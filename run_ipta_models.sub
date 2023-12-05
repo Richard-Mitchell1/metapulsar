@@ -1,0 +1,20 @@
+executable     = /usr/bin/singularity
+
+arguments      = exec --bind /work/rutger.vhaasteren/projects/combine-ptas/:/data/ --bind /work/rutger.vhaasteren/datasets/:/datasets/ --bind /tmp/:/tmp/ /work/rutger.vhaasteren/singularity_images/anpta.sif python /data/run_ipta_models.py --hdf5_dir /data/hdf5-pulsars/ipta-dr3-light/ --procid $(ProcID) --output_dir /data/chains/ipta-dr3-light/
+environment    = "MKL_NUM_THREADS=8; OPENBLAS_NUM_THREADS=8"
+
+# Where to place output/logfiles
+output         = out/job_output.$(ProcID).txt
+error          = err/job_error.$(ProcID).txt
+log            = job_log.txt
+
+# which resources are needed
+request_cpus     = 8
+request_memory   = 8192
+request_disk     = 10240000
+accounting_group = pta.dev.first_tests
+
+# How many jobs to start
+queue 114
+#queue ProcID in {10..20}
+#queue ProcID from (5,58,82,89)
