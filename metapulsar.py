@@ -13,6 +13,7 @@ import logging
 import os
 import glob
 import re
+import shutil
 
 from itertools import groupby
 from collections import defaultdict
@@ -101,7 +102,10 @@ binary_parameters = ['BINARY'] + \
 dm_parameters = ['DMEPOCH', 'DM', 'DM1', 'DM2']
 
 # Other parameters in the parfile that need to match
-init_parameters = ['EPHEM']
+init_parameters = ['EPHEM', 'CLOCK', 'CLK']
+
+# Init parameters with aliases need to be mapped
+map_init_parameters = {'CLOCK': 'CLK'}
 
 #                     Tempo2: PINT
 parameter_aliases = {'XDOT': 'A1DOT',
@@ -166,7 +170,7 @@ def get_pta_release_files(base_dir, par_pattern, tim_pattern, **kwargs):
     for par_file in par_files:
         pulsar_name_match = re.search(par_pattern, par_file)  # Match against the full path
         if pulsar_name_match:
-            pulsar_name = pulsar_name_match.group(1)
+            pulsar_name = pulsar_name_match.group(1)          # 0 would be all, 1 is just PSR name
 
             # Find the corresponding .tim file that contains the pulsar_name
             tim_file = next((f for f in tim_files if pulsar_name in f and re.search(tim_pattern, f)), None)
@@ -314,7 +318,7 @@ def write_stringio_to_file(string_io_object, fpobj):
 class MetaParfiles(object):
     """Class to manipulate multiple parfiles for combined analysis"""
 
-    def __init__(self, parfiles):
+    def __init__(self, parfiles, convert=True):
         """Parse parfiles and modify them for combined analysis"""
         # List of dictionaries: [{pta: ptaname, file: filepath, package: pint}]
 
@@ -324,6 +328,12 @@ class MetaParfiles(object):
 
         # Read parfiles using PINT routine 'parse_parfile'
         self.read_parfile_dicts(parfield="parfile", pardictfield='pardict')
+
+        if convert:
+            self.convert_all()
+
+    def convert_all(self):
+        """Do all the conversions, and save to pardict_conv"""
 
         # Conversion, so that all UNITS are the same
         self.convert_units()
@@ -495,13 +505,11 @@ class MetaParfiles(object):
                 pfd['parfile_units_converted'] = StringIO(pfd['parfile'].read())
                 pfd['parfile'].seek(0)
 
-    def replace_pars_with_ref_model(self, ref_index=0, parameters=[]):
+    def replace_pars_with_ref_model(self, ref_index=0, parameters=[], map={}):
         """Based on the reference model, replace all relevant parameters"""
 
         refpfd = self._parfiles[ref_index]['pardict_conv']
-        dupdate = {par: parval for (par, parval) in refpfd.items() if par in parameters}
-        if 'RAJ' in dupdate:
-            logger.warning("RAJ units not yet dealt with correctly. RAJ derivatives if combining with PINT")
+        dupdate = {map.get(par, par): parval for (par, parval) in refpfd.items() if par in parameters}
 
         for ind, pfd in enumerate(self._parfiles):
             if ind!=ref_index:
@@ -529,7 +537,8 @@ class MetaParfiles(object):
 
         self.replace_pars_with_ref_model(
             ref_index=ref_index,
-            parameters=init_parameters
+            parameters=init_parameters,
+            map=map_init_parameters,
         )
 
     def merge_spin(self):
@@ -587,7 +596,27 @@ class MetaParfiles(object):
             for parname in pops:
                 pd.pop(parname)
 
+            #TODO: Add a DMEPOCH
             pd.update({'DM': [f"{dm_val}     1"], 'DM1': ["0.0     1"], 'DM2': ["0.0     1"]})
+
+
+    def get_parfile_lines(self, converted=True):
+        """Get the lines of all the parfiles, ready to write to disk"""
+
+        pardict_field = 'pardict_conv' if converted else 'pardict'
+
+        parfiles_d = dict()
+
+        for pfd in self._parfiles:
+            parfile_lines = []
+
+            for pname, pvals in pfd[pardict_field].items():
+                parfile_lines += [pname + f"    {pv}" for pv in pvals]
+
+            parfiles_d[pfd['pta']] = parfile_lines
+
+        return parfiles_d
+
 
 class MetaPulsar(h5p.BasePulsar):
     """Composite pulsar class for multiple PINT and Tempo2 objects"""
@@ -792,19 +821,19 @@ class MetaPulsar(h5p.BasePulsar):
     def design_matrix_column(self, full_parname):
         """Get a single column of the combined design matrix"""
 
-        # TODO: This needs to be dealt with differently
+        # TODO: This needs to be dealt with differently by supporting libstempo units
         units_correction = {
-            ('elong', 'tempo2'): np.pi / 180.0,
+            ('elong', 'tempo2'): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
             ('elong', 'pint'): 1.0,
-            ('elat', 'tempo2'): np.pi / 180.0,
+            ('elat', 'tempo2'): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
             ('elat', 'pint'): 1.0,
-            ('lambda', 'tempo2'): np.pi / 180.0,
+            ('lambda', 'tempo2'): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
             ('lambda', 'pint'): 1.0,
-            ('beta', 'tempo2'): np.pi / 180.0,
+            ('beta', 'tempo2'): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
             ('beta', 'pint'): 1.0,
-            ('raj', 'tempo2'): np.pi / 180.0,   # Incorrect
+            ('raj', 'tempo2'): (1.0 * u.second / u.radian).to(u.second / u.hourangle).value,
             ('raj', 'pint'): 1.0,
-            ('decj', 'tempo2'): np.pi / 180.0,
+            ('decj', 'tempo2'): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
             ('decj', 'pint'): 1.0,
         }
 
@@ -933,10 +962,13 @@ class MetaPulsar(h5p.BasePulsar):
         #       can then be used for a consistency statistic.
         pass
 
-def create_metapulsar(input_files):
+def create_metapulsar(input_files, par_output_dir=None, return_metapulsar=True):
     """Create a metapulsar object
 
     :param input_files: list of dictionaries
+    :param par_output_dir:  If not None, where parfiles will be written
+    :param return_metapulsar: Whether to return MetaPulsar or the parfile list
+
     :returns: Enterprise MetaPulsar object
 
     The input_files is a list of dictionaries, structured like:
@@ -951,25 +983,31 @@ def create_metapulsar(input_files):
 
     mpfs = MetaParfiles(input_files)
     pulsar_dict = {}
+    parfile_dict = mpfs.get_parfile_lines()
 
+    # TODO: Make communication between mpfs object and here nicer
     for pfd in mpfs._parfiles:
-        parfile_lines = []
 
-        for pname, pvals in pfd['pardict_conv'].items():
-            parfile_lines += [pname + f"    {pv}" for pv in pvals]
+        psr_name = pfd['name']
+        pta = pfd['pta']
+        timing_package = pfd['package']
+        parfile_lines = parfile_dict[pta]
 
         # We need to work with a temporary directory, because PINT determines
         # the pulsar name from the filename
-        #with tempfile.NamedTemporaryFile(mode='w+', delete=True) as temp_parfile:
         with tempfile.TemporaryDirectory() as temp_dir:
 
-            temp_parfile_path = Path(temp_dir) / pfd['name']
+            # PINT gets pulsar name from filename
+            parfile_name = f"{psr_name}.par"                # For PINT
+            parfile_pta_name = f"{psr_name}_{pta}.par"      # To save
+
+            temp_parfile_path = Path(temp_dir) / parfile_name
             with open(temp_parfile_path, 'w+') as temp_parfile:
 
                 temp_parfile.write("\n".join(parfile_lines))
                 temp_parfile.flush()
 
-                if pfd['package'] in ['libstempo', 'tempo2']:
+                if timing_package in ['libstempo', 'tempo2']:
                     # use libstempo to read the par/tim file
                     # TODO: check for maxobs
 
@@ -981,7 +1019,7 @@ def create_metapulsar(input_files):
                         dofit=False
                     )
 
-                elif pfd['package']=='pint':
+                elif timing_package=='pint':
                     # Use PINT to read the par/tim file
 
                     pulsar_dict[pfd['pta']] = get_model_and_toas(
@@ -989,7 +1027,14 @@ def create_metapulsar(input_files):
                         pfd['timfile'],
                     )
 
-    return MetaPulsar(pulsars=pulsar_dict,
+            if par_output_dir:
+                # Move the parfile so it is not deleted
+
+                save_parfile_path = Path(par_output_dir) / parfile_pta_name
+                shutil.move(temp_parfile_path, save_parfile_path)
+
+    if return_metapulsar:
+        return MetaPulsar(pulsars=pulsar_dict,
                         sort=True,
                         planets=True,
                         drop_t2pulsar=True,
@@ -998,3 +1043,5 @@ def create_metapulsar(input_files):
                         merge_spin=True,
                         merge_binary=True,
                         merge_dm=True)
+    else:
+        return pulsar_dict
