@@ -188,6 +188,11 @@ def main():
 
     # Only work if this pulsar has not been done yet
     if not os.path.isfile(outfile) or overwrite:
+        # TODO for Wangwei Yu: RAJ/DECJ is not fully supported (units match)
+        #                      Choose the longest time-scale model
+        #                      PINT does not yet support T2 binary model.
+        #                      That depends on this PR: https://github.com/nanograv/PINT/pull/1695
+        #                      I will work on the PR in the meantime
         # Because RAJ/DECJ is not yet supported-well by MetaPulsar,
         # and the T2 Binar model is not converted automatically yet
         # we need to sort
