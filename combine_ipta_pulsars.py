@@ -2,6 +2,7 @@ import os
 from collections import defaultdict
 import argparse
 import metapulsar as mp
+import copy
 
 
 def get_ipta_release_definitions(ipta_data_dir = "/data/IPTA-DR3"):
@@ -21,8 +22,8 @@ def get_ipta_release_definitions(ipta_data_dir = "/data/IPTA-DR3"):
     # PPTA DR2
     ipta_data['ppta_dr2'] = dict(
         base_dir = f"{ipta_data_dir}/PPTA_DR2/",
-        par_pattern = r"([BJ]\d{4}[+-]\d{2,4})\.par",
-        tim_pattern = r"([BJ]\d{4}[+-]\d{2,4})\.tim",
+        par_pattern = r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.par",
+        tim_pattern = r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.tim",
         coordinates = 'equatorial',
         timing_package = 'tempo2',
     )
@@ -30,8 +31,8 @@ def get_ipta_release_definitions(ipta_data_dir = "/data/IPTA-DR3"):
     # PPTA DR3
     ipta_data['ppta_dr3'] = dict(
         base_dir = f"{ipta_data_dir}/PPTA_DR3/",
-        par_pattern = r"([BJ]\d{4}[+-]\d{2,4})\.par",
-        tim_pattern = r"([BJ]\d{4}[+-]\d{2,4})\.tim",
+        par_pattern = r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.par",
+        tim_pattern = r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.tim",
         coordinates = 'equatorial',
         timing_package = 'tempo2',
     )
@@ -143,8 +144,12 @@ def main():
                         help='Output directory for hdf5 files',
                         default='/data/hdf5-pulsars')
 
+    parser.add_argument('--output_dir_parfiles', metavar='N', type=str,
+                        help='Output directory for processed parfiles',
+                        default='/data/par')
+
     parser.add_argument('--psrname', metavar='N', type=str,
-                        help='Output directory for hdf5 files',
+                        help='Instead of using procid, select this pulsar',
                         default='')
 
 
@@ -155,6 +160,7 @@ def main():
     job_number = args.procid
     ipta_data_dir = args.ipta_data_dir
     h5dir = args.output_dir
+    pardir = args.output_dir_parfiles
     overwrite = args.overwrite
     psrname = args.psrname
 
@@ -175,6 +181,10 @@ def main():
     pulsar_l = pulsar_dict[psrname]
 
     outfile = os.path.join(h5dir, psrname + '.h5')
+    individual_pta_dir = os.path.join(h5dir, 'individual')
+
+    if not os.path.isdir(individual_pta_dir):
+        os.mkdir(individual_pta_dir)
 
     # Only work if this pulsar has not been done yet
     if not os.path.isfile(outfile) or overwrite:
@@ -182,9 +192,31 @@ def main():
         # and the T2 Binar model is not converted automatically yet
         # we need to sort
         pulsar_ordered = sorted(sorted(pulsar_l, key=lambda x: x['coordinates']), key=lambda x: x['package'])
-        mpsr = mp.create_metapulsar(pulsar_ordered)
 
+        # Create the combined HDF5 file, and output the parfiles
+        print(f"Creating combined pulsar {psrname}")
+        mpsr = mp.create_metapulsar(pulsar_ordered, par_output_dir=pardir,)
         mpsr.to_hdf5(outfile)
+
+        # Also create the individual PTA files
+        print("All PTAs: ", [ptadict['pta'] for ptadict in pulsar_ordered])
+        for ptadict in pulsar_ordered:
+            pta = ptadict['pta']
+            parfile_orig = ptadict['parfile']
+            parfile_conv = os.path.join(pardir, f"{psrname}_{pta}.par")
+
+            for parfile, suffix in zip([parfile_orig, parfile_conv],
+                                      ['orig', 'conv']):
+                ptadict_indiv = [copy.deepcopy(ptadict)]
+                ptadict_indiv[0]['parfile'] = parfile
+
+                outfile_indiv = os.path.join(individual_pta_dir, f"{psrname}_{pta}_{suffix}.h5")
+
+                print(f"Creating individual pta pulsar {psrname}-{pta}-{suffix}")
+                mpsr_indiv = mp.create_metapulsar(ptadict_indiv)
+                mpsr_indiv.to_hdf5(outfile_indiv)
+
+
 
 
 if __name__=="__main__":
