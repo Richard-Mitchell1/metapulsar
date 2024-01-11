@@ -320,7 +320,7 @@ class MetaParfiles(object):
 
     def __init__(self, parfiles, convert=True):
         """Parse parfiles and modify them for combined analysis"""
-        # List of dictionaries: [{pta: ptaname, file: filepath, package: pint}]
+        # List of dictionaries: [{pta: ptaname, parfile: filepath, package: pint}]
 
         # Check input, and read the original par files
         self._parfiles = copy.deepcopy(parfiles)
@@ -581,6 +581,7 @@ class MetaParfiles(object):
         # we add DM, DM1, and DM2, so that we can do a DMGP model
 
         dm_val = 0.0
+        dm_epoch = 55000.0
 
         for pfd in self._parfiles:
             pd = pfd['pardict_conv']
@@ -590,14 +591,21 @@ class MetaParfiles(object):
                 if parname == 'DM':
                     dm_val = float(parvals[0].split()[0])
                     pops.append(parname)
+                elif parname == 'DMEPOCH':
+                    dm_epoch = float(parvals[0].split()[0])
+                    pops.append(parname)
                 elif parname.startswith('DM'):
                     pops.append(parname)
 
             for parname in pops:
                 pd.pop(parname)
 
-            #TODO: Add a DMEPOCH
-            pd.update({'DM': [f"{dm_val}     1"], 'DM1': ["0.0     1"], 'DM2': ["0.0     1"]})
+            pd.update({
+                    'DM': [f"{dm_val}     1"],
+                    'DM1': ["0.0     1"],
+                    'DM2': ["0.0     1"],
+                    'DMEPOCH': [f"{dm_epoch}"],
+                })
 
 
     def get_parfile_lines(self, converted=True):
