@@ -99,7 +99,8 @@ binary_parameters = ['BINARY'] + \
                     'FB0', 'FB1', 'A1_2', 'A1_3', 'ECC_2', 'ECC_3',
                     'T0_2', 'T0_3', 'OM_2', 'OM_3', 'VARSIGMA']
 
-dm_parameters = ['DMEPOCH', 'DM', 'DM1', 'DM2']
+#dm_parameters = ['DMEPOCH', 'DM', 'DM1', 'DM2']
+dm_parameters = ['DMEPOCH', 'DM1', 'DM2']
 
 # Other parameters in the parfile that need to match
 init_parameters = ['EPHEM', 'CLOCK', 'CLK']
@@ -588,13 +589,13 @@ class MetaParfiles(object):
             pops = []
 
             for parname, parvals in pd.items():
-                if parname == 'DM':
-                    dm_val = float(parvals[0].split()[0])
-                    pops.append(parname)
-                elif parname == 'DMEPOCH':
+                #if parname == 'DM':
+                #    dm_val = float(parvals[0].split()[0])
+                #    pops.append(parname)
+                if parname == 'DMEPOCH':
                     dm_epoch = float(parvals[0].split()[0])
                     pops.append(parname)
-                elif parname.startswith('DM'):
+                elif parname.startswith('DM') and not parname.startswith('DMJUMP'):
                     pops.append(parname)
 
             for parname in pops:
