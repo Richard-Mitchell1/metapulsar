@@ -595,14 +595,14 @@ class MetaParfiles(object):
                 if parname == 'DMEPOCH':
                     dm_epoch = float(parvals[0].split()[0])
                     pops.append(parname)
-                elif parname.startswith('DM') and not parname.startswith('DMJUMP'):
+                elif parname.startswith('DM') and not parname.startswith('DMJUMP') and not parname=='DM':
                     pops.append(parname)
 
             for parname in pops:
                 pd.pop(parname)
 
             pd.update({
-                    'DM': [f"{dm_val}     1"],
+                    #'DM': [f"{dm_val}     1"],
                     'DM1': ["0.0     1"],
                     'DM2': ["0.0     1"],
                     'DMEPOCH': [f"{dm_epoch}"],
