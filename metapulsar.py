@@ -598,7 +598,7 @@ class MetaParfiles(object):
                 elif parname.startswith('DM') and not parname.startswith('DMJUMP') and not parname=='DM':
                     pops.append(parname)
                 elif parname=='DM':
-                    values = parvals.split()
+                    values = parvals[0].split()
 
                     if len(values)>1 and values[1]=='1':
                         # The DM is being fit for, so no change
