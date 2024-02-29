@@ -96,7 +96,8 @@ binary_parameters = ['BINARY'] + \
                     'KOM', 'KIN', 'SINI', 'SHAPMAX', 'H4', 'H3', 'STIG',
                     'STIGMA', 'EPS1', 'EPS2', 'EPS1DOT', 'EPS2DOT',
                     'DR', 'DTH', 'SHAPIRO', 'M2', 'A0', 'B0', 'OM2DOT',
-                    'FB0', 'FB1', 'A1_2', 'A1_3', 'ECC_2', 'ECC_3',
+                    'FB0', 'FB1', 'FB2', 'FB3', 'FB4', 'FB5', 'FB6', 'FB7', 'FB8', 'FB9', 'FB10', 'FB11',
+                    'A1_2', 'A1_3', 'ECC_2', 'ECC_3',
                     'T0_2', 'T0_3', 'OM_2', 'OM_3', 'VARSIGMA']
 
 #dm_parameters = ['DMEPOCH', 'DM', 'DM1', 'DM2']
@@ -195,17 +196,6 @@ def create_selection_stag(name, flagdict={}, lowfreq=None, highfreq=None):
             # Never use empty flag values
             return set(flags[flag]) - set([""])
 
-    # Deprecated function
-    #def combined_flag_mask(flags, flag, flagvals, msk_subset=None):
-    #    msk = np.zeros_like(flags[flag], dtype=bool)
-    #    msk_subset = msk if msk_subset is None else msk_subset
-
-    #    for flagval in flagvals:
-    #        msk_new = flags[flag]==flagval
-
-    #        msk = np.logical_or(msk, np.logical_and(msk_subset, msk_new))
-
-    #    return msk
 
     def get_flagit(flags, flag, flagval):
         """get_flagit(flags, ("group", "f"), None) -> {flagval_list: masks}"""
@@ -224,18 +214,12 @@ def create_selection_stag(name, flagdict={}, lowfreq=None, highfreq=None):
             try:
                 flagvals = get_flagvals(flags, flagkey, flagval)
                 for fv in flagvals:
-                    #print(f"HERE: {flagkey} - {fv}")
-                    #msk_comb = combined_flag_mask(flags, flagkey, flagvals, msk_todo)
                     msk_flag = (flags[flagkey] == fv)
 
-                    #if np.any(np.logical_and(msk_todo, msk_comb)):
                     if np.any(np.logical_and(msk_todo, msk_flag)):
                         # Yep, add this flag-key
-                        #print("Yup, adding")
-                        #rd.update({fv: msk_comb})
                         rd.update({fv: msk_flag})
 
-                        #msk_todo = np.logical_and(msk_todo, np.logical_not(msk_comb))
                         msk_todo = np.logical_and(msk_todo, np.logical_not(msk_flag))
                     else:
                         # Nothing to add
@@ -255,10 +239,8 @@ def create_selection_stag(name, flagdict={}, lowfreq=None, highfreq=None):
             suffix = ""
 
         sels = [get_flagit(flags, flag, flagval) for (flag, flagval) in flagdict.items()]
-        #print(flagdict)
 
         if len(sels) > 0:
-            #print(sels)
             return {name+suffix+"_"+fv: msk for rd in sels for (fv, msk) in rd.items()}
         else:
             return {name + suffix: freq_mask}
