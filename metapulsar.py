@@ -48,8 +48,8 @@ if pint is None and t2 is None:
 
 
 # # tempo2 units
-# import astropy.constants
-# import astropy.units as u
+import astropy.constants
+import astropy.units as u
 # 
 # lts = astropy.units.def_unit(['lightsecond','ls','lts'],astropy.constants.c * u.s)
 # 
