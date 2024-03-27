@@ -191,7 +191,10 @@ def create_selection_stag(name, flagdict={}, lowfreq=None, highfreq=None):
 
     def get_flagvals(flags, flag, flagval):
         if flagval is not None:
-            return [flagval]
+            if isinstance(flagval, str):
+                return [flagval]
+            else:
+                return flagval
         else:
             # Never use empty flag values
             return set(flags[flag]) - set([""])
