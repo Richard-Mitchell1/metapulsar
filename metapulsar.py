@@ -21,9 +21,15 @@ from collections import defaultdict
 import numpy as np
 
 from pint.models.model_builder import parse_parfile, ModelBuilder
+from pint.toa import get_TOAs
+from pint.logging import setup as setup_log
+setup_log(level="WARNING")
 
 import enterprise.pulsar as ep
 import h5pulsar as h5p
+
+from astropy.coordinates import SkyCoord
+from astropy.coordinates import FK4
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +54,7 @@ if pint is None and t2 is None:
 
 
 # # tempo2 units
-import astropy.constants
+# import astropy.constants
 import astropy.units as u
 # 
 # lts = astropy.units.def_unit(['lightsecond','ls','lts'],astropy.constants.c * u.s)
@@ -96,12 +102,11 @@ binary_parameters = ['BINARY'] + \
                     'KOM', 'KIN', 'SINI', 'SHAPMAX', 'H4', 'H3', 'STIG',
                     'STIGMA', 'EPS1', 'EPS2', 'EPS1DOT', 'EPS2DOT',
                     'DR', 'DTH', 'SHAPIRO', 'M2', 'A0', 'B0', 'OM2DOT',
-                    'FB0', 'FB1', 'FB2', 'FB3', 'FB4', 'FB5', 'FB6', 'FB7', 'FB8', 'FB9', 'FB10', 'FB11',
+                    'FB0', 'FB1', 'FB2', 'FB3', 'FB4', 'FB5', 'FB6', 'FB7', 'FB8', 'FB9', 'FB10', 'FB11', 'FB12', 'FB13', 'FB14', 'FB15', 'FB16', 'FB17',
                     'A1_2', 'A1_3', 'ECC_2', 'ECC_3',
                     'T0_2', 'T0_3', 'OM_2', 'OM_3', 'VARSIGMA']
 
-#dm_parameters = ['DMEPOCH', 'DM', 'DM1', 'DM2']
-dm_parameters = ['DMEPOCH', 'DM1', 'DM2']
+dm_parameters = ['DMEPOCH', 'DM', 'DM1', 'DM2']
 
 # Other parameters in the parfile that need to match
 init_parameters = ['EPHEM', 'CLOCK', 'CLK']
@@ -113,12 +118,13 @@ map_init_parameters = {'CLOCK': 'CLK'}
 parameter_aliases = {'XDOT': 'A1DOT',
                      'E': 'ECC',
                      'EDOT': 'ECCDOT',
+                     'STIG': 'STIGMA',
                      'VARSIGMA': 'STIGMA'}
 #                         PINT: Tempo2
 parameter_rev_aliases = {'A1DOT': 'XDOT',
                          'ECC': 'E',
                          'ECCDOT': 'EDOT',
-                         'STIGMA': 'VARSIGMA'}
+                         'STIGMA': ['STIG', 'VARSIGMA']}
 
 equivalence_parameter_lists = [
     ['RAJ', 'ELONG', 'LAMBDA'],
@@ -131,8 +137,16 @@ equivalence_parameter_lists = [
     ['EDOT', 'ECCDOT'],
 ]
 
+epoch_map = {
+    'J1857+0943': 'B1855+09',
+    'J1939+2134': 'B1937+21',
+    'J1955+2908': 'B1953+29',
+}
+
+
 def all_equal(iterable):
-    g = groupby(iterable)
+    psr_list = [epoch_map.get(x, x) for x in iterable]
+    g = groupby(psr_list)
     return next(g, True) and not next(g, False)
 
 
@@ -191,14 +205,10 @@ def create_selection_stag(name, flagdict={}, lowfreq=None, highfreq=None):
 
     def get_flagvals(flags, flag, flagval):
         if flagval is not None:
-            if isinstance(flagval, str):
-                return [flagval]
-            else:
-                return flagval
+            return [flagval]
         else:
             # Never use empty flag values
             return set(flags[flag]) - set([""])
-
 
     def get_flagit(flags, flag, flagval):
         """get_flagit(flags, ("group", "f"), None) -> {flagval_list: masks}"""
@@ -250,6 +260,7 @@ def create_selection_stag(name, flagdict={}, lowfreq=None, highfreq=None):
 
     return selection_func
 
+
 def get_timing_package(psr):
     if isinstance(psr, ep.PintPulsar):
         return 'PINT'
@@ -258,14 +269,17 @@ def get_timing_package(psr):
     else:
         raise ValueError(f"Backend package for {psr.name} not supported")
 
+
 def check_in_fitpars(parname, epulsars):
     """Check whether parname is fit for in all epulsars"""
 
     def has_fitpar(parname, epsr):
-        return parameter_rev_aliases.get(parname, parname) in epsr.fitpars or \
-               parameter_aliases.get(parname, parname) in epsr.fitpars
-
+        len_ali = len(parameter_aliases.get(parname, parname))
+        len_rev = len(parameter_rev_aliases.get(parname, parname))
+        return any(np.atleast_1d(parameter_rev_aliases.get(parname, parname)[i] in epsr.fitpars for i in range(len_rev))) or \
+            any(np.atleast_1d(parameter_aliases.get(parname, parname)[i] in epsr.fitpars for i in range(len_ali)))
     return all([has_fitpar(parname, epsr) for epsr in epulsars.values()])
+
 
 def file_to_stringio(fpath):
     """Read from file path (can be str, Path, or StringIO)"""
@@ -287,6 +301,7 @@ def file_to_stringio(fpath):
     else:
         raise ValueError(f"Unsupported fpath type: {type(fpath)}")
 
+
 def write_stringio_to_file(string_io_object, fpobj):
     # Ensure that the string_io_object's pointer is at the beginning
     string_io_object.seek(0)
@@ -301,10 +316,11 @@ def write_stringio_to_file(string_io_object, fpobj):
         # Flush the write buffer to ensure all data is written to the file
         fpobj.flush()
 
+
 class MetaParfiles(object):
     """Class to manipulate multiple parfiles for combined analysis"""
 
-    def __init__(self, parfiles, convert=True):
+    def __init__(self, parfiles, ref_index=0, convert=True):
         """Parse parfiles and modify them for combined analysis"""
         # List of dictionaries: [{pta: ptaname, parfile: filepath, package: pint}]
 
@@ -314,6 +330,9 @@ class MetaParfiles(object):
 
         # Read parfiles using PINT routine 'parse_parfile'
         self.read_parfile_dicts(parfield="parfile", pardictfield='pardict')
+
+        # set ref index
+        self.ref_index = ref_index
 
         if convert:
             self.convert_all()
@@ -337,29 +356,32 @@ class MetaParfiles(object):
         self.merge_binary()
         self.merge_dm()
 
+        # Adjustment for PINT or Tempo2
+        self.summary()
+
     def check_and_read_input(self):
         """Check the given input, and read parfiles from disk if necessary"""
 
         for pfd in self._parfiles:
             if not isinstance(pfd['pta'], str):
-                logger.error("PTA type needs to be a string") # pragma: no cover
+                logger.error("PTA type needs to be a string")  # pragma: no cover
                 raise ValueError("PTA type needs to be a string")
 
             if not pfd['package'].lower() in ['libstempo', 'tempo2', 'pint']:
-                logger.error("Package needs to be tempo2/libstempo/point") # pragma: no cover
+                logger.error("Package needs to be tempo2/libstempo/point")  # pragma: no cover
                 raise ValueError("Package needs to be tempo2/libstempo/pint")
             else:
                 pfd['package'] = pfd['package'].lower()
 
             if isinstance(pfd['parfile'], str) and not os.path.isfile(pfd['parfile']):
-                logger.error(f"Parfile {pfd['parfile']} does not exist") # pragma: no cover
+                logger.error(f"Parfile {pfd['parfile']} does not exist")  # pragma: no cover
                 raise FileExistsError(f"Parfile {pfd['parfile']} does not exist")
 
             elif isinstance(pfd['parfile'], (str, Path)) or hasattr(pfd['parfile'], 'read'):
                 pfd['parfile'] = file_to_stringio(pfd['parfile'])
 
             else:
-                logger.error(f"Parfile {pfd['parfile']} invalid") # pragma: no cover
+                logger.error(f"Parfile {pfd['parfile']} invalid")  # pragma: no cover
                 raise ValueError(f"Parfile {pfd['parfile']} invalid")
 
     def read_parfile_dicts(self, parfield='parfile', pardictfield='pardict'):
@@ -415,11 +437,28 @@ class MetaParfiles(object):
             elif pfd['package'] in ['tempo2', 'libstempo']:
                 pd['DM_SERIES'] = ['TAYLOR']
 
+        # only modify the non-refrence model
+        for ind, pfd in enumerate(self._parfiles):
+            pd = pfd['pardict_conv']
+            if ind != self.ref_index and pfd['package'] == 'pint' and 'ECL' in pd:
+                self.pop_parameters_from_par(pop_par='ECL', index=ind)
+
+    def summary(self):
+        """Adjustment for PINT or Tempo2"""
+        for ind, pfd in enumerate(self._parfiles):
+            pd = pfd['pardict_conv']
+            if ind != self.ref_index and pfd['package'] == 'pint' and 'STIG' in pd:
+                self.replace_parameters_from_par(pop_par='STIG', re_par='STIGMA', index=ind)
+
     def convert_pint_to_tdb(self, pfd):
-        """Create a StringIO object with the new parfile using PINT"""
+        """Create a StringIO object with the new parfile using PINT
+            Usually, we can't produce pulsar in tcb units with PINT
+        """
 
         mb = ModelBuilder()
-        model = mb(pfd['parfile'], allow_tcb=True)
+        model = mb(StringIO(
+            pfd['parfile'].getvalue()
+        ),  allow_tcb=True)
 
         new_file = StringIO("")
         model.write_parfile(new_file)
@@ -428,8 +467,11 @@ class MetaParfiles(object):
         pfd['parfile_units_converted'].seek(0)
 
     def convert_tempo2_to_tdb(self, pfd):
-        """Create a StringIO object with the new parfile using Tempo2"""
-
+        """Create a StringIO object with the new parfile using Tempo2
+        params
+        ------
+        pfd:list, the pta list {'parfile':xxxx, 'timfile':xxxx,}
+        """
         with tempfile.NamedTemporaryFile(mode='w+', delete=True) as output_file, tempfile.NamedTemporaryFile(mode='w+', delete=True) as input_file:
 
             write_stringio_to_file(pfd['parfile'], input_file.name)
@@ -498,13 +540,30 @@ class MetaParfiles(object):
         dupdate = {map.get(par, par): parval for (par, parval) in refpfd.items() if par in parameters}
 
         for ind, pfd in enumerate(self._parfiles):
-            if ind!=ref_index:
+            if ind != ref_index:
                 pd = pfd['pardict_conv']
 
                 for parname in set(parameters) & set(pd.keys()):
                     pd.pop(parname)
 
                 pd.update(dupdate)
+
+    # Could be better
+    def pop_parameters_from_par(self, pop_par, index=0):
+        """Delete parameters in parfile"""
+
+        for ind, pfd in enumerate(self._parfiles):
+            if ind == index:
+                pd = pfd['pardict_conv']
+                pd.pop(pop_par)
+
+    # Could be better
+    def replace_parameters_from_par(self, pop_par, re_par, index=0):
+        """Replace parameters in parfile"""
+        for ind, pfd in enumerate(self._parfiles):
+            if ind == index:
+                pd = pfd['pardict_conv']
+                pd[re_par] = pd.pop(pop_par)
 
     def choose_spin_reference(self):
         """Based on the read-in parfiles, choose a reference spin model"""
@@ -574,18 +633,18 @@ class MetaParfiles(object):
             pops = []
 
             for parname, parvals in pd.items():
-                #if parname == 'DM':
-                #    dm_val = float(parvals[0].split()[0])
-                #    pops.append(parname)
+                if parname == 'DM':
+                    dm_val = float(parvals[0].split()[0])
+                    pops.append(parname)
                 if parname == 'DMEPOCH':
                     dm_epoch = float(parvals[0].split()[0])
                     pops.append(parname)
-                elif parname.startswith('DM') and not parname.startswith('DMJUMP') and not parname=='DM':
+                elif parname.startswith('DM') and not parname.startswith('DMJUMP') and not parname == 'DM':
                     pops.append(parname)
-                elif parname=='DM':
+                elif parname == 'DM':
                     values = parvals[0].split()
 
-                    if len(values)>1 and values[1]=='1':
+                    if len(values) > 1 and values[1] == '1':
                         # The DM is being fit for, so no change
                         pass
                     else:
@@ -596,12 +655,17 @@ class MetaParfiles(object):
                 pd.pop(parname)
 
             pd.update({
-                    #'DM': [f"{dm_val}     1"],
+                    'DM': [f"{dm_val}     1"],
                     'DM1': ["0.0     1"],
                     'DM2': ["0.0     1"],
                     'DMEPOCH': [f"{dm_epoch}"],
                 })
 
+        ref_index = self.choose_astrometry_reference()
+        self.replace_pars_with_ref_model(
+            ref_index=ref_index,
+            parameters=dm_parameters
+        )
 
     def get_parfile_lines(self, converted=True):
         """Get the lines of all the parfiles, ready to write to disk"""
@@ -681,7 +745,7 @@ class MetaPulsar(h5p.BasePulsar):
                 pmodel, ptoas = psritem
 
                 if not isinstance(pmodel, TimingModel) or \
-                    not isinstance(ptoas, TOAs):
+                   not isinstance(ptoas, TOAs):
                     raise TypeError("Not valid PINT objects")
 
                 pint_models.update({epname: pmodel})
@@ -694,7 +758,6 @@ class MetaPulsar(h5p.BasePulsar):
                 lt_pulsars.update({epname: psritem})
 
         return pint_models, pint_toas, lt_pulsars
-
 
     def check_for_pulsar(self, pint_toas, pint_models, lt_pulsars):
         """Check the objects for a single pulsar name, and return it"""
@@ -864,13 +927,24 @@ class MetaPulsar(h5p.BasePulsar):
         flags = defaultdict(lambda: np.zeros(len(self._toas), dtype='U128'))
 
         for pta, psr in self._epulsars.items():
-            for flag, flagvals in  psr.flags.items():
+            flag_pta = False
+            for flag, flagvals in psr.flags.items():
                 flags[flag][pta_slice[pta]] = flagvals
+
+                # check whether 'pta' key exists
+                if flag == 'pta' and not np.any(flagvals == ''):
+                    # for '\t' in EPTA data
+                    flags[flag][pta_slice[pta]] = [pta_flag.strip() for pta_flag in flagvals]
+                    flag_pta = True
 
             timing_package = get_timing_package(psr)
 
             flags['pta_dataset'][pta_slice[pta]] = pta
             flags['timing_package'][pta_slice[pta]] = timing_package
+
+            # if there is no pta flag, then use pta in dict
+            if not flag_pta:
+                flags['pta'][pta_slice[pta]] = pta
 
             # TODO: Add flag for how to do DM modeling?
             # TODO: Add flag for wideband data?
@@ -888,10 +962,18 @@ class MetaPulsar(h5p.BasePulsar):
 
         self._pdist = self._get_pdist()
 
+        for psr in self._epulsars.values():
+            if psr.name[0] == 'B':
+                coord_b = SkyCoord(ra=psr._raj*u.rad, dec=psr._decj*u.rad, frame='fk4', equinox='B1950')
+                coord_j = coord_b.transform_to(FK4(equinox='J2000'))
+                psr._raj = coord_j.ra.rad
+                psr._decj = coord_j.dec.rad
+
         rajs = [psr._raj for psr in self._epulsars.values()]
-        decjs = [psr._raj for psr in self._epulsars.values()]
-        if not  np.allclose(rajs, rajs[0], atol=1e-7, rtol=1e-4) or \
-            not np.allclose(decjs, decjs[0], atol=1e-7, rtol=1e-3):
+        decjs = [psr._decj for psr in self._epulsars.values()]
+
+        if not np.allclose(rajs, rajs[0], atol=1e-7, rtol=1e-4) or \
+           not np.allclose(decjs, decjs[0], atol=1e-7, rtol=1e-3):
             raise ValueError("Not all pulsar object have the same position")
 
         self._raj, self._decj = rajs[0], decjs[0]
@@ -914,7 +996,7 @@ class MetaPulsar(h5p.BasePulsar):
 
         self._pos_t = np.zeros((len(self._toas), 3))
         for pta, psr in self._epulsars.items():
-            self._pos_t[pta_slice[pta],:] = psr._pos_t
+            self._pos_t[pta_slice[pta], :] = psr._pos_t
 
         #which_astrometry = (
         #    "AstrometryEquatorial" if "AstrometryEquatorial" in model.components else "AstrometryEcliptic"
@@ -965,12 +1047,15 @@ class MetaPulsar(h5p.BasePulsar):
         #       can then be used for a consistency statistic.
         pass
 
-def create_metapulsar(input_files, par_output_dir=None, return_metapulsar=True):
+
+def create_metapulsar(input_files, par_output_dir=None, return_metapulsar=True, planets=True):
     """Create a metapulsar object
 
     :param input_files: list of dictionaries
     :param par_output_dir:  If not None, where parfiles will be written
     :param return_metapulsar: Whether to return MetaPulsar or the parfile list
+    :param planets: bool, defualt=True,
+                    It is just requirement for ENTERPRISE object.
 
     :returns: Enterprise MetaPulsar object
 
@@ -1022,12 +1107,13 @@ def create_metapulsar(input_files, par_output_dir=None, return_metapulsar=True):
                         dofit=False
                     )
 
-                elif timing_package=='pint':
+                elif timing_package == 'pint':
                     # Use PINT to read the par/tim file
 
                     pulsar_dict[pfd['pta']] = get_model_and_toas(
                         temp_parfile.name,
                         pfd['timfile'],
+                        planets=planets
                     )
 
             if par_output_dir:
@@ -1038,13 +1124,13 @@ def create_metapulsar(input_files, par_output_dir=None, return_metapulsar=True):
 
     if return_metapulsar:
         return MetaPulsar(pulsars=pulsar_dict,
-                        sort=True,
-                        planets=True,
-                        drop_t2pulsar=True,
-                        drop_pintpsr=True,
-                        merge_astrometry=True,
-                        merge_spin=True,
-                        merge_binary=True,
-                        merge_dm=True)
+                          sort=True,
+                          planets=True,
+                          drop_t2pulsar=True,
+                          drop_pintpsr=True,
+                          merge_astrometry=True,
+                          merge_spin=True,
+                          merge_binary=True,
+                          merge_dm=True)
     else:
         return pulsar_dict
