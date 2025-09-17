@@ -51,22 +51,14 @@ def create_selection_stag(name, flagdict={}, lowfreq=None, highfreq=None):
 
     def get_flagvals(flags, flag, flagval):
         if flagval is not None:
-            return [flagval]
+            if isinstance(flagval, str):
+                return [flagval]
+            else:
+                return flagval
         else:
             # Never use empty flag values
             return set(flags[flag]) - set([""])
 
-    # Deprecated function
-    #def combined_flag_mask(flags, flag, flagvals, msk_subset=None):
-    #    msk = np.zeros_like(flags[flag], dtype=bool)
-    #    msk_subset = msk if msk_subset is None else msk_subset
-
-    #    for flagval in flagvals:
-    #        msk_new = flags[flag]==flagval
-
-    #        msk = np.logical_or(msk, np.logical_and(msk_subset, msk_new))
-
-    #    return msk
 
     def get_flagit(flags, flag, flagval):
         """get_flagit(flags, ("group", "f"), None) -> {flagval_list: masks}"""
