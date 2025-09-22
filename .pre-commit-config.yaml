@@ -34,8 +34,8 @@ repos:
   #       args: ["--baseline", ".secrets.baseline"]
   #       stages: [pre-commit]
 
-  #- repo: https://github.com/commitizen-tools/commitizen
-  #  rev: v3.27.0
-  #  hooks:
-  #    - id: commitizen
-  #      stages: [commit-msg]
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.27.0
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]

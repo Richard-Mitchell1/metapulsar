@@ -1,0 +1,53 @@
+Metadata-Version: 2.4
+Name: ipta-metapulsar-analysis
+Version: 0.1.0
+Summary: Multi-PTA pulsar timing data combination framework for gravitational wave detection
+Author-email: Rutger van Haasteren <rutger@vhaasteren.com>, OneWay Yu <oneway@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/ipta-metapulsar-analysis
+Project-URL: Repository, https://github.com/ipta-metapulsar-analysis
+Project-URL: Documentation, https://ipta-metapulsar-analysis.readthedocs.io
+Project-URL: Issues, https://github.com/ipta-metapulsar-analysis/issues
+Keywords: pulsar,timing,gravitational-waves,pta,ipta,astronomy
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering :: Astronomy
+Classifier: Topic :: Scientific/Engineering :: Physics
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy>=1.20.0
+Requires-Dist: astropy>=5.0.0
+Requires-Dist: scipy>=1.7.0
+Requires-Dist: pint-pulsar>=0.9.0
+Requires-Dist: enterprise-pulsar>=3.0.0
+Requires-Dist: h5pulsar@ git+https://github.com/vhaasteren/h5pulsar@main
+Provides-Extra: dev
+Requires-Dist: pytest>=6.0; extra == "dev"
+Requires-Dist: pytest-cov>=2.0; extra == "dev"
+Requires-Dist: black>=22.0; extra == "dev"
+Requires-Dist: mypy>=0.900; extra == "dev"
+Requires-Dist: flake8>=4.0; extra == "dev"
+Requires-Dist: sphinx>=4.0; extra == "dev"
+Requires-Dist: sphinx-rtd-theme>=1.0; extra == "dev"
+Provides-Extra: libstempo
+Requires-Dist: libstempo>=2.0.0; extra == "libstempo"
+Provides-Extra: analysis
+Requires-Dist: xarray>=0.20.0; extra == "analysis"
+Requires-Dist: arviz>=0.12.0; extra == "analysis"
+Requires-Dist: la-forge>=0.1.0; extra == "analysis"
+Requires-Dist: matplotlib>=3.5.0; extra == "analysis"
+Requires-Dist: seaborn>=0.11.0; extra == "analysis"
+Dynamic: license-file
+
+# ipta-metapulsar-analysis
+
+
+Basically fully implemented in ./metapulsar.py

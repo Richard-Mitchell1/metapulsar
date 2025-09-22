@@ -1,0 +1,7 @@
+FORMAT 1
+# Sample TOA data for testing
+test1 1400.0 54500.123456789 1.5 g -sys TEST -pta TEST -group TEST
+test2 1400.0 54510.234567890 2.1 g -sys TEST -pta TEST -group TEST
+test3 1400.0 54520.345678901 1.8 g -sys TEST -pta TEST -group TEST
+test4 1400.0 54530.456789012 2.3 g -sys TEST -pta TEST -group TEST
+test5 1400.0 54540.567890123 1.9 g -sys TEST -pta TEST -group TEST

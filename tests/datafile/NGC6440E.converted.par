@@ -1,0 +1,42 @@
+# Created: 2025-03-25T11:00:21.462547
+# PINT_version: 1.1.1+56.g0ccf6d42.dirty
+# User: vhaasteren
+# Host: delldock-204.aei.uni-hannover.de
+# OS: macOS-14.6.1-x86_64-i386-64bit
+# Python: 3.10.13 | packaged by conda-forge | (main, Dec 23 2023, 15:36:59) [Clang 16.0.6 ]
+# Format: tempo2
+# read_time: 2025-03-25T11:00:21.458899
+# allow_tcb: False
+# convert_tcb: False
+# allow_T2: False
+# original_name: /Users/vhaasteren/research/code/PINT/src/pint/data/examples/NGC6440E.par.good
+MODE 1
+PSR                            1748-2021E
+EPHEM                               DE421
+CLK                             UTC(NIST)
+UNITS                                 TDB
+START              53478.2850000000000000
+FINISH             54187.5880000000000000
+TIMEEPH                              FB90
+#T2CMETHOD                        IAU2000B
+DILATEFREQ                              N
+DMDATA          0
+NTOA                                   62
+TRES                                21.18
+RAJ                     17:48:52.80034717 1 0.00013524999999999998
+DECJ                   -20:21:29.38320870 1 0.03285280000000000145
+PMRA                                  0.0
+PMDEC                                 0.0
+PX                                    0.0
+POSEPOCH           53750.0000000000000000
+F0                    61.4854765543727595 1 1.80861e-11
+F1                    -1.181337028639e-15 1 1.441855022456e-18
+PEPOCH             53750.0000000000000000
+TZRMJD             53801.3860512007484954
+TZRSITE                                 1
+TZRFRQ                           1949.609
+CORRECT_TROPOSPHERE                         N
+PLANET_SHAPIRO                          N
+SOLARN0                               0.0
+NE_SW1                                0.0
+DM                             224.113798 1 0.034939

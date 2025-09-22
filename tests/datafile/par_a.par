@@ -1,0 +1,31 @@
+# Created: 2025-03-25T11:00:21.028229
+# PINT_version: 1.1.1+56.g0ccf6d42.dirty
+# User: vhaasteren
+# Host: delldock-204.aei.uni-hannover.de
+# OS: macOS-14.6.1-x86_64-i386-64bit
+# Python: 3.10.13 | packaged by conda-forge | (main, Dec 23 2023, 15:36:59) [Clang 16.0.6 ]
+# Format: pint
+# read_time: 2025-03-25T11:00:20.994031
+# allow_tcb: False
+# convert_tcb: False
+# allow_T2: False
+PSR                            J1713+0747
+EPHEM                               DE421
+CLK                          TT(BIPM2015)
+UNITS                                 TDB
+TIMEEPH                              FB90
+DILATEFREQ                              N
+DMDATA                                  N
+NTOA                                    0
+LAMBDA                256.668695240569491 1 0.00000000233510000000
+BETA                   30.700360493706000 1 0.00000000414660000000
+PMLAMBDA                           5.2671 1 0.0021
+PMBETA                            -3.4428 1 0.0043
+PX                                 0.8211 1 0.0258
+ECL                              IERS2003
+POSEPOCH           56553.0000000000000000
+F0                    218.811843796082627 1 9.88e-14
+F1                    -4.083888637248e-16 1 1.433249826455e-21
+PEPOCH             55391.0000000000000000
+PLANET_SHAPIRO                          N
+DM                              15.917131
