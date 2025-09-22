@@ -1,0 +1,48 @@
+{
+  "name": "ipta-metapulsar-analysis Native Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "platform": "linux/arm64",
+    //"args": {
+    //  "BUILDKIT_INLINE_CACHE": "0"
+    //}
+  },
+
+  "remoteUser": "vscode",
+
+  //"features": {},
+  //"overrideCommand": false,
+
+  "containerEnv": {
+    "VIRTUAL_ENV": "/opt/venvs/pta"
+  },
+
+  "remoteEnv": {
+    "PATH": "/opt/venvs/pta/bin:/opt/software:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+  },
+
+  "postCreateCommand": "echo 'Native ARM64 environment ready'",
+  "postStartCommand": "bash -lc 'source /opt/venvs/pta/bin/activate && pre-commit install --hook-type pre-commit --hook-type pre-push --hook-type commit-msg'",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-vscode.vscodevim",
+        "ms-vscode-remote.remote-containers",
+        "ms-python.python",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+        "ms-python.pytest",
+        "ms-vscode.vscode-json",
+        "redhat.vscode-yaml",
+        "ms-vscode.makefile-tools",
+        "github.vscode-pull-request-github",
+        "eamodio.gitlens"
+      ]
+    }
+  },
+
+  "portsAttributes": {
+    "5000": { "label": "Web App", "onAutoForward": "notify" }
+  }
+}
