@@ -7,14 +7,14 @@ repos:
     rev: 24.8.0
     hooks: 
       - id: black
-        exclude: ^(pylk-old/|old-rag-code/|src-old/)
+        exclude: ^(pylk-old/|old-rag-code/|src-old/|legacy/)
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.9
     hooks:
       - id: ruff
         args: ["--fix"]
-        exclude: ^(pylk-old/|old-rag-code/|src-old/)
+        exclude: ^(pylk-old/|old-rag-code/|src-old/|legacy/)
 
   # Removing mypy, because it caused problems
   # - repo: local
