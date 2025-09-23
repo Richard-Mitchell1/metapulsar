@@ -5,3 +5,4 @@ chains
 hdf5-pulsars
 dr3_mini_noise
 research
+*.egg-info/

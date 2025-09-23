@@ -1,2 +1,0 @@
-ipta_metapulsar
-pint
