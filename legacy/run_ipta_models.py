@@ -1,8 +1,6 @@
-
 import glob
 import os
 import numpy as np
-
 
 
 from h5pulsar import FilePulsar
