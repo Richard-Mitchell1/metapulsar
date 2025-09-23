@@ -201,6 +201,7 @@ class TestMetaPulsarParameterManager:
         # Should not add parameter if not identifiable
         assert "RAJ_EPTA" not in fitparameters
 
+    @pytest.mark.slow
     def test_validate_parameter_consistency_success(self):
         """Test parameter consistency validation when valid."""
         manager = MetaPulsarParameterManager(self.pint_models)
@@ -215,6 +216,7 @@ class TestMetaPulsarParameterManager:
         # Should not raise exception
         manager._validate_parameter_consistency(fitparameters, setparameters)
 
+    @pytest.mark.slow
     def test_validate_parameter_consistency_failure(self):
         """Test parameter consistency validation when invalid."""
         manager = MetaPulsarParameterManager(self.pint_models)
@@ -228,6 +230,7 @@ class TestMetaPulsarParameterManager:
         ):
             manager._validate_parameter_consistency(fitparameters, setparameters)
 
+    @pytest.mark.slow
     def test_build_parameter_mapping_result(self):
         """Test building parameter mapping result."""
         manager = MetaPulsarParameterManager(self.pint_models)

@@ -11,6 +11,7 @@ from .pint_helpers import (
     get_parameter_aliases_from_pint,
     check_component_available_in_model,
     get_parameter_identifiability_from_model,
+    _is_astrometry_parameter,
 )
 
 
@@ -60,7 +61,7 @@ class ParameterResolver:
         from loguru import logger
 
         # For astrometry parameters, check component availability
-        if self._is_astrometry_parameter(param_name):
+        if _is_astrometry_parameter(param_name):
             logger.debug(
                 f"Checking astrometry parameter '{param_name}' via component availability"
             )
@@ -129,42 +130,3 @@ class ParameterResolver:
 
         # Return canonical name plus all aliases
         return [canonical] + aliases
-
-    def _is_astrometry_parameter(self, param_name: str) -> bool:
-        """Check if parameter is astrometry-related by discovering from PINT components."""
-        from pint.models.model_builder import AllComponents
-
-        try:
-            all_components = AllComponents()
-
-            # Get all astrometry components from PINT
-            astrometry_components = all_components.category_component_map.get(
-                "astrometry", []
-            )
-
-            # Collect all parameters from astrometry components
-            astrometry_params = set()
-            for component_name in astrometry_components:
-                try:
-                    # Access component from the components dictionary
-                    component_instance = all_components.components[component_name]
-                    if hasattr(component_instance, "params"):
-                        astrometry_params.update(component_instance.params)
-                except (KeyError, AttributeError, TypeError, Exception):
-                    # Component not available or can't be instantiated, continue
-                    continue
-
-            return param_name in astrometry_params
-
-        except Exception:
-            # If PINT discovery fails, fall back to a minimal known set
-            # This is a safety fallback, not ideal but better than hardcoded lists
-            minimal_astrometry_params = {
-                "RAJ",
-                "DECJ",
-                "ELONG",
-                "ELAT",
-                "POSEPOCH",
-                "PX",
-            }
-            return param_name in minimal_astrometry_params

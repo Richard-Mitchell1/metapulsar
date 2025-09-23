@@ -3,6 +3,7 @@
 from unittest.mock import Mock, patch
 from pint.models import TimingModel
 from ipta_metapulsar.parameter_resolver import ParameterResolver
+from ipta_metapulsar.pint_helpers import _is_astrometry_parameter
 
 
 class TestParameterResolver:
@@ -139,15 +140,14 @@ class TestParameterResolver:
     def test_is_astrometry_parameter(self, mock_get_aliases):
         """Test astrometry parameter identification."""
         mock_get_aliases.return_value = {}
-        resolver = ParameterResolver(self.pint_models)
 
         # Test astrometry parameters
-        assert resolver._is_astrometry_parameter("RAJ") is True
-        assert resolver._is_astrometry_parameter("DECJ") is True
-        assert resolver._is_astrometry_parameter("ELONG") is True
-        assert resolver._is_astrometry_parameter("PMRA") is True
+        assert _is_astrometry_parameter("RAJ") is True
+        assert _is_astrometry_parameter("DECJ") is True
+        assert _is_astrometry_parameter("ELONG") is True
+        assert _is_astrometry_parameter("PMRA") is True
 
         # Test non-astrometry parameters
-        assert resolver._is_astrometry_parameter("F0") is False
-        assert resolver._is_astrometry_parameter("A1") is False
-        assert resolver._is_astrometry_parameter("PB") is False
+        assert _is_astrometry_parameter("F0") is False
+        assert _is_astrometry_parameter("A1") is False
+        assert _is_astrometry_parameter("PB") is False

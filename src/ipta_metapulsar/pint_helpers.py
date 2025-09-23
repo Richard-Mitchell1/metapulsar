@@ -14,44 +14,17 @@ class PINTDiscoveryError(Exception):
 
 
 def get_category_mapping_from_pint() -> Dict[str, str]:
-    """Discover component category mappings from PINT.
+    """Get component category mappings from PINT.
 
     Returns:
         Dictionary mapping parameter type names to PINT category names
     """
-    from pint.models.model_builder import AllComponents
-
-    try:
-        all_components = AllComponents()
-        component_category_map = all_components.component_category_map
-
-        # Map our parameter type names to PINT categories
-        # This mapping is based on the actual PINT category names
-        type_to_category = {}
-
-        # Check what categories are actually available in PINT
-        available_categories = set(component_category_map.values())
-
-        # Map our parameter types to PINT categories
-        if "astrometry" in available_categories:
-            type_to_category["astrometry"] = "astrometry"
-        if "spindown" in available_categories:
-            type_to_category["spindown"] = "spindown"
-        if "pulsar_system" in available_categories:
-            type_to_category["binary"] = "pulsar_system"
-        if "dispersion_constant" in available_categories:
-            type_to_category["dispersion"] = "dispersion_constant"
-
-        return type_to_category
-
-    except Exception:
-        # Fallback to known mappings if PINT discovery fails
-        return {
-            "astrometry": "astrometry",
-            "spindown": "spindown",
-            "binary": "pulsar_system",
-            "dispersion": "dispersion_constant",
-        }
+    return {
+        "astrometry": "astrometry",
+        "spindown": "spindown",
+        "binary": "pulsar_system",
+        "dispersion": "dispersion_constant",
+    }
 
 
 def get_parameters_by_type_from_pint(param_type: str) -> List[str]:
@@ -129,8 +102,8 @@ def get_parameter_aliases_from_pint() -> Dict[str, str]:
         # Keep only simple parameter aliases
         simple_aliases = {}
         for alias, canonical in alias_map.items():
-            # Skip coordinate system aliases
-            if not _is_coordinate_alias(alias, canonical):
+            # Skip coordinate system aliases (astrometry parameters)
+            if not _is_astrometry_parameter(alias):
                 simple_aliases[alias] = canonical
 
         # Add missing aliases that PINT doesn't have but legacy expects
@@ -203,44 +176,25 @@ def get_parameter_identifiability_from_model(
     return True
 
 
-def _is_coordinate_alias(alias: str, canonical: str) -> bool:
-    """Check if alias is coordinate-related (should be handled at component level)"""
-    # Dynamically discover coordinate parameters from PINT astrometry components
-    try:
-        from pint.models.model_builder import AllComponents
+def _is_astrometry_parameter(param_name: str) -> bool:
+    """Check if parameter is astrometry-related by discovering from PINT components."""
+    from pint.models.model_builder import AllComponents
 
-        all_components = AllComponents()
+    all_components = AllComponents()
 
-        coordinate_params = set()
-        astrometry_components = all_components.category_component_map.get(
-            "astrometry", []
-        )
+    # Get all astrometry components from PINT
+    astrometry_components = all_components.category_component_map.get("astrometry", [])
 
-        for component_name in astrometry_components:
-            try:
-                # Access component from the components dictionary
-                component_instance = all_components.components[component_name]
-                if hasattr(component_instance, "params"):
-                    coordinate_params.update(component_instance.params)
-            except (KeyError, AttributeError, TypeError, Exception):
-                continue
+    # Collect all parameters from astrometry components
+    astrometry_params = set()
+    for component_name in astrometry_components:
+        try:
+            # Access component from the components dictionary
+            component_instance = all_components.components[component_name]
+            if hasattr(component_instance, "params"):
+                astrometry_params.update(component_instance.params)
+        except (KeyError, AttributeError, TypeError, Exception):
+            # Component not available or can't be instantiated, continue
+            continue
 
-        return alias in coordinate_params and canonical in coordinate_params
-
-    except Exception:
-        # Minimal fallback if PINT discovery fails
-        coordinate_params = {
-            "RAJ",
-            "DECJ",
-            "ELONG",
-            "ELAT",
-            "LAMBDA",
-            "BETA",
-            "PMRA",
-            "PMDEC",
-            "PMELONG",
-            "PMELAT",
-            "PMLAMBDA",
-            "PMBETA",
-        }
-        return alias in coordinate_params and canonical in coordinate_params
+    return param_name in astrometry_params

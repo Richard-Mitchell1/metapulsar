@@ -8,7 +8,7 @@ from ipta_metapulsar.pint_helpers import (
     check_component_available_in_model,
     get_parameter_identifiability_from_model,
     PINTDiscoveryError,
-    _is_coordinate_alias,
+    _is_astrometry_parameter,
 )
 
 
@@ -211,13 +211,13 @@ class TestGetParameterIdentifiabilityFromModel:
         assert result is False
 
 
-class TestIsCoordinateAlias:
-    """Test _is_coordinate_alias helper function."""
+class TestIsAstrometryParameter:
+    """Test _is_astrometry_parameter helper function."""
 
-    def test_coordinate_alias_true(self):
-        """Test that coordinate aliases are correctly identified."""
+    def test_astrometry_parameter_true(self):
+        """Test that astrometry parameters are correctly identified."""
         with patch("ipta_metapulsar.pint_helpers.AllComponents") as mock_all_components:
-            # Mock astrometry components for coordinate detection
+            # Mock astrometry components for parameter detection
             mock_instance = Mock()
             mock_instance.category_component_map = {
                 "astrometry": ["AstrometryEquatorial", "AstrometryEcliptic"]
@@ -238,15 +238,15 @@ class TestIsCoordinateAlias:
 
             mock_all_components.return_value = mock_instance
 
-            assert _is_coordinate_alias("RAJ", "ELONG") is True
-            assert _is_coordinate_alias("ELONG", "RAJ") is True
-            assert _is_coordinate_alias("PMRA", "PMELONG") is True
-            assert _is_coordinate_alias("PMELONG", "PMRA") is True
+            assert _is_astrometry_parameter("RAJ") is True
+            assert _is_astrometry_parameter("ELONG") is True
+            assert _is_astrometry_parameter("PMRA") is True
+            assert _is_astrometry_parameter("PMELONG") is True
 
-    def test_coordinate_alias_false(self):
-        """Test that non-coordinate aliases are correctly identified."""
+    def test_astrometry_parameter_false(self):
+        """Test that non-astrometry parameters are correctly identified."""
         with patch("ipta_metapulsar.pint_helpers.AllComponents") as mock_all_components:
-            # Mock astrometry components for coordinate detection
+            # Mock astrometry components for parameter detection
             mock_instance = Mock()
             mock_instance.category_component_map = {
                 "astrometry": ["AstrometryEquatorial", "AstrometryEcliptic"]
@@ -267,6 +267,6 @@ class TestIsCoordinateAlias:
 
             mock_all_components.return_value = mock_instance
 
-            assert _is_coordinate_alias("XDOT", "A1DOT") is False
-            assert _is_coordinate_alias("E", "ECC") is False
-            assert _is_coordinate_alias("F0", "F0") is False
+            assert _is_astrometry_parameter("XDOT") is False
+            assert _is_astrometry_parameter("E") is False
+            assert _is_astrometry_parameter("F0") is False

@@ -4,6 +4,7 @@ These tests verify that the new refactored implementation produces
 identical results to the legacy metapulsar.py implementation.
 """
 
+import pytest
 from unittest.mock import Mock, patch
 from pint.models import TimingModel
 from ipta_metapulsar.metapulsar_parameter_manager import (
@@ -60,6 +61,7 @@ class TestLegacyCompatibility:
             "NANOGrav": self.mock_nanograv_model,
         }
 
+    @pytest.mark.slow
     @patch(
         "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
     )
@@ -112,6 +114,7 @@ class TestLegacyCompatibility:
         for param in expected_params:
             assert param in merge_pars
 
+    @pytest.mark.slow
     @patch(
         "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
     )
@@ -155,6 +158,7 @@ class TestLegacyCompatibility:
                 model = self.pint_models[pta_name]
                 assert original_param in model.params
 
+    @pytest.mark.slow
     @patch(
         "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
     )
@@ -175,6 +179,7 @@ class TestLegacyCompatibility:
             manager.resolver.check_component_available_across_ptas("astrometry") is True
         )
 
+    @pytest.mark.slow
     @patch(
         "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
     )
@@ -190,6 +195,7 @@ class TestLegacyCompatibility:
         assert manager.resolver.resolve_parameter_equivalence("E") == "ECC"
         assert manager.resolver.resolve_parameter_equivalence("STIG") == "STIGMA"
 
+    @pytest.mark.slow
     @patch(
         "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
     )
@@ -212,6 +218,7 @@ class TestLegacyCompatibility:
             manager.resolver.check_parameter_available_across_ptas("UNKNOWN") is False
         )
 
+    @pytest.mark.slow
     @patch(
         "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
     )
@@ -232,6 +239,7 @@ class TestLegacyCompatibility:
         # DECJ should not be identifiable in EPTA (not free)
         assert manager.resolver.check_parameter_identifiable("EPTA", "DECJ") is False
 
+    @pytest.mark.slow
     @patch(
         "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
     )
@@ -247,6 +255,7 @@ class TestLegacyCompatibility:
         assert manager.resolver.check_parameter_available_across_ptas("RAJ") is True
         assert manager.resolver.check_parameter_available_across_ptas("ELONG") is True
 
+    @pytest.mark.slow
     @patch(
         "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
     )
