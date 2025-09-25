@@ -8,7 +8,7 @@ from ipta_metapulsar.pint_helpers import (
     check_component_available_in_model,
     get_parameter_identifiability_from_model,
     PINTDiscoveryError,
-    _is_astrometry_parameter
+    _is_astrometry_parameter,
 )
 
 
@@ -270,4 +270,3 @@ class TestIsAstrometryParameter:
             assert _is_astrometry_parameter("XDOT") is False
             assert _is_astrometry_parameter("E") is False
             assert _is_astrometry_parameter("F0") is False
-

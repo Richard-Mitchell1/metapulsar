@@ -198,4 +198,3 @@ def _is_astrometry_parameter(param_name: str) -> bool:
             continue
 
     return param_name in astrometry_params
-
