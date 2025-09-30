@@ -24,6 +24,11 @@ class MetaPulsar:
     pulsars : dict
         Dictionary with PTA names as keys and pulsar objects as values.
         Format: {'pta1': (pint_model, pint_toas), 'pta2': t2_psr, ...}
+    combination_strategy : str, optional
+        Strategy used to create this MetaPulsar. Options are:
+        - "composite": Use raw par files without modification (Borg/FrankenStat method)
+        - "consistent": Use astrophysically consistent par files (harmonized parameters)
+        Default is "composite".
     sort : bool, optional
         Whether to sort the data by time. Default is True.
     planets : bool, optional
@@ -47,6 +52,7 @@ class MetaPulsar:
     def __init__(
         self,
         pulsars: Dict[str, Union[Tuple, object]],
+        combination_strategy: str = "composite",
         sort: bool = True,
         planets: bool = True,
         drop_t2pulsar: bool = True,
@@ -59,6 +65,7 @@ class MetaPulsar:
         """Initialize MetaPulsar with multiple pulsar objects."""
 
         self.pulsars = pulsars
+        self.combination_strategy = combination_strategy
         self.sort = sort
         self.planets = planets
         self.drop_t2pulsar = drop_t2pulsar
@@ -96,6 +103,36 @@ class MetaPulsar:
                 )
 
     # PINT parameter discovery methods will be implemented
+
+    def get_combination_strategy(self) -> str:
+        """Get the combination strategy used for this MetaPulsar.
+
+        Returns
+        -------
+        str
+            The combination strategy: "composite" or "consistent"
+        """
+        return self.combination_strategy
+
+    def is_composite_strategy(self) -> bool:
+        """Check if this MetaPulsar uses the composite combination strategy.
+
+        Returns
+        -------
+        bool
+            True if using composite strategy, False if using consistent strategy
+        """
+        return self.combination_strategy == "composite"
+
+    def is_consistent_strategy(self) -> bool:
+        """Check if this MetaPulsar uses the consistent combination strategy.
+
+        Returns
+        -------
+        bool
+            True if using consistent strategy, False if using composite strategy
+        """
+        return self.combination_strategy == "consistent"
 
     def drop_pulsars(self, drop_t2pulsar=True, drop_pintpsr=True):
         """Drop the original pulsar objects if required"""
