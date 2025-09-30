@@ -242,6 +242,140 @@ class TestParFileManager:
             assert "UNITS TDB" in result["epta_dr2"]
             assert "UNITS TDB" in result["ppta_dr2"]
 
+    def test_make_parameters_consistent_spin(self):
+        """Test making spin parameters consistent."""
+        parfile_data = {
+            "epta_dr2": "F0 123.456 1\nF1 -1.23e-15 1\nPEPOCH 55000.0\n",
+            "ppta_dr2": "F0 124.000 1\nF1 -1.50e-15 1\nPEPOCH 55000.0\n",
+        }
+
+        result = self.manager._make_parameters_consistent(
+            parfile_data, "epta_dr2", ["spin"], False
+        )
+
+        # Both should have the same F0 and F1 values from reference PTA
+        # PINT as_parfile() format: "F0                                123.456 1 0.0"
+        assert "F0                                123.456 1" in result["epta_dr2"]
+        assert "F1                              -1.23e-15 1" in result["epta_dr2"]
+        assert "F0                                123.456 1" in result["ppta_dr2"]
+        assert "F1                              -1.23e-15 1" in result["ppta_dr2"]
+
+    def test_make_parameters_consistent_dm_with_derivatives(self):
+        """Test making DM parameters consistent with derivatives."""
+        parfile_data = {
+            "epta_dr2": "DM 10.5 1\nDMEPOCH 55000.0\nDM1 0.1 1\nDM2 0.01 1\n",
+            "ppta_dr2": "DM 11.0 1\nDMEPOCH 55000.0\nDMX_001 0.1 1\n",
+        }
+
+        result = self.manager._make_parameters_consistent(
+            parfile_data, "epta_dr2", ["dispersion"], True
+        )
+
+        # Both should have the same DM values from reference PTA
+        # Custom format: "DM    10.5 1"
+        assert "DM    10.5 1" in result["epta_dr2"]
+        assert "DM    10.5 1" in result["ppta_dr2"]
+        assert "DM1    0.1 1" in result["epta_dr2"]
+        assert "DM1    0.1 1" in result["ppta_dr2"]
+        assert "DM2    0.01 1" in result["epta_dr2"]
+        assert "DM2    0.01 1" in result["ppta_dr2"]
+
+        # DMX parameters should be removed from non-reference PTA
+        assert "DMX_001" not in result["ppta_dr2"]
+
+    def test_make_parameters_consistent_dm_without_derivatives(self):
+        """Test making DM parameters consistent without adding derivatives."""
+        parfile_data = {
+            "epta_dr2": "DM 10.5 1\nDMEPOCH 55000.0\nDM1 0.1 1\n",
+            "ppta_dr2": "DM 11.0 1\nDMEPOCH 55000.0\nDM1 0.2 1\n",
+        }
+
+        result = self.manager._make_parameters_consistent(
+            parfile_data, "epta_dr2", ["dispersion"], False
+        )
+
+        # Both should have the same DM values from reference PTA
+        assert "DM    10.5 1" in result["epta_dr2"]
+        assert "DM    10.5 1" in result["ppta_dr2"]
+        assert "DM1    0.1 1" in result["epta_dr2"]
+        assert "DM1    0.1 1" in result["ppta_dr2"]  # Aligned to reference
+
+    def test_make_parameters_consistent_astrometry(self):
+        """Test making astrometry parameters consistent."""
+        parfile_data = {
+            "epta_dr2": "RAJ 12:34:56.789\nDECJ 12:34:56.789\nPMRA 10.5 1\n",
+            "ppta_dr2": "RAJ 12:35:00.000\nDECJ 12:35:00.000\nPMRA 11.0 1\n",
+        }
+
+        result = self.manager._make_parameters_consistent(
+            parfile_data, "epta_dr2", ["astrometry"], False
+        )
+
+        # Both should have the same astrometry values from reference PTA
+        assert "RAJ    12:34:56.789" in result["epta_dr2"]
+        assert "RAJ    12:34:56.789" in result["ppta_dr2"]
+        assert "DECJ    12:34:56.789" in result["epta_dr2"]
+        assert "DECJ    12:34:56.789" in result["ppta_dr2"]
+        assert "PMRA    10.5 1" in result["epta_dr2"]
+        assert "PMRA    10.5 1" in result["ppta_dr2"]
+
+    def test_make_parameters_consistent_dm_derivatives_warning(self):
+        """Test warning when add_dm_derivatives=True but dispersion not in combine_components."""
+        parfile_data = {"epta_dr2": "F0 123.456 1\n", "ppta_dr2": "F0 124.000 1\n"}
+
+        with patch("loguru.logger.warning") as mock_warning:
+            self.manager._make_parameters_consistent(
+                parfile_data,
+                "epta_dr2",
+                ["spin"],
+                True,  # add_dm_derivatives=True but no 'dispersion'
+            )
+
+            # Should issue warning about DM derivatives
+            warning_calls = [
+                call
+                for call in mock_warning.call_args_list
+                if "add_dm_derivatives=True but 'dispersion' not in combine_components"
+                in str(call)
+            ]
+            assert len(warning_calls) == 1
+
+    def test_get_component_parameters(self):
+        """Test getting component parameters."""
+        spin_params = self.manager._get_component_parameters("spin")
+        assert "F0" in spin_params
+        assert "F1" in spin_params
+        assert "PEPOCH" in spin_params
+
+        astrometry_params = self.manager._get_component_parameters("astrometry")
+        assert "RAJ" in astrometry_params
+        assert "DECJ" in astrometry_params
+        assert "PMRA" in astrometry_params
+
+        binary_params = self.manager._get_component_parameters("binary")
+        assert "PB" in binary_params
+        assert "A1" in binary_params
+        assert "ECC" in binary_params
+
+        # Test unknown component
+        unknown_params = self.manager._get_component_parameters("unknown")
+        assert unknown_params == []
+
+    def test_dict_to_parfile_string(self):
+        """Test converting par file dictionary back to string."""
+        parfile_dict = {
+            "F0": [["123.456", "1"]],
+            "F1": [["-1.23e-15", "1"]],
+            "PEPOCH": [["55000.0", "1"]],
+        }
+
+        result = self.manager._dict_to_parfile_string(parfile_dict)
+
+        # PINT as_parfile() format: "F0                                123.456 1 0.0"
+        assert "F0                                123.456 1" in result
+        assert "F1                              -1.23e-15 1" in result
+        assert "PEPOCH             55000.0000000000000000" in result
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

@@ -55,21 +55,26 @@ def get_parameters_by_type_from_pint(param_type: str) -> List[str]:
 
         # Get all parameters from components with matching category
         all_params = set()
-        astrometry_components = all_components.category_component_map.get(
+        category_components = all_components.category_component_map.get(
             target_category, []
         )
 
-        for component_name in astrometry_components:
+        for component_name in category_components:
             try:
-                component_class = getattr(all_components, component_name)
-                # Create an instance to get the params
-                component_instance = component_class()
+                # Components are already instantiated in all_components.components
+                component_instance = all_components.components[component_name]
                 if hasattr(component_instance, "params"):
                     all_params.update(component_instance.params)
 
-            except (AttributeError, TypeError, Exception):
+            except (KeyError, AttributeError, TypeError, Exception):
                 # Component not available, continue
                 continue
+
+        # Add derivative parameters that are commonly used but not in base components
+        if param_type == "spindown":
+            # Add common frequency derivatives
+            all_params.update([f"F{i}" for i in range(1, 20)])  # F1, F2, ..., F19
+            all_params.update([f"P{i}" for i in range(1, 20)])  # P1, P2, ..., P19
 
         logger.debug(f"Discovered {len(all_params)} parameters for type '{param_type}'")
         return list(all_params)

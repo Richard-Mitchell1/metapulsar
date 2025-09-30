@@ -41,7 +41,7 @@ class ParFileManager:
         self.registry = registry or PTARegistry()
         self.logger = logger
 
-    def make_parfiles_consistent(
+    def write_consistent_parfiles(
         self,
         pulsar_name: str,
         pta_names: List[str] = None,
@@ -57,11 +57,11 @@ class ParFileManager:
             pta_names: List of PTA names to include. If None, uses all available.
             reference_pta: PTA to use as reference. If None, auto-selects.
             combine_components: List of components to make consistent:
-                ['spin', 'astrometry', 'binary', 'dm']. If None, makes all consistent.
+                ['spin', 'astrometry', 'binary', 'dispersion']. If None, makes all consistent.
             add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files.
                 If True: Add DM1, DM2 if missing, align values if present.
                 If False: Do not add DM parameters, but align existing DM1, DM2 to reference PTA.
-                Note: Only effective when 'dm' is in combine_components. Otherwise, a warning is issued.
+                Note: Only effective when 'dispersion' is in combine_components. Otherwise, a warning is issued.
             output_dir: Directory to save consistent par files. If None, uses temp dir.
                 Output files are named as: f"{pulsar_name}_{pta_name}.par"
 
@@ -289,38 +289,282 @@ class ParFileManager:
         )
 
         # Validate add_dm_derivatives parameter
-        if add_dm_derivatives and "dm" not in combine_components:
+        if add_dm_derivatives and "dispersion" not in combine_components:
             self.logger.warning(
-                "add_dm_derivatives=True but 'dm' not in combine_components. Ignoring add_dm_derivatives."
+                "add_dm_derivatives=True but 'dispersion' not in combine_components. "
+                "Ignoring DM derivatives parameter."
             )
             add_dm_derivatives = False
 
-        # Parse reference PTA par file
-        # TODO: Use reference_parfile for parameter consistency logic
-        # reference_parfile = parfile_data[reference_pta]
-        # reference_params = parse_parfile(StringIO(reference_parfile))
-
-        consistent_parfiles = {}
-
+        # Parse all par files
+        parfile_dicts = {}
         for pta_name, parfile_content in parfile_data.items():
-            if pta_name == reference_pta:
-                # Keep reference PTA as-is
-                consistent_parfiles[pta_name] = parfile_content
-                continue
+            try:
+                parfile_dict = parse_parfile(StringIO(parfile_content))
+                parfile_dicts[pta_name] = parfile_dict
+                self.logger.debug(f"Parsed par file for PTA {pta_name}")
+            except Exception as e:
+                self.logger.error(f"Error parsing par file for PTA {pta_name}: {e}")
+                raise RuntimeError(
+                    f"Failed to parse par file for PTA {pta_name}"
+                ) from e
 
-            self.logger.debug(f"Making parameters consistent for PTA: {pta_name}")
+        # Get reference PTA parameters
+        reference_dict = parfile_dicts[reference_pta]
+        self.logger.debug(f"Using reference PTA {reference_pta} for parameter values")
 
-            # Parse current PTA par file
-            # TODO: Use current_params for parameter consistency logic
-            # current_params = parse_parfile(StringIO(parfile_content))
+        # Process each component
+        for component in combine_components:
+            self.logger.info(f"Making {component} parameters consistent")
 
-            # TODO: Implement parameter consistency logic
-            # This will be implemented in the next step
+            if component == "dispersion":
+                # Handle dispersion parameters with special logic for DMX removal and derivatives
+                self._make_dm_parameters_consistent(
+                    parfile_dicts, reference_dict, reference_pta, add_dm_derivatives
+                )
+            else:
+                # Handle other components using standard parameter consistency logic
+                self._make_component_parameters_consistent(
+                    parfile_dicts, reference_dict, reference_pta, component
+                )
 
-            # For now, return the original content
-            consistent_parfiles[pta_name] = parfile_content
+        # Convert back to par file strings
+        consistent_parfiles = {}
+        for pta_name, parfile_dict in parfile_dicts.items():
+            try:
+                consistent_content = self._dict_to_parfile_string(parfile_dict)
+                consistent_parfiles[pta_name] = consistent_content
+                self.logger.debug(f"Converted PTA {pta_name} par file back to string")
+            except Exception as e:
+                self.logger.error(f"Error converting par file for PTA {pta_name}: {e}")
+                raise RuntimeError(
+                    f"Failed to convert par file for PTA {pta_name}"
+                ) from e
 
         return consistent_parfiles
+
+    def _make_component_parameters_consistent(
+        self,
+        parfile_dicts: Dict[str, Dict],
+        reference_dict: Dict,
+        reference_pta: str,
+        component: str,
+    ) -> None:
+        """Make parameters for a specific component consistent.
+
+        Args:
+            parfile_dicts: Dictionary mapping PTA names to parsed par file dictionaries
+            reference_dict: Reference PTA par file dictionary
+            reference_pta: Name of the reference PTA
+            component: Component name ('spin', 'astrometry', 'binary')
+        """
+        # Get parameters for this component
+        component_params = self._get_component_parameters(component)
+
+        # Extract reference values
+        reference_values = {}
+        for param in component_params:
+            if param in reference_dict:
+                reference_values[param] = reference_dict[param]
+                self.logger.debug(f"Reference {param}: {reference_dict[param]}")
+
+        # Apply to all PTAs
+        for pta_name, parfile_dict in parfile_dicts.items():
+            if pta_name == reference_pta:
+                continue  # Skip reference PTA
+
+            # Remove existing parameters
+            for param in component_params:
+                if param in parfile_dict:
+                    old_value = parfile_dict[param]
+                    parfile_dict.pop(param)
+                    self.logger.debug(f"PTA {pta_name}: Removed {param} = {old_value}")
+
+            # Add reference values
+            for param, value in reference_values.items():
+                parfile_dict[param] = value
+                self.logger.debug(f"PTA {pta_name}: Set {param} = {value}")
+
+    def _make_dm_parameters_consistent(
+        self,
+        parfile_dicts: Dict[str, Dict],
+        reference_dict: Dict,
+        reference_pta: str,
+        add_dm_derivatives: bool,
+    ) -> None:
+        """Make DM parameters consistent with special handling for DMX and derivatives.
+
+        Args:
+            parfile_dicts: Dictionary mapping PTA names to parsed par file dictionaries
+            reference_dict: Reference PTA par file dictionary
+            reference_pta: Name of the reference PTA
+            add_dm_derivatives: Whether to add DM1, DM2 parameters
+        """
+        # Extract reference DM values
+        reference_dm = reference_dict.get("DM", [["0.0", "1"]])[0]
+        if isinstance(reference_dm, list):
+            reference_dm = reference_dm[0]
+        else:
+            reference_dm = reference_dm.split()[0]
+
+        reference_dm1 = reference_dict.get("DM1", [["0.0", "1"]])[0]
+        if isinstance(reference_dm1, list):
+            reference_dm1 = reference_dm1[0]
+        else:
+            reference_dm1 = reference_dm1.split()[0]
+
+        reference_dm2 = reference_dict.get("DM2", [["0.0", "1"]])[0]
+        if isinstance(reference_dm2, list):
+            reference_dm2 = reference_dm2[0]
+        else:
+            reference_dm2 = reference_dm2.split()[0]
+
+        reference_dmepoch = reference_dict.get("DMEPOCH", [["55000.0", "1"]])[0]
+        if isinstance(reference_dmepoch, list):
+            reference_dmepoch = reference_dmepoch[0]
+        else:
+            reference_dmepoch = reference_dmepoch.split()[0]
+
+        self.logger.debug(
+            f"Reference DM values: DM={reference_dm}, DM1={reference_dm1}, DM2={reference_dm2}, DMEPOCH={reference_dmepoch}"
+        )
+
+        # Process each PTA (including reference PTA)
+        for pta_name, parfile_dict in parfile_dicts.items():
+            # Remove all DMX parameters from ALL PTAs
+            dmx_params = [key for key in parfile_dict.keys() if key.startswith("DMX")]
+            for dmx_param in dmx_params:
+                old_value = parfile_dict[dmx_param]
+                parfile_dict.pop(dmx_param)
+                self.logger.debug(f"PTA {pta_name}: Removed {dmx_param} = {old_value}")
+
+            # Set DM parameter for ALL PTAs
+            parfile_dict["DM"] = [[f"{reference_dm}", "1"]]
+            self.logger.debug(f"PTA {pta_name}: Set DM = {reference_dm}")
+
+            # Set DMEPOCH for ALL PTAs
+            parfile_dict["DMEPOCH"] = [[f"{reference_dmepoch}", "1"]]
+            self.logger.debug(f"PTA {pta_name}: Set DMEPOCH = {reference_dmepoch}")
+
+            # Handle DM derivatives for ALL PTAs
+            if add_dm_derivatives:
+                # Add DM1 and DM2 to ALL PTAs
+                parfile_dict["DM1"] = [[f"{reference_dm1}", "1"]]
+                parfile_dict["DM2"] = [[f"{reference_dm2}", "1"]]
+                self.logger.debug(
+                    f"PTA {pta_name}: Added DM1 = {reference_dm1}, DM2 = {reference_dm2}"
+                )
+            else:
+                # Align existing DM1, DM2 if present in ALL PTAs
+                if "DM1" in parfile_dict:
+                    old_dm1 = parfile_dict["DM1"][0]
+                    if isinstance(old_dm1, list):
+                        old_dm1 = old_dm1[0]
+                    else:
+                        old_dm1 = old_dm1.split()[0]
+                    parfile_dict["DM1"] = [[f"{reference_dm1}", "1"]]
+                    self.logger.debug(
+                        f"PTA {pta_name}: Aligned DM1: {old_dm1} -> {reference_dm1}"
+                    )
+
+                if "DM2" in parfile_dict:
+                    old_dm2 = parfile_dict["DM2"][0]
+                    if isinstance(old_dm2, list):
+                        old_dm2 = old_dm2[0]
+                    else:
+                        old_dm2 = old_dm2.split()[0]
+                    parfile_dict["DM2"] = [[f"{reference_dm2}", "1"]]
+                    self.logger.debug(
+                        f"PTA {pta_name}: Aligned DM2: {old_dm2} -> {reference_dm2}"
+                    )
+
+    def _get_component_parameters(self, component: str) -> List[str]:
+        """Get parameter names for a specific component using SSOT from pint_helpers.
+
+        Args:
+            component: Component name ('spin', 'astrometry', 'binary', 'dispersion')
+
+        Returns:
+            List of parameter names for the component
+        """
+        from .pint_helpers import get_parameters_by_type_from_pint
+
+        # Map component names to parameter types
+        component_mapping = {
+            "spin": "spindown",
+            "astrometry": "astrometry",
+            "binary": "binary",
+            "dispersion": "dispersion",
+        }
+
+        param_type = component_mapping.get(component)
+        if not param_type:
+            self.logger.warning(f"Unknown component: {component}")
+            return []
+
+        try:
+            # Use SSOT from pint_helpers
+            params = get_parameters_by_type_from_pint(param_type)
+            self.logger.debug(
+                f"Discovered {len(params)} parameters for {component}: {params}"
+            )
+            return params
+        except Exception as e:
+            self.logger.error(f"Failed to get parameters for {component}: {e}")
+            raise RuntimeError(
+                f"Failed to discover parameters for component '{component}': {e}"
+            ) from e
+
+    def _dict_to_parfile_string(self, parfile_dict: Dict) -> str:
+        """Convert par file dictionary back to string format.
+
+        Uses PINT's as_parfile() method when possible, falls back to custom implementation.
+
+        Args:
+            parfile_dict: Parsed par file dictionary
+
+        Returns:
+            Par file content as string
+        """
+        try:
+            # Try to use PINT's as_parfile() method
+            # First convert dict back to string format, then create model
+            temp_content = self._dict_to_parfile_string_custom(parfile_dict)
+
+            # Create PINT model from string
+            mb = ModelBuilder()
+            model = mb(StringIO(temp_content))
+
+            # Use PINT's as_parfile() method
+            return model.as_parfile()
+
+        except Exception as e:
+            self.logger.debug(
+                f"PINT as_parfile() failed, using custom implementation: {e}"
+            )
+            return self._dict_to_parfile_string_custom(parfile_dict)
+
+    def _dict_to_parfile_string_custom(self, parfile_dict: Dict) -> str:
+        """Custom implementation for converting par file dictionary to string.
+
+        Args:
+            parfile_dict: Parsed par file dictionary
+
+        Returns:
+            Par file content as string
+        """
+        lines = []
+        for param_name, param_values in parfile_dict.items():
+            for param_value in param_values:
+                if isinstance(param_value, list):
+                    # Handle list format: [value, error]
+                    value_str = " ".join(str(v) for v in param_value)
+                else:
+                    # Handle string format
+                    value_str = str(param_value)
+                lines.append(f"{param_name}    {value_str}")
+
+        return "\n".join(lines) + "\n"
 
     def _determine_parfile_units(
         self, parfile_paths: Dict[str, Path]

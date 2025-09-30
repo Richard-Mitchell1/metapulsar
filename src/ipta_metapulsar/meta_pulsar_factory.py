@@ -17,6 +17,10 @@ except ImportError:
     PintPulsar = None
     Tempo2Pulsar = None
 
+# Import MetaPulsar and ParFileManager
+from .metapulsar import MetaPulsar
+from .parfile_manager import ParFileManager
+
 # Import PINT for model creation
 try:
     from pint.models import get_model_and_toas
@@ -30,7 +34,6 @@ except ImportError:
     t2 = None
 
 from .pta_registry import PTARegistry
-from .metapulsar import MetaPulsar
 from .position_helpers import j_name_from_pulsar
 
 
@@ -49,6 +52,7 @@ class MetaPulsarFactory:
         """
         self.registry = registry or PTARegistry()
         self.logger = logger
+        self.parfile_manager = ParFileManager(registry=self.registry)
 
         # Check dependencies
         self._check_dependencies()
@@ -73,63 +77,139 @@ class MetaPulsarFactory:
             )
 
     def create_metapulsar(
-        self, pulsar_name: str, pta_names: List[str] = None
+        self,
+        pulsar_name: str,
+        pta_names: List[str] = None,
+        combination_strategy: str = "composite",
+        reference_pta: str = None,
+        combine_components: List[str] = None,
+        add_dm_derivatives: bool = True,
     ) -> MetaPulsar:
-        """Create MetaPulsar by creating Enterprise Pulsars for each PTA.
+        """Create MetaPulsar using specified combination strategy.
 
         Args:
-            pulsar_name: Name of the pulsar to create MetaPulsar for
-            pta_names: List of PTA names to include. If None, uses all available PTAs.
+            pulsar_name: Name of the pulsar
+            pta_names: List of PTA names to include. If None, uses all available.
+            combination_strategy: Strategy for combining PTAs:
+                - "composite": Multi-PTA composition (preserves original parameters, Borg/FrankenStat methods)
+                - "consistent": Astrophysical consistency (modifies par files for consistency)
+            reference_pta: PTA to use as reference (for consistent strategy)
+            combine_components: List of components to make consistent (for consistent strategy)
+            add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files (for consistent strategy)
 
         Returns:
-            MetaPulsar object containing Enterprise Pulsars from all available PTAs
+            MetaPulsar object
 
         Raises:
-            ValueError: If no files found for the pulsar
+            ValueError: If no files found for the pulsar or invalid parameters
             RuntimeError: If Enterprise Pulsar creation fails
         """
-        self.logger.info(f"Creating MetaPulsar for {pulsar_name}")
-
-        # 1. Get PTA configurations
-        pta_configs = (
-            self.registry.get_pta_subset(pta_names)
-            if pta_names
-            else self.registry.configs
-        )
-
-        # 2. Discover files
-        file_pairs = self._discover_files(pulsar_name, pta_configs)
-
-        if not file_pairs:
-            raise ValueError(f"No files found for pulsar {pulsar_name}")
-
-        self.logger.debug(
-            f"Found files for {pulsar_name} in {len(file_pairs)} PTAs: {list(file_pairs.keys())}"
-        )
-
-        # 3. Create Enterprise Pulsars
-        enterprise_pulsars = self._create_enterprise_pulsars(file_pairs, pta_configs)
-
-        # 4. Resolve canonical name
-        canonical_name = self._resolve_canonical_name(enterprise_pulsars)
-
-        # 5. Build metadata (for future use)
-        # metadata = self._build_metadata(file_pairs, pta_configs)
-
-        # 6. Create MetaPulsar directly using constructor
-        # Convert enterprise_pulsars to the format expected by MetaPulsar constructor
-        pulsars_dict = {}
-        for pta_name, enterprise_pulsar in enterprise_pulsars.items():
-            # For now, store the enterprise pulsar directly
-            # TODO: Convert to PINT model/TOAs tuple format if needed
-            pulsars_dict[pta_name] = enterprise_pulsar
-
-        metapulsar = MetaPulsar(pulsars=pulsars_dict, planets=True)
-
         self.logger.info(
-            f"Successfully created MetaPulsar {canonical_name} with {len(enterprise_pulsars)} PTAs"
+            f"Creating MetaPulsar for {pulsar_name} using {combination_strategy} strategy"
         )
-        return metapulsar
+
+        if combination_strategy == "consistent":
+            return self._create_consistent_metapulsar(
+                pulsar_name,
+                pta_names,
+                reference_pta,
+                combine_components,
+                add_dm_derivatives,
+            )
+        elif combination_strategy == "composite":
+            return self._create_composite_metapulsar(pulsar_name, pta_names)
+        else:
+            raise ValueError(f"Unknown combination strategy: {combination_strategy}")
+
+    def list_available_pulsars(self, pta_names: List[str] = None) -> List[str]:
+        """List all available pulsars across specified PTAs.
+
+        Args:
+            pta_names: List of PTA names to search. If None, searches all PTAs.
+
+        Returns:
+            List of pulsar names found across all specified PTAs
+        """
+        return self.discover_available_pulsars(pta_names)
+
+    def _create_consistent_metapulsar(
+        self,
+        pulsar_name: str,
+        pta_names: List[str],
+        reference_pta: str,
+        combine_components: List[str],
+        add_dm_derivatives: bool,
+    ) -> MetaPulsar:
+        """Create MetaPulsar with astrophysically consistent parameters."""
+        # 1. Make par files consistent
+        consistent_files = self.parfile_manager.write_consistent_parfiles(
+            pulsar_name,
+            pta_names,
+            reference_pta,
+            combine_components,
+            add_dm_derivatives,
+        )
+
+        # 2. Create Enterprise Pulsars from consistent files
+        enterprise_pulsars = self._create_enterprise_pulsars_from_files(
+            consistent_files
+        )
+
+        # 3. Create MetaPulsar
+        return MetaPulsar(pulsars=enterprise_pulsars, combination_strategy="consistent")
+
+    def _create_composite_metapulsar(
+        self, pulsar_name: str, pta_names: List[str]
+    ) -> MetaPulsar:
+        """Create MetaPulsar with composite approach (preserves original parameters, Borg/FrankenStat methods)."""
+        # 1. Discover raw par files
+        raw_parfiles = self._discover_parfiles(pulsar_name, pta_names)
+
+        # 2. Create Enterprise Pulsars from raw files (no astrophysical consistency)
+        enterprise_pulsars = self._create_enterprise_pulsars_from_files(raw_parfiles)
+
+        # 3. Create MetaPulsar
+        return MetaPulsar(pulsars=enterprise_pulsars, combination_strategy="composite")
+
+    def _discover_parfiles(
+        self, pulsar_name: str, pta_names: List[str] = None
+    ) -> Dict[str, Path]:
+        """Discover par files using PTARegistry."""
+        return self.parfile_manager._discover_parfiles(pulsar_name, pta_names)
+
+    def _create_enterprise_pulsars_from_files(
+        self, file_paths: Dict[str, Path]
+    ) -> Dict[str, Any]:
+        """Create Enterprise Pulsars from file paths."""
+        enterprise_pulsars = {}
+        for pta_name, file_path in file_paths.items():
+            try:
+                # Get PTA configuration
+                pta_config = self.registry.configs[pta_name]
+
+                # Create Enterprise Pulsar based on timing package
+                if pta_config["timing_package"] == "pint":
+                    from enterprise.pulsar import PintPulsar
+
+                    enterprise_pulsars[pta_name] = PintPulsar(str(file_path))
+                elif pta_config["timing_package"] == "tempo2":
+                    from enterprise.pulsar import Tempo2Pulsar
+
+                    enterprise_pulsars[pta_name] = Tempo2Pulsar(str(file_path))
+                else:
+                    raise ValueError(
+                        f"Unknown timing package: {pta_config['timing_package']}"
+                    )
+
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to create Enterprise Pulsar for {pta_name}: {e}"
+                )
+                raise RuntimeError(
+                    f"Failed to create Enterprise Pulsar for {pta_name}"
+                ) from e
+
+        return enterprise_pulsars
 
     def create_all_metapulsars(
         self, pta_names: List[str] = None
