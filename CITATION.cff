@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+title: IPTA MetaPulsar Analysis Toolkit
+message: "If you use this software, please cite it as below."
+type: software
+authors:
+  - family-names: van Haasteren
+    given-names: Rutger
+    orcid: "https://orcid.org/0000-0002-6428-2620"
+    email: "rutger@vhaasteren.com"
+  - family-names: Yu
+    given-names: Wang-Wei
+    email: "wangwei.yu@aei.mpg.de"
+abstract: >
+  A comprehensive framework for combining pulsar timing data from multiple PTA 
+  (Pulsar Timing Array) collaborations into unified "metapulsar" objects for 
+  gravitational wave detection analysis. Supports both PINT and libstempo/tempo2 
+  timing packages with flexible parameter management and Enterprise integration.
+license: MIT
+repository-code: "https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis"
+keywords:
+  - pulsar timing
+  - gravitational waves
+  - PTA
+  - IPTA
+  - astronomy
+  - astrophysics
+  - data combination
+  - enterprise
+  - PINT
+  - tempo2
+

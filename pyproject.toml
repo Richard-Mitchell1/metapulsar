@@ -11,7 +11,7 @@ requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
     {name = "Rutger van Haasteren", email = "rutger@vhaasteren.com"},
-    {name = "OneWay Yu", email = "oneway@example.com"},
+    {name = "Wang-Wei Yu", email = "wangwei.yu@aei.mpg.de"},
 ]
 keywords = ["pulsar", "timing", "gravitational-waves", "pta", "ipta", "astronomy"]
 classifiers = [
@@ -59,10 +59,10 @@ analysis = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/ipta-metapulsar-analysis"
-Repository = "https://github.com/ipta-metapulsar-analysis"
+Homepage = "https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis"
+Repository = "https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis"
 Documentation = "https://ipta-metapulsar-analysis.readthedocs.io"
-Issues = "https://github.com/ipta-metapulsar-analysis/issues"
+Issues = "https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis/-/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

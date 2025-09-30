@@ -1,4 +1,4 @@
-.PHONY: datetime-date datetime-full datetime-filename datetime test fast help
+.PHONY: datetime-date datetime-full datetime-filename datetime test fast help install install-dev test-cov lint format clean docs check ci dev example
 
 # Date-time outputs for different use cases
 datetime-date:
@@ -20,6 +20,55 @@ test:
 fast:
 	@pytest -m "not slow"
 
+# --- Development -------------------------------------------------------------
+install:  ## Install package in production mode
+	pip install -e .
+
+install-dev:  ## Install package in development mode with all dependencies
+	pip install -e ".[dev,libstempo,analysis]"
+	pre-commit install
+
+test-cov:  ## Run tests with coverage
+	pytest --cov=src/ipta_metapulsar --cov-report=html --cov-report=term
+
+lint:  ## Run linting
+	ruff check src/ tests/
+	mypy src/
+
+format:  ## Format code
+	black src/ tests/
+	ruff check --fix src/ tests/
+
+clean:  ## Clean build artifacts
+	rm -rf build/
+	rm -rf dist/
+	rm -rf *.egg-info/
+	rm -rf .pytest_cache/
+	rm -rf .coverage
+	rm -rf htmlcov/
+	find . -type d -name __pycache__ -exec rm -rf {} +
+	find . -type f -name "*.pyc" -delete
+
+docs:  ## Build documentation
+	cd docs && make html
+
+check:  ## Run all checks (lint, format, test)
+	black --check src/ tests/
+	ruff check src/ tests/
+	mypy src/
+	pytest
+
+ci:  ## Run CI pipeline locally
+	pre-commit run --all-files
+	pytest --cov=src/ipta_metapulsar --cov-report=xml
+
+dev: install-dev  ## Quick development setup
+	@echo "Development environment ready!"
+	@echo "Run 'make test' to verify installation"
+
+example:  ## Run example scripts
+	python examples/factory_usage_example.py
+
 # --- Help -------------------------------------------------------------------
 help:
 	@echo "Available targets:"
@@ -27,6 +76,19 @@ help:
 	@echo "Testing targets:"
 	@echo "  test             - run all tests with pytest"
 	@echo "  fast             - run fast tests only (excludes slow tests)"
+	@echo "  test-cov         - run tests with coverage report"
+	@echo ""
+	@echo "Development targets:"
+	@echo "  install          - install package in production mode"
+	@echo "  install-dev      - install package in development mode"
+	@echo "  dev              - quick development setup"
+	@echo "  lint             - run code linting"
+	@echo "  format           - format code with black and ruff"
+	@echo "  clean            - clean build artifacts"
+	@echo "  docs             - build documentation"
+	@echo "  check            - run all checks (lint, format, test)"
+	@echo "  ci               - run CI pipeline locally"
+	@echo "  example          - run example scripts"
 	@echo ""
 	@echo "Date-time targets:"
 	@echo "  datetime-date     - output current date in YYYY-MM-DD format"
