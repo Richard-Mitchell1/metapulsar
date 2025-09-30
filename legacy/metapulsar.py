@@ -473,7 +473,7 @@ class MetaParfiles(object):
 
             if pfd["package"].lower() not in ["libstempo", "tempo2", "pint"]:
                 logger.error(
-                    "Package needs to be tempo2/libstempo/point"
+                    "Package needs to be tempo2/libstempo/pint"
                 )  # pragma: no cover
                 raise ValueError("Package needs to be tempo2/libstempo/pint")
             else:

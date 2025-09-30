@@ -106,34 +106,3 @@ class MetaPulsar:
                 del self._pint_models
             if hasattr(self, "_pint_toas"):
                 del self._pint_toas
-
-
-def create_metapulsar(
-    input_files, par_output_dir=None, return_metapulsar=True, planets=True
-):
-    """Create a metapulsar object
-
-    This is a placeholder function that matches the legacy API.
-
-    Parameters
-    ----------
-    input_files : list
-        List of input file dictionaries
-    par_output_dir : str, optional
-        Output directory for parfiles
-    return_metapulsar : bool, optional
-        Whether to return MetaPulsar object
-    planets : bool, optional
-        Whether to include planets
-
-    Returns
-    -------
-    MetaPulsar or list
-        MetaPulsar object or list of parfiles
-    """
-    # This is a simplified implementation
-    # In practice, this would process the input_files and create the appropriate pulsar objects
-    logger.warning("create_metapulsar is a placeholder - full implementation needed")
-
-    # For now, return a basic MetaPulsar with empty pulsars
-    return MetaPulsar(pulsars={}, planets=planets)

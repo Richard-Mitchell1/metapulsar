@@ -5,9 +5,15 @@ collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar"
 objects for gravitational wave detection.
 """
 
-from .metapulsar import MetaPulsar, create_metapulsar
+from .metapulsar import MetaPulsar
+
+# New factory architecture imports
+from .pta_registry import PTARegistry
+from .meta_pulsar_factory import MetaPulsarFactory
 
 __version__ = "0.1.0"
 __author__ = "Rutger van Haasteren, Wangwei Yu"
 __email__ = "rutger@vhaasteren.com"
-__all__ = ["MetaPulsar", "create_metapulsar"]
+
+# Export both legacy and new classes for backward compatibility
+__all__ = ["MetaPulsar", "PTARegistry", "MetaPulsarFactory"]
