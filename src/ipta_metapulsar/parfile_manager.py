@@ -4,7 +4,7 @@ This module provides functionality for managing par files across multiple PTAs,
 including making astrophysical parameters consistent and handling unit conversions.
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 from pathlib import Path
 import tempfile
 import subprocess
@@ -322,27 +322,24 @@ class ParFileManager:
 
         return consistent_parfiles
 
-    def _convert_units_if_needed(
+    def _determine_parfile_units(
         self, parfile_paths: Dict[str, Path]
-    ) -> Dict[str, str]:
-        """Convert par files to consistent units (TDB).
+    ) -> Tuple[Dict[str, str], Dict[str, str]]:
+        """Determine the units of all par files for this pulsar.
 
-        Only converts if units are mixed (some TDB, some TCB).
-        If all files have the same units, no conversion is needed.
+        Args:
+            parfile_paths: Dictionary mapping PTA names to par file paths
 
-        Implementation details:
-        1. Parse each par file using PINT's parse_parfile()
-        2. Check UNITS parameter in each par file
-        3. Determine if conversion is needed (mixed units)
-        4. Convert TCB to TDB using appropriate method:
-           - PINT files: Use ModelBuilder with allow_tcb=True, and allow_T2=True then write_parfile()
-           - Tempo2 files: Use subprocess to call 'tempo2 -gr transform parFile outputFile tdb'
-        5. Handle conversion errors with proper logging and exceptions
-        6. Return converted par file content as strings
+        Returns:
+            Tuple of (file_units, parfile_contents) where:
+            - file_units: Dictionary mapping PTA names to unit strings (TDB/TCB)
+            - parfile_contents: Dictionary mapping PTA names to par file content strings
+
+        Raises:
+            RuntimeError: If any par file cannot be read or parsed
         """
-        self.logger.info("Checking if unit conversion is needed")
+        self.logger.info("Determining units for all par files")
 
-        # First pass: check units in all files
         file_units = {}
         parfile_contents = {}
 
@@ -365,6 +362,30 @@ class ParFileManager:
                 self.logger.error(f"Error reading par file for PTA {pta_name}: {e}")
                 raise RuntimeError(f"Failed to read par file for PTA {pta_name}") from e
 
+        return file_units, parfile_contents
+
+    def _convert_units_if_needed(
+        self, parfile_paths: Dict[str, Path]
+    ) -> Dict[str, str]:
+        """Convert par files to consistent units (TDB).
+
+        Only converts if units are mixed (some TDB, some TCB).
+        If all files have the same units, no conversion is needed.
+
+        Args:
+            parfile_paths: Dictionary mapping PTA names to par file paths
+
+        Returns:
+            Dictionary mapping PTA names to par file content strings
+
+        Raises:
+            RuntimeError: If unit conversion fails
+        """
+        self.logger.info("Checking if unit conversion is needed")
+
+        # Determine units for all par files
+        file_units, parfile_contents = self._determine_parfile_units(parfile_paths)
+
         # Check if all units are the same
         unique_units = set(file_units.values())
         if len(unique_units) == 1:
@@ -378,7 +399,23 @@ class ParFileManager:
         self.logger.info(
             f"Mixed units detected: {unique_units}. Converting TCB files to TDB."
         )
+        return self._convert_mixed_units(file_units, parfile_contents)
 
+    def _convert_mixed_units(
+        self, file_units: Dict[str, str], parfile_contents: Dict[str, str]
+    ) -> Dict[str, str]:
+        """Convert par files with mixed units to consistent TDB units.
+
+        Args:
+            file_units: Dictionary mapping PTA names to unit strings
+            parfile_contents: Dictionary mapping PTA names to par file content strings
+
+        Returns:
+            Dictionary mapping PTA names to converted par file content strings
+
+        Raises:
+            RuntimeError: If unit conversion fails
+        """
         converted_parfiles = {}
 
         for pta_name, parfile_content in parfile_contents.items():
