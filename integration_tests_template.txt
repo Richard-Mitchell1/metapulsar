@@ -72,19 +72,7 @@
       * Test error handling for permission issues
       * Test graceful error reporting
 
-    4. PERFORMANCE AND SCALABILITY TESTS
-    -------------------------------------
-    - test_multiple_pta_performance()
-      * Test with 5+ PTAs and 10+ pulsars
-      * Measure discovery time and memory usage
-      * Test coordinate matching efficiency
-
-    - test_large_parfile_handling()
-      * Test with large par files (1000+ parameters)
-      * Test memory usage and processing time
-      * Test error handling for oversized files
-
-    5. END-TO-END WORKFLOW TESTS
+    4. END-TO-END WORKFLOW TESTS
     -----------------------------
     - test_complete_workflow_with_real_data()
       * Test full pipeline: discovery -> creation -> usage
