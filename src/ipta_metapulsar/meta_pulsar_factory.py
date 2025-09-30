@@ -34,7 +34,7 @@ except ImportError:
     t2 = None
 
 from .pta_registry import PTARegistry
-from .position_helpers import j_name_from_pulsar
+from .position_helpers import bj_name_from_pulsar
 
 
 class MetaPulsarFactory:
@@ -155,8 +155,16 @@ class MetaPulsarFactory:
             consistent_files
         )
 
-        # 3. Create MetaPulsar
-        return MetaPulsar(pulsars=enterprise_pulsars, combination_strategy="consistent")
+        # 3. Get canonical name
+        pta_configs = self.registry.get_pta_subset(pta_names)
+        canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
+
+        # 4. Create MetaPulsar
+        return MetaPulsar(
+            pulsars=enterprise_pulsars,
+            combination_strategy="consistent",
+            canonical_name=canonical_name,
+        )
 
     def _create_composite_metapulsar(
         self, pulsar_name: str, pta_names: List[str]
@@ -168,8 +176,16 @@ class MetaPulsarFactory:
         # 2. Create Enterprise Pulsars from raw files (no astrophysical consistency)
         enterprise_pulsars = self._create_enterprise_pulsars_from_files(raw_parfiles)
 
-        # 3. Create MetaPulsar
-        return MetaPulsar(pulsars=enterprise_pulsars, combination_strategy="composite")
+        # 3. Get canonical name
+        pta_configs = self.registry.get_pta_subset(pta_names)
+        canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
+
+        # 4. Create MetaPulsar
+        return MetaPulsar(
+            pulsars=enterprise_pulsars,
+            combination_strategy="composite",
+            canonical_name=canonical_name,
+        )
 
     def _discover_parfiles(
         self, pulsar_name: str, pta_names: List[str] = None
@@ -181,35 +197,16 @@ class MetaPulsarFactory:
         self, file_paths: Dict[str, Path]
     ) -> Dict[str, Any]:
         """Create Enterprise Pulsars from file paths."""
-        enterprise_pulsars = {}
-        for pta_name, file_path in file_paths.items():
-            try:
-                # Get PTA configuration
-                pta_config = self.registry.configs[pta_name]
+        # Convert to file pairs format (par, tim) for the existing method
+        file_pairs = {}
+        for pta_name, parfile in file_paths.items():
+            # Find corresponding tim file
+            config = self.registry.configs[pta_name]
+            timfile = self._find_timfile(parfile, config)
+            file_pairs[pta_name] = (parfile, timfile)
 
-                # Create Enterprise Pulsar based on timing package
-                if pta_config["timing_package"] == "pint":
-                    from enterprise.pulsar import PintPulsar
-
-                    enterprise_pulsars[pta_name] = PintPulsar(str(file_path))
-                elif pta_config["timing_package"] == "tempo2":
-                    from enterprise.pulsar import Tempo2Pulsar
-
-                    enterprise_pulsars[pta_name] = Tempo2Pulsar(str(file_path))
-                else:
-                    raise ValueError(
-                        f"Unknown timing package: {pta_config['timing_package']}"
-                    )
-
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to create Enterprise Pulsar for {pta_name}: {e}"
-                )
-                raise RuntimeError(
-                    f"Failed to create Enterprise Pulsar for {pta_name}"
-                ) from e
-
-        return enterprise_pulsars
+        # Use the existing method that properly handles PINT/Tempo2 creation
+        return self._create_enterprise_pulsars(file_pairs, self.registry.configs)
 
     def create_all_metapulsars(
         self, pta_names: List[str] = None
@@ -241,63 +238,153 @@ class MetaPulsarFactory:
         return metapulsars
 
     def discover_available_pulsars(self, pta_names: List[str] = None) -> List[str]:
-        """Discover all available pulsars across PTAs.
+        """Discover all available pulsars using coordinate-based matching.
 
         Args:
             pta_names: List of PTA names to search. If None, searches all PTAs.
 
         Returns:
-            List of pulsar names found across all specified PTAs
+            List of canonical pulsar names (B-names preferred, J-names as fallback)
         """
         pta_configs = (
             self.registry.get_pta_subset(pta_names)
             if pta_names
             else self.registry.configs
         )
-        all_pulsars = set()
 
-        for pta_name, config in pta_configs.items():
-            pulsars = self._discover_pulsars_in_pta(config)
-            all_pulsars.update(pulsars)
-            self.logger.debug(f"Found {len(pulsars)} pulsars in {pta_name}")
+        # Use coordinate-based discovery instead of filename-based
+        coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
 
-        pulsar_list = sorted(list(all_pulsars))
+        # Return preferred names (B-names when available, J-names otherwise)
+        pulsar_list = sorted(
+            [info["preferred_name"] for info in coordinate_map.values()]
+        )
         self.logger.info(
             f"Discovered {len(pulsar_list)} unique pulsars across {len(pta_configs)} PTAs"
         )
         return pulsar_list
 
+    def _discover_pulsars_by_coordinates(
+        self, pta_configs: Dict[str, Dict]
+    ) -> Dict[str, Dict]:
+        """Discover pulsars by reading par files and extracting coordinates."""
+        from pint.models.model_builder import parse_parfile
+
+        coordinate_map = {}
+
+        for pta_name, config in pta_configs.items():
+            for parfile_path in self._discover_parfiles_in_pta(config):
+                try:
+                    model = parse_parfile(str(parfile_path))
+                    j_name = bj_name_from_pulsar(model, "J")
+                    b_name = bj_name_from_pulsar(model, "B")
+                    suffix = self._extract_suffix_from_filename(
+                        parfile_path, config["par_pattern"]
+                    )
+
+                    if j_name not in coordinate_map:
+                        coordinate_map[j_name] = {
+                            "ptas": [],
+                            "files": {},
+                            "preferred_name": j_name,
+                            "suffix": "",
+                            "b_name": b_name,
+                        }
+
+                    coordinate_map[j_name]["ptas"].append(pta_name)
+                    coordinate_map[j_name]["files"][pta_name] = (
+                        parfile_path,
+                        self._find_timfile(parfile_path, config),
+                    )
+
+                    # Prefer B-name if available
+                    if b_name and not coordinate_map[j_name][
+                        "preferred_name"
+                    ].startswith("B"):
+                        coordinate_map[j_name]["preferred_name"] = b_name
+
+                    if suffix:
+                        coordinate_map[j_name]["suffix"] = suffix
+
+                except Exception as e:
+                    self.logger.warning(f"Failed to process {parfile_path}: {e}")
+
+        return coordinate_map
+
+    def _discover_parfiles_in_pta(self, config: Dict) -> List[Path]:
+        """Discover par files in a single PTA configuration."""
+        import re
+
+        base_dir = Path(config["base_dir"])
+        pattern = config["par_pattern"]
+
+        parfiles = []
+        for file_path in base_dir.rglob("*.par"):
+            if re.search(pattern, str(file_path)):
+                parfiles.append(file_path)
+
+        return parfiles
+
+    def _extract_suffix_from_filename(self, file_path: Path, pattern: str) -> str:
+        """Extract suffix (A, B, etc.) from filename if present."""
+        import re
+
+        match = re.search(pattern, str(file_path))
+        if match:
+            coord_part = match.group(1)
+            # Check if the coordinate part ends with a letter (suffix)
+            suffix_match = re.search(r"([A-Z])$", coord_part)
+            if suffix_match:
+                return suffix_match.group(1)
+        return ""
+
+    def _find_timfile(self, parfile_path: Path, config: Dict) -> Path:
+        """Find corresponding tim file for a par file."""
+        import re
+
+        match = re.search(config["par_pattern"], str(parfile_path))
+        if match:
+            pulsar_name = match.group(1)
+            return self._find_file(
+                pulsar_name, config["base_dir"], config["tim_pattern"]
+            )
+        return None
+
     def _discover_files(
         self, pulsar_name: str, pta_configs: Dict[str, Dict]
     ) -> Dict[str, Tuple[Path, Path]]:
-        """Discover par/tim files for a pulsar across PTAs.
+        """Discover par/tim files for a pulsar across PTAs using coordinate matching.
 
         Args:
-            pulsar_name: Name of the pulsar to search for
+            pulsar_name: Name of the pulsar (can be J-name, B-name, or preferred name)
             pta_configs: Dictionary of PTA configurations to search
 
         Returns:
             Dictionary mapping PTA names to (parfile, timfile) tuples
         """
-        file_pairs = {}
+        # First, discover all pulsars by coordinates
+        coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
 
-        for pta_name, config in pta_configs.items():
-            parfile = self._find_file(
-                pulsar_name, config["base_dir"], config["par_pattern"]
+        # Find the matching pulsar by any of its names
+        matching_pulsar = None
+        for j_name, pulsar_info in coordinate_map.items():
+            if (
+                pulsar_name == j_name
+                or pulsar_name == pulsar_info["preferred_name"]
+                or pulsar_name == pulsar_info["b_name"]
+            ):
+                matching_pulsar = pulsar_info
+                break
+
+        if not matching_pulsar:
+            available_names = [
+                info["preferred_name"] for info in coordinate_map.values()
+            ]
+            raise ValueError(
+                f"Pulsar '{pulsar_name}' not found. Available: {available_names}"
             )
-            timfile = self._find_file(
-                pulsar_name, config["base_dir"], config["tim_pattern"]
-            )
 
-            if parfile and timfile:
-                file_pairs[pta_name] = (parfile, timfile)
-                self.logger.debug(
-                    f"Found files for {pulsar_name} in {pta_name}: {parfile}, {timfile}"
-                )
-            else:
-                self.logger.debug(f"No files found for {pulsar_name} in {pta_name}")
-
-        return file_pairs
+        return matching_pulsar["files"]
 
     def _create_enterprise_pulsars(
         self, file_pairs: Dict[str, Tuple[Path, Path]], pta_configs: Dict[str, Dict]
@@ -361,18 +448,39 @@ class MetaPulsarFactory:
             enterprise_pulsars: Dictionary of Enterprise Pulsars
 
         Returns:
-            Canonical J-name for the pulsar
+            Canonical J-name for the pulsar (used as internal identifier)
         """
         # Use the first Enterprise Pulsar to get coordinates
         first_pulsar = next(iter(enterprise_pulsars.values()))
 
         # Use existing position helpers for robust name resolution
         try:
-            return j_name_from_pulsar(first_pulsar)
+            return bj_name_from_pulsar(
+                first_pulsar, "J"
+            )  # Use J for internal identification
         except Exception as e:
             self.logger.warning(f"Failed to resolve canonical name: {e}")
             # Fallback to a generic name
             return "UNKNOWN"
+
+    def _get_canonical_name_for_pulsar(
+        self, pulsar_name: str, pta_configs: Dict[str, Dict]
+    ) -> str:
+        """Get the canonical name (with suffix) for a pulsar."""
+        coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
+
+        for j_name, pulsar_info in coordinate_map.items():
+            if (
+                pulsar_name == j_name
+                or pulsar_name == pulsar_info["preferred_name"]
+                or pulsar_name == pulsar_info["b_name"]
+            ):
+                canonical_name = pulsar_info["preferred_name"]
+                if pulsar_info["suffix"]:
+                    canonical_name += pulsar_info["suffix"]
+                return canonical_name
+
+        return pulsar_name
 
     def _build_metadata(
         self, file_pairs: Dict[str, Tuple[Path, Path]], pta_configs: Dict[str, Dict]

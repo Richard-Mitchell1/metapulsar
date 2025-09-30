@@ -1,22 +1,29 @@
 """
-Position helpers for pulsar coordinate conversion and J-name generation.
+Position helpers for pulsar coordinate conversion and B/J-name generation.
 
 This module provides robust coordinate conversion between different pulsar object
 types (PINT TimingModel, libstempo tempopulsar, Enterprise Pulsar) and generates
-canonical J-names (JHHMM±DDMM) from actual coordinate data.
+canonical B-names (BHHMM±DD) or J-names (JHHMM±DDMM) from actual coordinate data.
 
 Functions:
-    j_name_from_pulsar: Generate J-name from any supported pulsar object
+    bj_name_from_pulsar: Generate B-name or J-name from any supported pulsar object
     _skycoord_from_pint_model: Extract coordinates from PINT TimingModel
     _skycoord_from_libstempo: Extract coordinates from libstempo tempopulsar
     _skycoord_from_enterprise: Extract coordinates from Enterprise Pulsar
     _format_j_name_from_icrs: Format ICRS coordinates into J-name string
+    _format_b_name_from_icrs: Format ICRS coordinates into B-name string
 """
 
 from typing import Any
 import numpy as np
-from astropy.coordinates import SkyCoord, ICRS, FK4, Angle
-from astropy.coordinates import GeocentricTrueEcliptic, BarycentricTrueEcliptic
+from astropy.coordinates import (
+    SkyCoord,
+    ICRS,
+    FK4,
+    Angle,
+    GeocentricTrueEcliptic,
+    BarycentricTrueEcliptic,
+)
 from astropy.time import Time
 import astropy.units as u
 
@@ -36,6 +43,22 @@ def _format_j_name_from_icrs(c: SkyCoord) -> str:
     MM = int((a - DD) * 60.0)  # truncate arcminutes
 
     return f"J{hh:02d}{mm:02d}{sign}{DD:02d}{MM:02d}"
+
+
+def _format_b_name_from_icrs(c: SkyCoord) -> str:
+    """Format ICRS coordinates into a B1234±56 label using TRUNCATION."""
+    # RA
+    ra_h = c.ra.to(u.hourangle).value
+    hh = int(np.floor(ra_h)) % 24
+    mm = int((ra_h - hh) * 60.0)  # truncate minutes
+
+    # Dec
+    dec_deg = c.dec.to(u.deg).value
+    sign = "-" if dec_deg < 0 else "+"
+    a = abs(dec_deg)
+    DD = int(np.floor(a))
+
+    return f"B{hh:02d}{mm:02d}{sign}{DD:02d}"
 
 
 def _skycoord_from_pint_model(model: Any) -> SkyCoord:
@@ -193,9 +216,9 @@ def _skycoord_from_enterprise(psr: Any) -> SkyCoord:
     raise ValueError("Enterprise pulsar lacks _raj/_decj.")
 
 
-def j_name_from_pulsar(psr_obj: Any) -> str:
+def bj_name_from_pulsar(psr_obj: Any, name_type: str = "J") -> str:
     """
-    Generate canonical J-name (JHHMM±DDMM) from pulsar object coordinates.
+    Generate canonical B-name or J-name from pulsar object coordinates.
 
     Supports multiple pulsar object types:
     - PINT TimingModel
@@ -204,13 +227,18 @@ def j_name_from_pulsar(psr_obj: Any) -> str:
 
     Args:
         psr_obj: Pulsar object with coordinate information
+        name_type: "J" for J-name (JHHMM±DDMM) or "B" for B-name (BHHMM±DD)
 
     Returns:
-        Canonical J-name string (e.g., "J1857+0943")
+        Canonical name string (e.g., "J1857+0943" or "B1857+09")
 
     Raises:
-        ValueError: If coordinates cannot be extracted from object
+        ValueError: If coordinates cannot be extracted from object or invalid name_type
     """
+    # Validate name_type
+    if name_type.upper() not in ["J", "B"]:
+        raise ValueError(f"Invalid name_type '{name_type}'. Must be 'J' or 'B'")
+
     # Try enterprise first (common in your MetaPulsar flow)
     try:
         c = _skycoord_from_enterprise(psr_obj)
@@ -222,6 +250,12 @@ def j_name_from_pulsar(psr_obj: Any) -> str:
             # Try libstempo tempopulsar
             c = _skycoord_from_libstempo(psr_obj)
 
-    # Ensure we’re in ICRS (if any upstream gave a different frame)
+    # Ensure we're in ICRS (if any upstream gave a different frame)
     c_icrs = c.transform_to(ICRS())
-    return _format_j_name_from_icrs(c_icrs)
+
+    if name_type.upper() == "B":
+        # B-names should be based on FK4 B1950 coordinates, not ICRS
+        c_fk4 = c_icrs.transform_to(FK4(equinox=Time("B1950")))
+        return _format_b_name_from_icrs(c_fk4)
+    else:
+        return _format_j_name_from_icrs(c_icrs)

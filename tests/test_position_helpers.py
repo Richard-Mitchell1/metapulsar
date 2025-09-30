@@ -17,7 +17,7 @@ from ipta_metapulsar.position_helpers import (
     _skycoord_from_pint_model,
     _skycoord_from_enterprise,
     _skycoord_from_libstempo,
-    j_name_from_pulsar,
+    bj_name_from_pulsar,
 )
 
 # === FIXTURES ===
@@ -122,22 +122,43 @@ def _assert_coords_close(c1: SkyCoord, c2: SkyCoord, atol_rad=1e-10):
 # === TEST CLASSES ===
 
 
-class TestJNameGeneration:
-    """Test J-name generation from various pulsar objects."""
+class TestBJNameGeneration:
+    """Test B/J-name generation from various pulsar objects."""
 
     @pytest.mark.parametrize("parfile_name", ["binary.par", "binary-B.par"])
     def test_j_name_from_pint_model(self, mb, load_parfile_text, parfile_name):
         """Test J-name generation from PINT models."""
         par_text = load_parfile_text(parfile_name)
         model = _build_pint_model(mb, par_text)
-        jlabel = j_name_from_pulsar(model)
+        jlabel = bj_name_from_pulsar(model, "J")
         assert jlabel == "J1857+0943"
 
-    def test_j_name_consistency_across_parfiles(self, model_J, model_B):
-        """Test that J-name is consistent between different parfile formats."""
-        jl_j = j_name_from_pulsar(model_J)
-        jl_b = j_name_from_pulsar(model_B)
+    @pytest.mark.parametrize("parfile_name", ["binary.par", "binary-B.par"])
+    def test_b_name_from_pint_model(self, mb, load_parfile_text, parfile_name):
+        """Test B-name generation from PINT models."""
+        par_text = load_parfile_text(parfile_name)
+        model = _build_pint_model(mb, par_text)
+        blabel = bj_name_from_pulsar(model, "B")
+        assert blabel == "B1857+09"
+
+    def test_name_consistency_across_parfiles(self, model_J, model_B):
+        """Test that names are consistent between different parfile formats."""
+        jl_j = bj_name_from_pulsar(model_J, "J")
+        jl_b = bj_name_from_pulsar(model_B, "J")
+        bl_j = bj_name_from_pulsar(model_J, "B")
+        bl_b = bj_name_from_pulsar(model_B, "B")
         assert jl_j == jl_b == "J1857+0943"
+        assert bl_j == bl_b == "B1857+09"
+
+    def test_default_name_type_is_j(self, model_J):
+        """Test that default name type is J."""
+        jlabel = bj_name_from_pulsar(model_J)
+        assert jlabel == "J1857+0943"
+
+    def test_invalid_name_type_raises_error(self, model_J):
+        """Test that invalid name type raises ValueError."""
+        with pytest.raises(ValueError):
+            bj_name_from_pulsar(model_J, "X")
 
 
 class TestCoordinateConversion:
@@ -189,7 +210,14 @@ class TestEndToEndJNameGeneration:
         """Test J-name generation from Enterprise mock objects."""
         model = model_J if which == "J" else model_B
         emock = enterprise_from_model(model)
-        assert j_name_from_pulsar(emock) == "J1857+0943"
+        assert bj_name_from_pulsar(emock, "J") == "J1857+0943"
+
+    @pytest.mark.parametrize("which", ["J", "B"])
+    def test_b_label_from_enterprise_mock(self, which, model_J, model_B):
+        """Test B-name generation from Enterprise mock objects."""
+        model = model_J if which == "J" else model_B
+        emock = enterprise_from_model(model)
+        assert bj_name_from_pulsar(emock, "B") == "B1857+09"
 
     @pytest.mark.parametrize(
         "which,variant", [("J", "eq"), ("B", "eq"), ("J", "ecl"), ("B", "ecl")]
@@ -201,4 +229,16 @@ class TestEndToEndJNameGeneration:
             lmock = libstempo_from_model_equatorial(model)
         else:
             lmock = libstempo_from_model_ecliptic(model)
-        assert j_name_from_pulsar(lmock) == "J1857+0943"
+        assert bj_name_from_pulsar(lmock, "J") == "J1857+0943"
+
+    @pytest.mark.parametrize(
+        "which,variant", [("J", "eq"), ("B", "eq"), ("J", "ecl"), ("B", "ecl")]
+    )
+    def test_b_label_from_libstempo_mocks(self, which, variant, model_J, model_B):
+        """Test B-name generation from libstempo mock objects."""
+        model = model_J if which == "J" else model_B
+        if variant == "eq":
+            lmock = libstempo_from_model_equatorial(model)
+        else:
+            lmock = libstempo_from_model_ecliptic(model)
+        assert bj_name_from_pulsar(lmock, "B") == "B1857+09"
