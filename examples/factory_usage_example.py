@@ -43,12 +43,6 @@ def main():
     print(f"   PINT PTAs: {pint_ptas}")
     print(f"   Tempo2 PTAs: {tempo2_ptas}")
 
-    # List PTAs by coordinate system
-    equatorial_ptas = registry.get_ptas_by_coordinates("equatorial")
-    ecliptical_ptas = registry.get_ptas_by_coordinates("ecliptical")
-    print(f"   Equatorial PTAs: {equatorial_ptas}")
-    print(f"   Ecliptical PTAs: {ecliptical_ptas}\n")
-
     # 4. Add a custom PTA configuration
     print("4. Adding Custom PTA Configuration:")
     custom_config = {
@@ -129,12 +123,6 @@ def main():
     print(f"   Total PTAs: {len(registry)}")
     print(f"   PINT PTAs: {len(registry.get_ptas_by_timing_package('pint'))}")
     print(f"   Tempo2 PTAs: {len(registry.get_ptas_by_timing_package('tempo2'))}")
-    print(
-        f"   PTAs that use equatorial coordinates: {len(registry.get_ptas_by_coordinates('equatorial'))}"
-    )
-    print(
-        f"   PTAs that use ecliptical coordinates: {len(registry.get_ptas_by_coordinates('ecliptical'))}"
-    )
 
     print()
     print("=== Example Complete ===")

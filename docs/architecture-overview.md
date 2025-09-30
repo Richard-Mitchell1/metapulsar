@@ -40,7 +40,6 @@ classDiagram
         +update_pta(name, config)
         +remove_pta(name)
         +get_ptas_by_timing_package(timing_package) List[str]
-        +get_ptas_by_coordinates(coordinates) List[str]
         +_validate_config(config)
     }
 
@@ -292,9 +291,6 @@ print(f"Available PTAs: {all_ptas}")
 pint_ptas = registry.get_ptas_by_timing_package("pint")
 tempo2_ptas = registry.get_ptas_by_timing_package("tempo2")
 
-# Filter by coordinate system
-equatorial_ptas = registry.get_ptas_by_coordinates("equatorial")
-ecliptical_ptas = registry.get_ptas_by_coordinates("ecliptical")
 
 # Get specific PTA configuration
 epta_config = registry.get_pta("epta_dr2")

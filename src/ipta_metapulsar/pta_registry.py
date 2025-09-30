@@ -259,21 +259,6 @@ class PTARegistry:
             if config.get("timing_package") == timing_package
         ]
 
-    def get_ptas_by_coordinates(self, coordinates: str) -> List[str]:
-        """Get PTA names that use a specific coordinate system.
-
-        Args:
-            coordinates: Coordinate system to filter by ('equatorial' or 'ecliptical')
-
-        Returns:
-            List of PTA names using the specified coordinate system
-        """
-        return [
-            name
-            for name, config in self.configs.items()
-            if config.get("coordinates") == coordinates
-        ]
-
     def __len__(self) -> int:
         """Get the number of PTA configurations."""
         return len(self.configs)

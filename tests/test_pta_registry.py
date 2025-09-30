@@ -164,12 +164,3 @@ class TestPTARegistry:
         assert len(tempo2_ptas) > 0
         assert "nanograv_15y" in pint_ptas
         assert "epta_dr2" in tempo2_ptas
-
-        # Test coordinate filtering
-        equatorial_ptas = registry.get_ptas_by_coordinates("equatorial")
-        ecliptical_ptas = registry.get_ptas_by_coordinates("ecliptical")
-
-        assert len(equatorial_ptas) > 0
-        assert len(ecliptical_ptas) > 0
-        assert "ppta_dr3" in equatorial_ptas
-        assert "epta_dr2" in ecliptical_ptas
