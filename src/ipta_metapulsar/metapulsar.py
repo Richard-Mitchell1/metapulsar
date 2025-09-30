@@ -120,7 +120,7 @@ class MetaPulsar(ep.BasePulsar):
             combine_components.append("dispersion")
 
         # Use MetaPulsarFactory to create the MetaPulsar
-        from .meta_pulsar_factory import MetaPulsarFactory
+        from .metapulsar_factory import MetaPulsarFactory
 
         factory = MetaPulsarFactory()
         return factory.create_metapulsar(
@@ -136,7 +136,7 @@ class MetaPulsar(ep.BasePulsar):
         Returns:
             str: Pulsar name if consistent, raises ValueError if not
         """
-        if not hasattr(self, "_epulsars"):
+        if not hasattr(self, "_epulsars") or self._epulsars is None:
             raise ValueError("No Enterprise Pulsars created yet")
 
         # Extract pulsar names from Enterprise Pulsars
@@ -189,7 +189,8 @@ class MetaPulsar(ep.BasePulsar):
         else:
             # All pulsars are already Enterprise Pulsars, get name from first one
             if self._epulsars:
-                self.name = next(iter(self._epulsars.values())).name
+                first_psr = next(iter(self._epulsars.values()))
+                self.name = getattr(first_psr, "name", "unknown")
             else:
                 self.name = "unknown"
 
@@ -264,11 +265,8 @@ class MetaPulsar(ep.BasePulsar):
         pint_models, _, _ = self._unpack_pulsar_data()
 
         if not pint_models:
-            # No PINT models available, create empty parameter lists
-            self._fitparameters = {}
-            self._setparameters = {}
-            self.fitpars = []
-            self.setpars = []
+            # No PINT models available, try to get parameters from Enterprise Pulsars
+            self._setup_parameters_from_enterprise_pulsars()
             return
 
         manager = MetaPulsarParameterManager(pint_models)
@@ -290,11 +288,8 @@ class MetaPulsar(ep.BasePulsar):
         pint_models, _, _ = self._unpack_pulsar_data()
 
         if not pint_models:
-            # No PINT models available, create empty parameter lists
-            self._fitparameters = {}
-            self._setparameters = {}
-            self.fitpars = []
-            self.setpars = []
+            # No PINT models available, try to get parameters from Enterprise Pulsars
+            self._setup_parameters_from_enterprise_pulsars()
             return
 
         manager = MetaPulsarParameterManager(pint_models)
@@ -307,6 +302,37 @@ class MetaPulsar(ep.BasePulsar):
 
         self._fitparameters = mapping.fitparameters
         self._setparameters = mapping.setparameters
+        self.fitpars = list(self._fitparameters.keys())
+        self.setpars = list(self._setparameters.keys())
+
+    def _setup_parameters_from_enterprise_pulsars(self):
+        """Setup parameters from Enterprise Pulsars when no PINT models are available."""
+        # For MockPulsar and other Enterprise Pulsars, collect parameters directly
+        all_fitpars = set()
+        all_setpars = set()
+
+        for pta, psr in self._epulsars.items():
+            if hasattr(psr, "fitpars"):
+                all_fitpars.update(psr.fitpars)
+            if hasattr(psr, "setpars"):
+                all_setpars.update(psr.setpars)
+
+        # Create parameter mappings
+        self._fitparameters = {}
+        self._setparameters = {}
+
+        for parname in all_fitpars:
+            self._fitparameters[parname] = {}
+            for pta, psr in self._epulsars.items():
+                if hasattr(psr, "fitpars") and parname in psr.fitpars:
+                    self._fitparameters[parname][pta] = parname
+
+        for parname in all_setpars:
+            self._setparameters[parname] = {}
+            for pta, psr in self._epulsars.items():
+                if hasattr(psr, "setpars") and parname in psr.setpars:
+                    self._setparameters[parname][pta] = parname
+
         self.fitpars = list(self._fitparameters.keys())
         self.setpars = list(self._setparameters.keys())
 
@@ -326,38 +352,78 @@ class MetaPulsar(ep.BasePulsar):
         self._stoas = concat("_stoas")
         self._residuals = concat("_residuals")
         self._toaerrs = concat("_toaerrs")
-        self._ssbfreqs = concat("_ssbfreqs")
+
+        # Handle frequency data - try both _ssbfreqs and _freqs
+        ssbfreqs = concat("_ssbfreqs")
+        freqs = concat("_freqs")
+        self._ssbfreqs = ssbfreqs if len(ssbfreqs) > 0 else freqs
+
         self._telescope = concat("_telescope")
 
         # Combine flags
-        self._flags = self._combine_flags()
+        self._combine_flags()
 
     def _combine_flags(self):
-        """Combine flags from all PTAs."""
-        all_flags = {}
+        """Combine flags from all PTAs with proper handling."""
+        from collections import defaultdict
+
+        pta_slice = self._get_pta_slices()
+        flags = defaultdict(lambda: np.zeros(len(self._toas), dtype="U128"))
 
         for pta, psr in self._epulsars.items():
-            if hasattr(psr, "_flags"):
-                # Handle both dictionary and array formats
-                if isinstance(psr._flags, dict):
-                    # Dictionary format (real Enterprise Pulsars)
-                    for flag_name, flag_values in psr._flags.items():
-                        if flag_name not in all_flags:
-                            all_flags[flag_name] = []
-                        all_flags[flag_name].append(flag_values)
-                elif hasattr(psr._flags, "dtype") and hasattr(psr._flags, "items"):
-                    # Structured array format
-                    for flag_name in psr._flags.dtype.names:
-                        if flag_name not in all_flags:
-                            all_flags[flag_name] = []
-                        all_flags[flag_name].append(psr._flags[flag_name])
+            flag_pta = False
 
-        # Concatenate flag arrays
-        combined_flags = {}
-        for flag_name, flag_arrays in all_flags.items():
-            combined_flags[flag_name] = np.concatenate(flag_arrays)
+            # Handle both dictionary and structured array formats for flags
+            if isinstance(psr._flags, dict):
+                # Dictionary format (legacy Enterprise Pulsars)
+                for flag, flagvals in psr._flags.items():
+                    flags[flag][pta_slice[pta]] = flagvals
 
-        return combined_flags
+                    # Handle PTA flag specifically
+                    if flag == "pta" and not np.any(flagvals == ""):
+                        flags[flag][pta_slice[pta]] = [
+                            pta_flag.strip() for pta_flag in flagvals
+                        ]
+                        flag_pta = True
+            else:
+                # Structured array format (MockPulsar and newer Enterprise Pulsars)
+                if hasattr(psr._flags, "dtype") and psr._flags.dtype.names:
+                    # Structured array with fields
+                    for field_name in psr._flags.dtype.names:
+                        flagvals = psr._flags[field_name]
+                        flags[field_name][pta_slice[pta]] = flagvals
+
+                        # Handle PTA flag specifically
+                        if field_name == "pta" and not np.any(flagvals == ""):
+                            flags[field_name][pta_slice[pta]] = [
+                                pta_flag.strip() for pta_flag in flagvals
+                            ]
+                            flag_pta = True
+                else:
+                    # Use the flags property for Enterprise Pulsars
+                    for flag, flagvals in psr.flags.items():
+                        flags[flag][pta_slice[pta]] = flagvals
+
+                        # Handle PTA flag specifically
+                        if flag == "pta" and not np.any(flagvals == ""):
+                            flags[flag][pta_slice[pta]] = [
+                                pta_flag.strip() for pta_flag in flagvals
+                            ]
+                            flag_pta = True
+
+            timing_package = self._get_timing_package(psr)
+            flags["pta_dataset"][pta_slice[pta]] = pta
+            flags["timing_package"][pta_slice[pta]] = timing_package
+
+            if not flag_pta:
+                flags["pta"][pta_slice[pta]] = pta
+
+        # Store as numpy record array
+        self._flags = np.zeros(
+            len(self._toas), dtype=[(key, val.dtype) for key, val in flags.items()]
+        )
+        for key, val in flags.items():
+            self._flags[key] = val
 
     def _get_pta_slices(self):
         """Get slice objects for each PTA in the combined data."""
@@ -405,8 +471,8 @@ class MetaPulsar(ep.BasePulsar):
             timing_package = self._get_timing_package(psr)
 
             # Get design matrix from Enterprise Pulsar
-            if hasattr(psr, "designmatrix"):
-                dm = psr.designmatrix
+            if hasattr(psr, "_designmatrix"):
+                dm = psr._designmatrix
                 if full_parname in psr.fitpars:
                     par_idx = psr.fitpars.index(full_parname)
                     column[slice_obj] = dm[:, par_idx]
@@ -445,8 +511,19 @@ class MetaPulsar(ep.BasePulsar):
 
     def _setup_position_and_planets(self):
         """Setup position and planetary data using PositionHelpers."""
-        # Get reference pulsar for position
+        # Check if we have any pulsars
+        if not self._epulsars:
+            # No pulsars available, set default values
+            self._raj = 0.0
+            self._decj = 0.0
+            self._pos = np.zeros((len(self._toas), 3))
+            self._pos_t = np.zeros((len(self._toas), 3))
+            self._planetssb = None
+            self._sunssb = None
+            self._pdist = None
+            return
 
+        # Get reference pulsar for position
         ref_psr = next(iter(self._epulsars.values()))
 
         # Set basic position attributes
@@ -454,7 +531,9 @@ class MetaPulsar(ep.BasePulsar):
         self._decj = ref_psr._decj
 
         # Generate B/J name using position_helpers
-        bj_name_from_pulsar(ref_psr)
+
+        bj_name = bj_name_from_pulsar(ref_psr)
+        logger.debug(f"Generated B/J name: {bj_name}")
 
         # Set position vector and time array
         pta_slice = self._get_pta_slices()

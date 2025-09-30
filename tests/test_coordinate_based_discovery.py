@@ -30,7 +30,7 @@ import astropy.units as u
 from astropy.coordinates import Angle
 from pint.models.model_builder import ModelBuilder
 
-from ipta_metapulsar.meta_pulsar_factory import MetaPulsarFactory
+from ipta_metapulsar.metapulsar_factory import MetaPulsarFactory
 from ipta_metapulsar.pta_registry import PTARegistry
 from ipta_metapulsar.position_helpers import bj_name_from_pulsar
 from ipta_metapulsar.metapulsar import MetaPulsar
@@ -170,7 +170,7 @@ class TestCoordinateBasedDiscovery:
 
         # Mock the coordinate extraction
         with patch(
-            "ipta_metapulsar.meta_pulsar_factory.bj_name_from_pulsar"
+            "ipta_metapulsar.metapulsar_factory.bj_name_from_pulsar"
         ) as mock_bj_name:
             mock_bj_name.side_effect = lambda model, name_type: (
                 "J1857+0943" if name_type == "J" else "B1855+09"
@@ -274,7 +274,7 @@ class TestMetaPulsarFactoryIntegration:
 
         # Mock coordinate extraction
         with patch(
-            "ipta_metapulsar.meta_pulsar_factory.bj_name_from_pulsar"
+            "ipta_metapulsar.metapulsar_factory.bj_name_from_pulsar"
         ) as mock_bj_name:
             mock_bj_name.side_effect = lambda model, name_type: (
                 "J1857+0943" if name_type == "J" else "B1855+09"
@@ -468,9 +468,9 @@ class TestEndToEndCoordinateBasedWorkflow:
 
         # Mock coordinate extraction and Enterprise Pulsar creation
         with patch(
-            "ipta_metapulsar.meta_pulsar_factory.bj_name_from_pulsar"
+            "ipta_metapulsar.metapulsar_factory.bj_name_from_pulsar"
         ) as mock_bj_name, patch(
-            "ipta_metapulsar.meta_pulsar_factory.get_model_and_toas"
+            "ipta_metapulsar.metapulsar_factory.get_model_and_toas"
         ) as mock_get_model_and_toas:
 
             mock_bj_name.side_effect = lambda model, name_type: (

@@ -41,6 +41,7 @@ class TestMockPulsar:
         assert len(psr._residuals) == n_toas
         assert len(psr._toaerrs) == n_toas
         assert len(psr._freqs) == n_toas
+        # MockPulsar uses structured array format for flags (Enterprise PR specification)
         assert len(psr._flags) == n_toas
 
     def test_telescope_handling(self):

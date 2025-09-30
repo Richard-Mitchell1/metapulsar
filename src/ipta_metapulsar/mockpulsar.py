@@ -49,7 +49,8 @@ class MockPulsar(BasePulsar):
         Pulsar name (default: "mock")
     astrometry : bool, optional
         Whether to include astrometry parameters (default: False)
-        Requires astropy to be available
+    spin : bool, optional
+        Whether to include spin parameters (default: True)
     """
 
     def __init__(
@@ -62,34 +63,30 @@ class MockPulsar(BasePulsar):
         telescope,
         name="mock",
         astrometry=False,
+        spin=True,
     ):
-        """
-        Initialize MockPulsar with synthetic data.
+        super().__init__()
 
-        Parameters
-        ----------
-        toas : array_like
-            Times of arrival in seconds
-        residuals : array_like
-            Timing residuals in seconds
-        errors : array_like
-            TOA errors in seconds
-        freqs : array_like
-            Observing frequencies in MHz
-        flags : dict
-            Dictionary of flag arrays for each flag type
-        telescope : str or array_like
-            Telescope name(s) for each TOA
-        name : str, optional
-            Pulsar name (default: "mock")
-        astrometry : bool, optional
-            Whether to include astrometry parameters (default: False)
-        """
-        # Convert inputs to numpy arrays
-        self._toas = np.array(toas, dtype=np.float64)
-        self._residuals = np.array(residuals, dtype=np.float64)
-        self._toaerrs = np.array(errors, dtype=np.float64)
-        self._freqs = np.array(freqs, dtype=np.float64)
+        # Set core timing data
+        self._toas = np.asarray(toas)
+        self._residuals = np.asarray(residuals)
+        self._toaerrs = np.asarray(errors)
+        self._freqs = np.asarray(freqs)
+
+        # Convert flags to structured numpy array (Enterprise PR specification)
+        if flags is None:
+            flags = {}
+
+        # Create structured array from dictionary flags
+        if flags:
+            self._flags = np.zeros(
+                len(self._toas), dtype=[(key, val.dtype) for key, val in flags.items()]
+            )
+            for key, val in flags.items():
+                self._flags[key] = val
+        else:
+            # Empty structured array with no fields
+            self._flags = np.zeros(len(self._toas), dtype=[])
 
         # Handle telescope input
         if isinstance(telescope, str):
@@ -103,11 +100,13 @@ class MockPulsar(BasePulsar):
         self._decj = 0.0  # Default Dec in radians
         self._sort = True  # Enable sorting by default
 
-        # Set up fitpars and setpars
+        # Set up parameters based on requested components
         self.fitpars = []
         self.setpars = []
 
-        # Add astrometry parameters if requested and astropy is available
+        if spin:
+            self._setup_spin_parameters()
+
         if astrometry and ASTROPY_AVAILABLE:
             self._setup_astrometry_parameters()
         elif astrometry and not ASTROPY_AVAILABLE:
@@ -115,8 +114,8 @@ class MockPulsar(BasePulsar):
                 "Astrometry requested but astropy not available. Skipping astrometry parameters."
             )
 
-        # Set up flags
-        self._setup_flags(flags)
+        # Create mock design matrix
+        self._create_mock_design_matrix()
 
         # Set up position and other attributes
         self._pdist = self._get_pdist()
@@ -128,98 +127,106 @@ class MockPulsar(BasePulsar):
         # Sort data
         self.sort_data()
 
+    def _setup_spin_parameters(self):
+        """Set up spin parameters (F0, F1, F2, etc.)."""
+        self.fitpars.extend(["F0", "F1", "F2"])
+        self.setpars.extend(["F0", "F1", "F2"])
+
+        # Set default spin values
+        self._f0 = 100.0  # Hz
+        self._f1 = -1e-15  # Hz/s
+        self._f2 = 0.0  # Hz/s^2
+
     def _setup_astrometry_parameters(self):
-        """Set up astrometry parameters if astropy is available."""
+        """Set up astrometry parameters for the mock pulsar."""
         if not ASTROPY_AVAILABLE:
             return
 
-        # Add astrometry parameters to fitpars
-        astrometry_params = ["RAJ", "DECJ", "PMRA", "PMDEC", "PX"]
-        for param in astrometry_params:
-            if param not in self.fitpars:
-                self.fitpars.append(param)
+        # Add astrometry parameters
+        self.fitpars.extend(["RAJ", "DECJ", "PMRA", "PMDEC", "PX"])
+        self.setpars.extend(["RAJ", "DECJ", "PMRA", "PMDEC", "PX"])
 
-        # Set default values
-        self._raj = 0.0
-        self._decj = 0.0
-        self._pmra = 0.0
-        self._pmdec = 0.0
-        self._px = 0.0
+        # Set default astrometry values
+        self._raj = np.random.uniform(0, 2 * np.pi)
+        self._decj = np.random.uniform(-np.pi / 2, np.pi / 2)
+        self._pmra = 0.0  # rad/yr
+        self._pmdec = 0.0  # rad/yr
+        self._px = 0.0  # arcsec
 
-    def _setup_flags(self, flags):
-        """Set up flags from input dictionary."""
-        # Create flags record array
-        if flags:
-            self._flags = np.zeros(
-                len(self._toas), dtype=[(key, val.dtype) for key, val in flags.items()]
-            )
-            for key, val in flags.items():
-                self._flags[key] = val
-        else:
-            # Default flags if none provided
-            self._flags = np.zeros(len(self._toas), dtype=[("telescope", "U10")])
-            self._flags["telescope"] = self._telescope
+        # Create SkyCoord object
+        self._pos = SkyCoord(ra=self._raj * u.rad, dec=self._decj * u.rad, frame="icrs")
 
-    def _get_pdist(self):
-        """Get pulsar distance (default 1 kpc)."""
-        return 1.0  # Default distance in kpc
+    def _create_mock_design_matrix(self):
+        """Create a mock design matrix for testing."""
+        n_toas = len(self._toas)
+        n_params = len(self.fitpars)
 
-    def _get_pos(self):
-        """Get pulsar position vector."""
-        # Convert RA/Dec to position vector
-        ra_rad = self._raj
-        dec_rad = self._decj
+        # Create design matrix with some realistic structure
+        self._designmatrix = np.zeros((n_toas, n_params))
 
-        # Position vector in kpc
-        pos = np.array(
-            [
-                np.cos(dec_rad) * np.cos(ra_rad),
-                np.cos(dec_rad) * np.sin(ra_rad),
-                np.sin(dec_rad),
-            ]
-        )
+        # Add time-dependent terms for spin parameters
+        for i, param in enumerate(self.fitpars):
+            if param == "F0":
+                # F0 contributes to all residuals equally
+                self._designmatrix[:, i] = 1.0
+            elif param == "F1":
+                # F1 contributes linearly with time
+                t_ref = np.mean(self._toas)
+                self._designmatrix[:, i] = (
+                    self._toas - t_ref
+                ) / 86400.0  # Convert to days
+            elif param == "F2":
+                # F2 contributes quadratically with time
+                t_ref = np.mean(self._toas)
+                self._designmatrix[:, i] = ((self._toas - t_ref) / 86400.0) ** 2
+            elif param in ["RAJ", "DECJ"]:
+                # Astrometry parameters contribute with frequency-dependent terms
+                self._designmatrix[:, i] = np.sin(
+                    2 * np.pi * self._freqs / 1000.0
+                )  # Simple frequency dependence
+            elif param in ["PMRA", "PMDEC"]:
+                # Proper motion contributes linearly with time
+                t_ref = np.mean(self._toas)
+                self._designmatrix[:, i] = (self._toas - t_ref) / (
+                    365.25 * 86400.0
+                )  # Convert to years
+            elif param == "PX":
+                # Parallax contributes with annual modulation
+                t_ref = np.mean(self._toas)
+                self._designmatrix[:, i] = np.sin(
+                    2 * np.pi * (self._toas - t_ref) / (365.25 * 86400.0)
+                )
 
-        return pos
-
-    def set_residuals(self, residuals):
-        """Set residuals for the pulsar."""
-        self._residuals = np.array(residuals, dtype=np.float64)
+    def set_residuals(self, new_residuals):
+        """Set new residuals for the mock pulsar."""
+        self._residuals = np.asarray(new_residuals)
 
     def set_position(self, ra, dec):
-        """Set pulsar position in radians."""
+        """Set new position for the mock pulsar."""
         self._raj = ra
         self._decj = dec
-        self._pos = self._get_pos()
-        self._pos_t = np.tile(self._pos, (len(self._toas), 1))
+        if ASTROPY_AVAILABLE:
+            self._pos = SkyCoord(
+                ra=self._raj * u.rad, dec=self._decj * u.rad, frame="icrs"
+            )
 
-    def set_astrometry(self, ra, dec, pmra=0.0, pmdec=0.0, px=0.0):
-        """Set astrometry parameters."""
-        if not ASTROPY_AVAILABLE:
-            logger.warning("Cannot set astrometry parameters: astropy not available")
-            return
+    def _get_pdist(self):
+        """Get pulsar distance (mock implementation)."""
+        return 1.0  # 1 kpc default
 
-        self._raj = ra
-        self._decj = dec
-        self._pmra = pmra
-        self._pmdec = pmdec
-        self._px = px
-
-        # Update position
-        self._pos = self._get_pos()
-        self._pos_t = np.tile(self._pos, (len(self._toas), 1))
-
-    def get_skycoord(self):
-        """Get SkyCoord object for astrometry calculations."""
-        if not ASTROPY_AVAILABLE:
-            raise ImportError("Astropy not available for SkyCoord calculations")
-
-        return SkyCoord(
-            ra=self._raj * u.rad,
-            dec=self._decj * u.rad,
-            pm_ra_cosdec=self._pmra * u.mas / u.yr,
-            pm_dec=self._pmdec * u.mas / u.yr,
-            distance=self._pdist * u.kpc,
-        )
+    def _get_pos(self):
+        """Get pulsar position vector (mock implementation)."""
+        if ASTROPY_AVAILABLE and hasattr(self, "_pos"):
+            return np.array(
+                [
+                    self._pos.cartesian.x.value,
+                    self._pos.cartesian.y.value,
+                    self._pos.cartesian.z.value,
+                ]
+            )
+        else:
+            # Simple mock position
+            return np.array([1.0, 0.0, 0.0])
 
 
 def create_mock_pulsar(
@@ -227,38 +234,13 @@ def create_mock_pulsar(
     residuals,
     errors,
     freqs,
-    flags=None,
-    telescope="mock",
+    flags,
+    telescope,
     name="mock",
     astrometry=False,
+    spin=True,
 ):
-    """
-    Convenience function to create a MockPulsar.
-
-    Parameters
-    ----------
-    toas : array_like
-        Times of arrival in seconds
-    residuals : array_like
-        Timing residuals in seconds
-    errors : array_like
-        TOA errors in seconds
-    freqs : array_like
-        Observing frequencies in MHz
-    flags : dict, optional
-        Dictionary of flag arrays for each flag type
-    telescope : str or array_like, optional
-        Telescope name(s) for each TOA (default: "mock")
-    name : str, optional
-        Pulsar name (default: "mock")
-    astrometry : bool, optional
-        Whether to include astrometry parameters (default: False)
-
-    Returns
-    -------
-    MockPulsar
-        MockPulsar instance
-    """
+    """Convenience function to create a MockPulsar instance."""
     return MockPulsar(
-        toas, residuals, errors, freqs, flags or {}, telescope, name, astrometry
+        toas, residuals, errors, freqs, flags or {}, telescope, name, astrometry, spin
     )

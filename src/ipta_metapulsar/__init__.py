@@ -9,7 +9,7 @@ from .metapulsar import MetaPulsar
 
 # New factory architecture imports
 from .pta_registry import PTARegistry
-from .meta_pulsar_factory import MetaPulsarFactory
+from .metapulsar_factory import MetaPulsarFactory
 from .parfile_manager import ParFileManager
 
 __version__ = "0.1.0"
