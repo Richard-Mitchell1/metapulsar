@@ -10,6 +10,7 @@ from .metapulsar import MetaPulsar
 # New factory architecture imports
 from .pta_registry import PTARegistry
 from .meta_pulsar_factory import MetaPulsarFactory
+from .parfile_manager import ParFileManager
 
 __version__ = "0.1.0"
 __author__ = "Rutger van Haasteren, Wangwei Yu"
@@ -23,5 +24,6 @@ __all__ = [
     "MetaPulsar",
     "PTARegistry",
     "MetaPulsarFactory",
+    "ParFileManager",
     "create_staggered_selection",
 ]
