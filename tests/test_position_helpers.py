@@ -139,7 +139,7 @@ class TestBJNameGeneration:
         par_text = load_parfile_text(parfile_name)
         model = _build_pint_model(mb, par_text)
         blabel = bj_name_from_pulsar(model, "B")
-        assert blabel == "B1857+09"
+        assert blabel == "B1855+09"
 
     def test_name_consistency_across_parfiles(self, model_J, model_B):
         """Test that names are consistent between different parfile formats."""
@@ -148,7 +148,7 @@ class TestBJNameGeneration:
         bl_j = bj_name_from_pulsar(model_J, "B")
         bl_b = bj_name_from_pulsar(model_B, "B")
         assert jl_j == jl_b == "J1857+0943"
-        assert bl_j == bl_b == "B1857+09"
+        assert bl_j == bl_b == "B1855+09"
 
     def test_default_name_type_is_j(self, model_J):
         """Test that default name type is J."""
@@ -217,7 +217,7 @@ class TestEndToEndJNameGeneration:
         """Test B-name generation from Enterprise mock objects."""
         model = model_J if which == "J" else model_B
         emock = enterprise_from_model(model)
-        assert bj_name_from_pulsar(emock, "B") == "B1857+09"
+        assert bj_name_from_pulsar(emock, "B") == "B1855+09"
 
     @pytest.mark.parametrize(
         "which,variant", [("J", "eq"), ("B", "eq"), ("J", "ecl"), ("B", "ecl")]
@@ -241,4 +241,4 @@ class TestEndToEndJNameGeneration:
             lmock = libstempo_from_model_equatorial(model)
         else:
             lmock = libstempo_from_model_ecliptic(model)
-        assert bj_name_from_pulsar(lmock, "B") == "B1857+09"
+        assert bj_name_from_pulsar(lmock, "B") == "B1855+09"

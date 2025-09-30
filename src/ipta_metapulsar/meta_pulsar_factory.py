@@ -173,16 +173,20 @@ class MetaPulsarFactory:
         # 1. Discover raw par files
         raw_parfiles = self._discover_parfiles(pulsar_name, pta_names)
 
-        # 2. Create Enterprise Pulsars from raw files (no astrophysical consistency)
-        enterprise_pulsars = self._create_enterprise_pulsars_from_files(raw_parfiles)
+        # 2. Create raw PINT/Tempo2 objects from files
+        raw_pulsars = self._create_raw_pulsars_from_files(raw_parfiles)
 
         # 3. Get canonical name
-        pta_configs = self.registry.get_pta_subset(pta_names)
+        pta_configs = (
+            self.registry.get_pta_subset(pta_names)
+            if pta_names is not None
+            else self.registry.configs
+        )
         canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
 
         # 4. Create MetaPulsar
         return MetaPulsar(
-            pulsars=enterprise_pulsars,
+            pulsars=raw_pulsars,
             combination_strategy="composite",
             canonical_name=canonical_name,
         )
@@ -193,10 +197,10 @@ class MetaPulsarFactory:
         """Discover par files using PTARegistry."""
         return self.parfile_manager._discover_parfiles(pulsar_name, pta_names)
 
-    def _create_enterprise_pulsars_from_files(
+    def _create_raw_pulsars_from_files(
         self, file_paths: Dict[str, Path]
     ) -> Dict[str, Any]:
-        """Create Enterprise Pulsars from file paths."""
+        """Create raw PINT/Tempo2 objects from file paths."""
         # Convert to file pairs format (par, tim) for the existing method
         file_pairs = {}
         for pta_name, parfile in file_paths.items():
@@ -205,8 +209,57 @@ class MetaPulsarFactory:
             timfile = self._find_timfile(parfile, config)
             file_pairs[pta_name] = (parfile, timfile)
 
-        # Use the existing method that properly handles PINT/Tempo2 creation
-        return self._create_enterprise_pulsars(file_pairs, self.registry.configs)
+        # Create raw PINT/Tempo2 objects
+        return self._create_raw_pulsars(file_pairs, self.registry.configs)
+
+    def _create_raw_pulsars(
+        self, file_pairs: Dict[str, Tuple[Path, Path]], pta_configs: Dict[str, Dict]
+    ) -> Dict[str, Any]:
+        """Create raw PINT/Tempo2 objects from file pairs.
+
+        Args:
+            file_pairs: Dictionary mapping PTA names to (parfile, timfile) tuples
+            pta_configs: Dictionary of PTA configurations
+
+        Returns:
+            Dictionary mapping PTA names to raw PINT/Tempo2 objects
+
+        Raises:
+            RuntimeError: If raw pulsar creation fails
+        """
+        raw_pulsars = {}
+
+        for pta_name, (parfile, timfile) in file_pairs.items():
+            config = pta_configs[pta_name]
+
+            try:
+                if config["timing_package"] == "pint":
+                    # Create raw PINT objects
+                    if get_model_and_toas is None:
+                        raise RuntimeError("PINT not available for raw PINT creation")
+
+                    model, toas = get_model_and_toas(str(parfile), str(timfile))
+                    raw_pulsars[pta_name] = (model, toas)
+
+                else:  # tempo2
+                    # Create raw Tempo2 object
+                    if t2 is None:
+                        raise RuntimeError(
+                            "libstempo not available for raw Tempo2 creation"
+                        )
+
+                    t2_psr = t2.tempopulsar(str(parfile), str(timfile))
+                    raw_pulsars[pta_name] = t2_psr
+
+                self.logger.debug(
+                    f"Created raw {config['timing_package']} object for {pta_name}"
+                )
+
+            except Exception as e:
+                self.logger.error(f"Failed to create raw pulsar for {pta_name}: {e}")
+                raise RuntimeError(f"Failed to create raw pulsar for {pta_name}: {e}")
+
+        return raw_pulsars
 
     def create_all_metapulsars(
         self, pta_names: List[str] = None
