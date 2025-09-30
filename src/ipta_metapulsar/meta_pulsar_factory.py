@@ -310,9 +310,6 @@ class MetaPulsarFactory:
             "file_pairs": {
                 pta: (str(par), str(tim)) for pta, (par, tim) in file_pairs.items()
             },
-            "coordinate_systems": {
-                pta: config["coordinates"] for pta, config in pta_configs.items()
-            },
             "timing_packages": {
                 pta: config["timing_package"] for pta, config in pta_configs.items()
             },

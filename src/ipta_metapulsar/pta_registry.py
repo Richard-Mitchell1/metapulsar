@@ -14,7 +14,6 @@ PTA_CONFIGS = {
         "base_dir": "/data/IPTA-DR3/EPTA_DR2/",
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1_all\.tim",
-        "coordinates": "ecliptical",
         "timing_package": "tempo2",
         "priority": 1,
         "description": "EPTA Data Release 2",
@@ -23,7 +22,6 @@ PTA_CONFIGS = {
         "base_dir": "/data/IPTA-DR3/PPTA_DR2/",
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.tim",
-        "coordinates": "equatorial",
         "timing_package": "tempo2",
         "priority": 1,
         "description": "PPTA Data Release 2",
@@ -32,7 +30,6 @@ PTA_CONFIGS = {
         "base_dir": "/data/IPTA-DR3/PPTA_DR3/",
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.tim",
-        "coordinates": "equatorial",
         "timing_package": "tempo2",
         "priority": 2,
         "description": "PPTA Data Release 3",
@@ -41,7 +38,6 @@ PTA_CONFIGS = {
         "base_dir": "/data/IPTA-DR3/InPTA_DR1/",
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1_all\.tim",
-        "coordinates": "equatorial",
         "timing_package": "tempo2",
         "priority": 1,
         "description": "InPTA Data Release 1",
@@ -50,7 +46,6 @@ PTA_CONFIGS = {
         "base_dir": "/data/IPTA-DR3/InPTA_DR1_edited/",
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1_all\.tim",
-        "coordinates": "equatorial",
         "timing_package": "tempo2",
         "priority": 2,
         "description": "InPTA Data Release 1 (Edited)",
@@ -59,7 +54,6 @@ PTA_CONFIGS = {
         "base_dir": "/data/IPTA-DR3/MPTA_DR1/",
         "par_pattern": r"MTMSP-([BJ]\d{4}[+-]\d{2,4})-\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})_16ch\.tim",
-        "coordinates": "equatorial",
         "timing_package": "tempo2",
         "priority": 1,
         "description": "MPTA Data Release 1",
@@ -68,7 +62,6 @@ PTA_CONFIGS = {
         "base_dir": "/data/IPTA-DR3/NANOGrav_12y/",
         "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})(?!.*\.t2)_NANOGrav_12yv2\.gls\.par",
         "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})_NANOGrav_12yv2\.tim",
-        "coordinates": "ecliptical",
         "timing_package": "pint",
         "priority": 1,
         "description": "NANOGrav 12-year Data Release",
@@ -77,7 +70,6 @@ PTA_CONFIGS = {
         "base_dir": "/data/IPTA-DR3/NANOGrav_15y/",
         "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})(?!.*(ao|gbt)).*\.par",
         "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})(?!.*(ao|gbt)).*\.tim",
-        "coordinates": "ecliptical",
         "timing_package": "pint",
         "priority": 2,
         "description": "NANOGrav 15-year Data Release",
@@ -217,18 +209,12 @@ class PTARegistry:
             "base_dir",
             "par_pattern",
             "tim_pattern",
-            "coordinates",
             "timing_package",
         }
         missing_keys = required_keys - config.keys()
 
         if missing_keys:
             raise ValueError(f"Missing required keys: {missing_keys}")
-
-        if config["coordinates"] not in ["equatorial", "ecliptical"]:
-            raise ValueError(
-                f"Invalid coordinates: {config['coordinates']}. Must be 'equatorial' or 'ecliptical'"
-            )
 
         if config["timing_package"] not in ["pint", "tempo2"]:
             raise ValueError(

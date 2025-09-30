@@ -28,7 +28,6 @@ class TestPTARegistry:
             "base_dir": "/data/custom",
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-            "coordinates": "equatorial",
             "timing_package": "pint",
             "priority": 1,
             "description": "Custom PTA",
@@ -48,7 +47,6 @@ class TestPTARegistry:
             "base_dir": "/data/custom",
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-            "coordinates": "equatorial",
             "timing_package": "pint",
         }
 
@@ -61,7 +59,6 @@ class TestPTARegistry:
 
         config = registry.get_pta("epta_dr2")
 
-        assert config["coordinates"] == "ecliptical"
         assert config["timing_package"] == "tempo2"
 
     def test_get_nonexistent_pta(self):
@@ -90,8 +87,6 @@ class TestPTARegistry:
         assert len(subset) == 2
         assert "epta_dr2" in subset
         assert "ppta_dr3" in subset
-        assert subset["epta_dr2"]["coordinates"] == "ecliptical"
-        assert subset["ppta_dr3"]["coordinates"] == "equatorial"
 
     def test_get_pta_subset_nonexistent(self):
         """Test that getting subset with nonexistent PTA raises KeyError."""
@@ -109,7 +104,6 @@ class TestPTARegistry:
             assert "base_dir" in config
             assert "par_pattern" in config
             assert "tim_pattern" in config
-            assert config["coordinates"] in ["equatorial", "ecliptical"]
             assert config["timing_package"] in ["pint", "tempo2"]
 
             # Check that patterns are valid regex
@@ -126,19 +120,6 @@ class TestPTARegistry:
         with pytest.raises(ValueError, match="Missing required keys"):
             registry.add_pta("test", {"base_dir": "/data"})
 
-        # Test invalid coordinates
-        with pytest.raises(ValueError, match="Invalid coordinates"):
-            registry.add_pta(
-                "test",
-                {
-                    "base_dir": "/data",
-                    "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
-                    "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-                    "coordinates": "invalid",
-                    "timing_package": "pint",
-                },
-            )
-
         # Test invalid timing package
         with pytest.raises(ValueError, match="Invalid timing_package"):
             registry.add_pta(
@@ -147,7 +128,6 @@ class TestPTARegistry:
                     "base_dir": "/data",
                     "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
                     "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-                    "coordinates": "equatorial",
                     "timing_package": "invalid",
                 },
             )

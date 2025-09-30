@@ -47,7 +47,6 @@ class TestMetaPulsarFactory:
             "base_dir": "/data/test",
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-            "coordinates": "equatorial",
             "timing_package": "pint",
             "priority": 1,
             "description": "Test PTA",
@@ -94,7 +93,6 @@ class TestMetaPulsarFactory:
             "base_dir": "/data/test",
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-            "coordinates": "equatorial",
             "timing_package": "pint",
             "priority": 1,
             "description": "Test PTA",
@@ -135,7 +133,6 @@ class TestMetaPulsarFactory:
             "base_dir": "/data/test",
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-            "coordinates": "equatorial",
             "timing_package": "pint",
             "priority": 1,
             "description": "Test PTA",
@@ -171,7 +168,6 @@ class TestMetaPulsarFactory:
             "base_dir": "/data/test",
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-            "coordinates": "equatorial",
             "timing_package": "pint",
             "priority": 1,
             "description": "Test PTA",
@@ -195,7 +191,6 @@ class TestMetaPulsarFactory:
             "base_dir": "/data/test",
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-            "coordinates": "equatorial",
             "timing_package": "pint",
             "priority": 1,
             "description": "Test PTA",
@@ -262,7 +257,6 @@ class TestMetaPulsarFactory:
             "base_dir": "/data/test",
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-            "coordinates": "equatorial",
             "timing_package": "pint",
             "priority": 1,
             "description": "Test PTA",
@@ -308,7 +302,6 @@ class TestMetaPulsarFactory:
                 "base_dir": "/data/epta",
                 "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
                 "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-                "coordinates": "ecliptical",
                 "timing_package": "tempo2",
                 "priority": 1,
                 "description": "EPTA DR2",
@@ -317,7 +310,6 @@ class TestMetaPulsarFactory:
                 "base_dir": "/data/ppta",
                 "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
                 "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-                "coordinates": "equatorial",
                 "timing_package": "tempo2",
                 "priority": 2,
                 "description": "PPTA DR3",
@@ -327,11 +319,7 @@ class TestMetaPulsarFactory:
         metadata = self.factory._build_metadata(file_pairs, pta_configs)
 
         assert "file_pairs" in metadata
-        assert "coordinate_systems" in metadata
         assert "timing_packages" in metadata
         assert "creation_timestamp" in metadata
-
-        assert metadata["coordinate_systems"]["epta_dr2"] == "ecliptical"
-        assert metadata["coordinate_systems"]["ppta_dr3"] == "equatorial"
         assert metadata["timing_packages"]["epta_dr2"] == "tempo2"
         assert metadata["timing_packages"]["ppta_dr3"] == "tempo2"
