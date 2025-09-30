@@ -30,7 +30,7 @@ def basic_usage_example():
         "J1909-3744", ["epta_dr2", "ppta_dr2", "nanograv_15y"]
     )
     print(f"MetaPulsar combination strategy: {metapulsar.get_combination_strategy()}")
-    print(f"Is composite strategy: {metapulsar.is_composite_strategy()}")
+    print(f"Is composite strategy: {metapulsar.combination_strategy == 'composite'}")
 
     # Create MetaPulsar with astrophysical consistency approach
     print("\nCreating MetaPulsar with consistent strategy...")
@@ -43,7 +43,9 @@ def basic_usage_example():
     print(
         f"MetaPulsar combination strategy: {metapulsar_consistent.get_combination_strategy()}"
     )
-    print(f"Is consistent strategy: {metapulsar_consistent.is_consistent_strategy()}")
+    print(
+        f"Is consistent strategy: {metapulsar_consistent.combination_strategy == 'consistent'}"
+    )
 
 
 def custom_pta_registry_example():
@@ -108,7 +110,7 @@ def custom_pta_registry_example():
     metapulsar = factory.create_metapulsar(
         "J1909-3744", ["custom_pta", "another_pta"], combination_strategy="composite"
     )
-    print(f"MetaPulsar created with strategy: {metapulsar.get_combination_strategy()}")
+    print(f"MetaPulsar created with strategy: {metapulsar.combination_strategy}")
 
 
 def advanced_usage_example():
@@ -211,7 +213,7 @@ def combination_strategy_comparison():
     metapulsar_composite = factory.create_metapulsar(
         "J1909-3744", ["epta_dr2", "ppta_dr2"], combination_strategy="composite"
     )
-    print(f"Composite strategy: {metapulsar_composite.get_combination_strategy()}")
+    print(f"Composite strategy: {metapulsar_composite.combination_strategy}")
     print("  - Uses raw par files without modification")
     print("  - Preserves PTA-specific parameter differences")
     print("  - Suitable for 'Borg' or 'FrankenStat' analysis methods")
@@ -225,7 +227,7 @@ def combination_strategy_comparison():
         reference_pta="epta_dr2",
         combine_components=["spin", "astrometry", "binary", "dispersion"],
     )
-    print(f"Consistent strategy: {metapulsar_consistent.get_combination_strategy()}")
+    print(f"Consistent strategy: {metapulsar_consistent.combination_strategy}")
     print("  - Uses astrophysically consistent par files")
     print("  - Aligns parameters to reference PTA values")
     print("  - Suitable for unified gravitational wave analysis")

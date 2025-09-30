@@ -83,8 +83,8 @@ def test_metapulsar_combination_strategy():
         )
 
         assert metapulsar_composite.get_combination_strategy() == "composite"
-        assert metapulsar_composite.is_composite_strategy()
-        assert not metapulsar_composite.is_consistent_strategy()
+        assert metapulsar_composite.combination_strategy == "composite"
+        assert metapulsar_composite.combination_strategy != "consistent"
         print("✓ Composite strategy methods work correctly")
 
         # Test consistent strategy
@@ -93,8 +93,8 @@ def test_metapulsar_combination_strategy():
         )
 
         assert metapulsar_consistent.get_combination_strategy() == "consistent"
-        assert not metapulsar_consistent.is_composite_strategy()
-        assert metapulsar_consistent.is_consistent_strategy()
+        assert metapulsar_consistent.combination_strategy != "composite"
+        assert metapulsar_consistent.combination_strategy == "consistent"
         print("✓ Consistent strategy methods work correctly")
 
         return True

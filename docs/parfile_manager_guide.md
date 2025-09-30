@@ -178,10 +178,10 @@ metapulsar = MetaPulsar(
 strategy = metapulsar.get_combination_strategy()
 
 # Check if using composite strategy
-is_composite = metapulsar.is_composite_strategy()
+is_composite = metapulsar.combination_strategy == "composite"
 
 # Check if using consistent strategy
-is_consistent = metapulsar.is_consistent_strategy()
+is_consistent = metapulsar.combination_strategy == "consistent"
 ```
 
 ## Usage Examples
@@ -395,11 +395,7 @@ Initialize MetaPulsar with pulsar data and combination strategy.
 #### `get_combination_strategy(self) -> str`
 Get the combination strategy used.
 
-#### `is_composite_strategy(self) -> bool`
-Check if using composite strategy.
-
-#### `is_consistent_strategy(self) -> bool`
-Check if using consistent strategy.
+**Note**: You can also access the strategy directly via `metapulsar.combination_strategy`.
 
 ---
 
