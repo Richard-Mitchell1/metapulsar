@@ -1,8 +1,71 @@
 """Selection utilities for IPTA Metapulsar Analysis.
 
-This module provides selection functions for Enterprise, particularly
-staggered selection functionality that supports hierarchical flag selection
-with fallback mechanisms.
+This module provides a modern, well-documented API for creating Enterprise-compatible
+selection functions. It replaces the legacy `create_selection_stag` function with
+improved functionality, better documentation, and enhanced type safety.
+
+Key Features:
+    - Hierarchical flag selection with automatic fallback
+    - Single flag selection for simple use cases
+    - Frequency band filtering
+    - Full Enterprise compatibility
+    - Complete type hints for better IDE support
+    - Robust error handling
+
+Basic Usage:
+    >>> from ipta_metapulsar.selection_utils import create_staggered_selection
+    >>> from enterprise.signals.selections import Selection
+    >>> 
+    >>> # Simple group-based selection
+    >>> group_sel = create_staggered_selection("efac", {"group": None})
+    >>> selection = Selection(group_sel)
+    >>> 
+    >>> # Staggered selection with fallback
+    >>> staggered_sel = create_staggered_selection("ecorr", {("group", "f"): None})
+    >>> selection = Selection(staggered_sel)
+    >>> 
+    >>> # Frequency band selection
+    >>> band_sel = create_staggered_selection("band", {"group": None}, freq_range=(400, 1000))
+    >>> selection = Selection(band_sel)
+
+Advanced Usage:
+    >>> # Multiple criteria
+    >>> multi_sel = create_staggered_selection("efac", {
+    ...     "pta": "EPTA",  # PTA-specific
+    ...     ("group", "f"): None  # All groups with fallback
+    ... })
+    >>> 
+    >>> # Complex staggered selection
+    >>> complex_sel = create_staggered_selection("efac", {
+    ...     ("group", "f", "B"): None,  # Triple fallback
+    ...     "pta": "EPTA"  # PTA-specific
+    ... })
+
+Migration from Legacy:
+    The new API is designed to be a drop-in replacement for the legacy function:
+    
+    >>> # Legacy code
+    >>> from legacy.metapulsar import create_selection_stag
+    >>> legacy_sel = create_selection_stag("efac", {"group": None}, lowfreq=400, highfreq=1000)
+    >>> 
+    >>> # New API
+    >>> from ipta_metapulsar.selection_utils import create_staggered_selection
+    >>> new_sel = create_staggered_selection("efac", {"group": None}, freq_range=(400, 1000))
+
+See Also:
+    - `enterprise.signals.selections.Selection`: Enterprise Selection class
+    - `examples/staggered_selection_usage.ipynb`: Comprehensive usage examples
+    - `docs/selection_utils_api.md`: Complete API documentation
+    - `docs/enterprise_integration_guide.md`: Enterprise integration guide
+
+Examples:
+    See the examples directory for comprehensive usage examples including:
+    - Basic flag selection
+    - Staggered selection with fallback
+    - Frequency band filtering
+    - Enterprise integration
+    - Real-world scenarios
+    - Performance optimization
 """
 
 from typing import Dict, Union, Tuple, Optional, Callable
