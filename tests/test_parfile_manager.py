@@ -198,6 +198,50 @@ class TestParFileManager:
         assert output_files["epta_dr2"].exists()
         assert output_files["epta_dr2"].name == "J1909-3744_epta_dr2.par"
 
+    def test_convert_units_mixed_units(self):
+        """Test unit conversion when units are mixed."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test par files with mixed units
+            tdb_file = Path(temp_dir) / "tdb.par"
+            tcb_file = Path(temp_dir) / "tcb.par"
+
+            tdb_file.write_text("F0 123.456 1\nUNITS TDB\n")
+            tcb_file.write_text("F0 123.456 1\nUNITS TCB\n")
+
+            parfile_paths = {"epta_dr2": tdb_file, "ppta_dr2": tcb_file}
+
+            with patch.object(self.manager, "_convert_tempo2_to_tdb") as mock_convert:
+                mock_convert.return_value = "F0 123.456 1\nUNITS TDB\n"
+
+                result = self.manager._convert_units_if_needed(parfile_paths)
+
+                # Should have converted the TCB file
+                assert len(result) == 2
+                assert "epta_dr2" in result
+                assert "ppta_dr2" in result
+                mock_convert.assert_called_once()
+
+    def test_convert_units_same_units(self):
+        """Test unit conversion when all units are the same."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test par files with same units
+            tdb_file1 = Path(temp_dir) / "tdb1.par"
+            tdb_file2 = Path(temp_dir) / "tdb2.par"
+
+            tdb_file1.write_text("F0 123.456 1\nUNITS TDB\n")
+            tdb_file2.write_text("F0 123.456 1\nUNITS TDB\n")
+
+            parfile_paths = {"epta_dr2": tdb_file1, "ppta_dr2": tdb_file2}
+
+            result = self.manager._convert_units_if_needed(parfile_paths)
+
+            # Should return original content without conversion
+            assert len(result) == 2
+            assert "epta_dr2" in result
+            assert "ppta_dr2" in result
+            assert "UNITS TDB" in result["epta_dr2"]
+            assert "UNITS TDB" in result["ppta_dr2"]
+
 
 if __name__ == "__main__":
     pytest.main([__file__])

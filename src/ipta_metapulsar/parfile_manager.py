@@ -136,29 +136,35 @@ class ParFileManager:
     ) -> Optional[Path]:
         """Find a file matching the pattern in the base directory.
 
+        Uses exact regex matching like the legacy implementation.
+
         Args:
             pulsar_name: Name of the pulsar to search for
             base_dir: Base directory to search in
-            pattern: Regex pattern to match against
+            pattern: Regex pattern to match against (includes directory structure)
 
         Returns:
             Path to the matching file, or None if not found
         """
         import re
         import glob
+        import os
 
         base_path = Path(base_dir)
         if not base_path.exists():
             return None
 
-        # Convert regex pattern to glob pattern for directory traversal
-        # This is a simplified approach - in practice, you might need more sophisticated pattern matching
-        search_pattern = str(base_path / "**" / f"*{pulsar_name}*")
+        # Use recursive glob to find all files, then match with exact regex
+        # This matches the legacy implementation approach
+        files = glob.glob(f"{base_dir}/**/*", recursive=True)
+        regex = re.compile(pattern)
 
-        for file_path in glob.glob(search_pattern, recursive=True):
-            file_path = Path(file_path)
-            if re.search(pattern, str(file_path)):
-                return file_path
+        for file_path in files:
+            if os.path.isfile(file_path) and regex.search(file_path):
+                # Check if this file matches the pulsar name
+                pulsar_name_match = re.search(pattern, file_path)
+                if pulsar_name_match and pulsar_name_match.group(1) == pulsar_name:
+                    return Path(file_path)
 
         return None
 
@@ -321,20 +327,24 @@ class ParFileManager:
     ) -> Dict[str, str]:
         """Convert par files to consistent units (TDB).
 
+        Only converts if units are mixed (some TDB, some TCB).
+        If all files have the same units, no conversion is needed.
+
         Implementation details:
         1. Parse each par file using PINT's parse_parfile()
         2. Check UNITS parameter in each par file
-        3. For tempo2/libstempo PTAs: Set UNITS to TCB if not specified
-        4. For PINT PTAs: Set UNITS to TDB if not specified
-        5. Convert TCB to TDB using appropriate method:
+        3. Determine if conversion is needed (mixed units)
+        4. Convert TCB to TDB using appropriate method:
            - PINT files: Use ModelBuilder with allow_tcb=True, and allow_T2=True then write_parfile()
            - Tempo2 files: Use subprocess to call 'tempo2 -gr transform parFile outputFile tdb'
-        6. Handle conversion errors with proper logging and exceptions
-        7. Return converted par file content as strings
+        5. Handle conversion errors with proper logging and exceptions
+        6. Return converted par file content as strings
         """
-        self.logger.info("Converting par files to consistent units (TDB)")
+        self.logger.info("Checking if unit conversion is needed")
 
-        converted_parfiles = {}
+        # First pass: check units in all files
+        file_units = {}
+        parfile_contents = {}
 
         for pta_name, parfile_path in parfile_paths.items():
             try:
@@ -344,20 +354,47 @@ class ParFileManager:
 
                 # Parse to check current units
                 parfile_dict = parse_parfile(StringIO(parfile_content))
+                current_units = parfile_dict.get("UNITS", ["TDB"])[0].upper()
 
-                # Get PTA configuration to determine timing package
-                pta_config = self.registry.get_pta(pta_name)
-                timing_package = pta_config.get("timing_package", "pint")
+                file_units[pta_name] = current_units
+                parfile_contents[pta_name] = parfile_content
 
-                # Check if conversion is needed
-                current_units = parfile_dict.get("UNITS", ["TDB"])[0]
+                self.logger.debug(f"PTA {pta_name}: {current_units} units")
 
-                if current_units.upper() == "TDB":
-                    # Already in TDB, no conversion needed
-                    converted_parfiles[pta_name] = parfile_content
-                    self.logger.debug(f"PTA {pta_name}: Already in TDB units")
-                else:
-                    # Convert to TDB
+            except Exception as e:
+                self.logger.error(f"Error reading par file for PTA {pta_name}: {e}")
+                raise RuntimeError(f"Failed to read par file for PTA {pta_name}") from e
+
+        # Check if all units are the same
+        unique_units = set(file_units.values())
+        if len(unique_units) == 1:
+            # All files have the same units, no conversion needed
+            self.logger.info(
+                f"All par files have {list(unique_units)[0]} units. No conversion needed."
+            )
+            return parfile_contents
+
+        # Mixed units detected, conversion needed
+        self.logger.info(
+            f"Mixed units detected: {unique_units}. Converting TCB files to TDB."
+        )
+
+        converted_parfiles = {}
+
+        for pta_name, parfile_content in parfile_contents.items():
+            current_units = file_units[pta_name]
+
+            if current_units == "TDB":
+                # Already in TDB, no conversion needed
+                converted_parfiles[pta_name] = parfile_content
+                self.logger.debug(f"PTA {pta_name}: Already in TDB units")
+            else:
+                # Convert to TDB
+                try:
+                    # Get PTA configuration to determine timing package
+                    pta_config = self.registry.get_pta(pta_name)
+                    timing_package = pta_config.get("timing_package", "pint")
+
                     if timing_package in ["tempo2", "libstempo"]:
                         # Use tempo2 subprocess for conversion
                         converted_content = self._convert_tempo2_to_tdb(parfile_content)
@@ -370,9 +407,11 @@ class ParFileManager:
                         f"PTA {pta_name}: Converted from {current_units} to TDB"
                     )
 
-            except Exception as e:
-                self.logger.error(f"Error converting units for PTA {pta_name}: {e}")
-                raise RuntimeError(f"Unit conversion failed for PTA {pta_name}") from e
+                except Exception as e:
+                    self.logger.error(f"Error converting units for PTA {pta_name}: {e}")
+                    raise RuntimeError(
+                        f"Unit conversion failed for PTA {pta_name}"
+                    ) from e
 
         return converted_parfiles
 
@@ -423,7 +462,7 @@ class ParFileManager:
         try:
             # Create ModelBuilder and parse par file
             mb = ModelBuilder()
-            model = mb(StringIO(parfile_content), allow_tcb=True)
+            model = mb(StringIO(parfile_content), allow_tcb=True, allow_T2=True)
 
             # Write par file with TDB units
             new_file = StringIO()
