@@ -20,10 +20,9 @@ class TestEndToEnd:
 
         for pulsar in test_pulsars[:2]:  # Test first 2 pulsars
             try:
-                mp = MetaPulsarFactory.create_metapulsar(
+                mp = MetaPulsarFactory().create_metapulsar(
                     pulsar_name=pulsar,
-                    pta_configs=dr2_configs,
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=dr2_configs,
                     reference_pta="epta_dr1_v2_2",
                 )
 
@@ -63,10 +62,9 @@ class TestEndToEnd:
 
         for pulsar in test_pulsars[:2]:  # Test first 2 pulsars
             try:
-                mp = MetaPulsarFactory.create_metapulsar(
+                mp = MetaPulsarFactory().create_metapulsar(
                     pulsar_name=pulsar,
-                    pta_configs=dr3_configs,
-                    primary_pta="epta_dr2",
+                    pta_names=dr3_configs,
                     reference_pta="epta_dr2",
                 )
 
@@ -106,10 +104,9 @@ class TestEndToEnd:
 
         for pulsar in test_pulsars[:1]:  # Test first pulsar
             try:
-                mp = MetaPulsarFactory.create_metapulsar(
+                mp = MetaPulsarFactory().create_metapulsar(
                     pulsar_name=pulsar,
-                    pta_configs=mixed_configs,
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=mixed_configs,
                     reference_pta="epta_dr1_v2_2",
                 )
 
@@ -144,10 +141,9 @@ class TestEndToEnd:
             try:
                 # Test with different primary PTAs
                 for primary_pta in test_configs:
-                    mp = MetaPulsarFactory.create_metapulsar(
+                    mp = MetaPulsarFactory().create_metapulsar(
                         pulsar_name=pulsar,
-                        pta_configs=test_configs,
-                        primary_pta=primary_pta,
+                        pta_names=test_configs,
                         reference_pta=primary_pta,
                     )
 
@@ -189,10 +185,9 @@ class TestEndToEnd:
                     or config in available_data_sets.get("dr3", {})
                     for config in pint_configs
                 ):
-                    mp_pint = MetaPulsarFactory.create_metapulsar(
+                    mp_pint = MetaPulsarFactory().create_metapulsar(
                         pulsar_name=pulsar,
-                        pta_configs=pint_configs,
-                        primary_pta=pint_configs[0],
+                        pta_names=pint_configs,
                         reference_pta=pint_configs[0],
                     )
 
@@ -208,10 +203,9 @@ class TestEndToEnd:
                     or config in available_data_sets.get("dr3", {})
                     for config in tempo2_configs
                 ):
-                    mp_tempo2 = MetaPulsarFactory.create_metapulsar(
+                    mp_tempo2 = MetaPulsarFactory().create_metapulsar(
                         pulsar_name=pulsar,
-                        pta_configs=tempo2_configs,
-                        primary_pta=tempo2_configs[0],
+                        pta_names=tempo2_configs,
                         reference_pta=tempo2_configs[0],
                     )
 
@@ -245,10 +239,9 @@ class TestEndToEnd:
 
         for pulsar in test_pulsars[:1]:  # Test first pulsar
             try:
-                mp = MetaPulsarFactory.create_metapulsar(
+                mp = MetaPulsarFactory().create_metapulsar(
                     pulsar_name=pulsar,
-                    pta_configs=all_configs,
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=all_configs,
                     reference_pta="epta_dr1_v2_2",
                 )
 
@@ -285,10 +278,9 @@ class TestEndToEnd:
         for pulsar in test_pulsars[:1]:  # Test first pulsar
             try:
                 # Create MetaPulsar
-                mp = MetaPulsarFactory.create_metapulsar(
+                mp = MetaPulsarFactory().create_metapulsar(
                     pulsar_name=pulsar,
-                    pta_configs=test_configs,
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=test_configs,
                     reference_pta="epta_dr1_v2_2",
                 )
 

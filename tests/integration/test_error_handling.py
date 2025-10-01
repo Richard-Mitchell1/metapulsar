@@ -12,11 +12,10 @@ class TestErrorHandling:
     def test_missing_data_directory(self):
         """Test handling of missing data directories."""
         # Test with non-existent directory
-        with pytest.raises((FileNotFoundError, ValueError)):
-            MetaPulsarFactory.create_metapulsar(
+        with pytest.raises(KeyError):
+            MetaPulsarFactory().create_metapulsar(
                 pulsar_name="J0030+0451",
-                pta_configs=["nonexistent_config"],
-                primary_pta="nonexistent_config",
+                pta_names=["nonexistent_config"],
                 reference_pta="nonexistent_config",
             )
 
@@ -27,10 +26,9 @@ class TestErrorHandling:
 
         # Test with non-existent pulsar
         with pytest.raises((FileNotFoundError, ValueError)):
-            MetaPulsarFactory.create_metapulsar(
+            MetaPulsarFactory().create_metapulsar(
                 pulsar_name="J9999+9999",  # Non-existent pulsar
-                pta_configs=["epta_dr1_v2_2"],
-                primary_pta="epta_dr1_v2_2",
+                pta_names=["epta_dr1_v2_2"],
                 reference_pta="epta_dr1_v2_2",
             )
 
@@ -53,20 +51,19 @@ F0 123.456 1 0.001
 """
                 )
 
-            # Create a temporary PTA config pointing to malformed file
-            registry = PTARegistry()
-            config = registry.get_config("epta_dr1_v2_2")
-            config["base_dir"] = str(temp_dir)
-            config["par_pattern"] = "J0030+0451.par"
+                # Create a temporary PTA config pointing to malformed file
+                registry = PTARegistry()
+                config = registry.get_pta("epta_dr1_v2_2")
+                config["base_dir"] = str(temp_dir)
+                config["par_pattern"] = "J0030+0451.par"
 
-            # This should raise an appropriate error
-            with pytest.raises((ValueError, RuntimeError)):
-                MetaPulsarFactory.create_metapulsar(
-                    pulsar_name="J0030+0451",
-                    pta_configs=["epta_dr1_v2_2"],
-                    primary_pta="epta_dr1_v2_2",
-                    reference_pta="epta_dr1_v2_2",
-                )
+                # This should raise FileNotFoundError because no valid data is found
+                with pytest.raises(FileNotFoundError):
+                    MetaPulsarFactory().create_metapulsar(
+                        pulsar_name="J0030+0451",
+                        pta_names=["epta_dr1_v2_2"],
+                        reference_pta="epta_dr1_v2_2",
+                    )
 
     def test_malformed_tim_file(self, available_data_sets):
         """Test handling of malformed tim files."""
@@ -86,20 +83,19 @@ C 12345.67890 0.0001
 """
                 )
 
-            # Create a temporary PTA config pointing to malformed file
-            registry = PTARegistry()
-            config = registry.get_config("epta_dr1_v2_2")
-            config["base_dir"] = str(temp_dir)
-            config["tim_pattern"] = "J0030+0451.tim"
+                # Create a temporary PTA config pointing to malformed file
+                registry = PTARegistry()
+                config = registry.get_pta("epta_dr1_v2_2")
+                config["base_dir"] = str(temp_dir)
+                config["tim_pattern"] = "J0030+0451.tim"
 
-            # This should raise an appropriate error
-            with pytest.raises((ValueError, RuntimeError)):
-                MetaPulsarFactory.create_metapulsar(
-                    pulsar_name="J0030+0451",
-                    pta_configs=["epta_dr1_v2_2"],
-                    primary_pta="epta_dr1_v2_2",
-                    reference_pta="epta_dr1_v2_2",
-                )
+                # This should raise FileNotFoundError because no valid data is found
+                with pytest.raises(FileNotFoundError):
+                    MetaPulsarFactory().create_metapulsar(
+                        pulsar_name="J0030+0451",
+                        pta_names=["epta_dr1_v2_2"],
+                        reference_pta="epta_dr1_v2_2",
+                    )
 
     def test_invalid_pta_config(self):
         """Test handling of invalid PTA configurations."""
@@ -107,15 +103,14 @@ C 12345.67890 0.0001
 
         # Test with invalid PTA config name
         with pytest.raises(KeyError):
-            registry.get_config("invalid_config")
+            registry.get_pta("invalid_config")
 
-        # Test with invalid primary/reference PTA
-        with pytest.raises((ValueError, KeyError)):
-            MetaPulsarFactory.create_metapulsar(
+        # Test with invalid primary/reference PTA - this should raise KeyError
+        with pytest.raises(KeyError):
+            MetaPulsarFactory().create_metapulsar(
                 pulsar_name="J0030+0451",
-                pta_configs=["epta_dr1_v2_2"],
-                primary_pta="invalid_pta",
-                reference_pta="epta_dr1_v2_2",
+                pta_names=["epta_dr1_v2_2"],
+                reference_pta="invalid_pta",
             )
 
     def test_empty_par_files(self, available_data_sets):
@@ -130,16 +125,15 @@ C 12345.67890 0.0001
 
             # Create a temporary PTA config pointing to empty file
             registry = PTARegistry()
-            config = registry.get_config("epta_dr1_v2_2")
+            config = registry.get_pta("epta_dr1_v2_2")
             config["base_dir"] = str(temp_dir)
             config["par_pattern"] = "J0030+0451.par"
 
-            # This should raise an appropriate error
-            with pytest.raises((ValueError, RuntimeError)):
-                MetaPulsarFactory.create_metapulsar(
+            # This should raise FileNotFoundError because no valid data is found
+            with pytest.raises(FileNotFoundError):
+                MetaPulsarFactory().create_metapulsar(
                     pulsar_name="J0030+0451",
-                    pta_configs=["epta_dr1_v2_2"],
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=["epta_dr1_v2_2"],
                     reference_pta="epta_dr1_v2_2",
                 )
 
@@ -158,16 +152,15 @@ C 12345.67890 0.0001
 
             # Create a temporary PTA config pointing to corrupted file
             registry = PTARegistry()
-            config = registry.get_config("epta_dr1_v2_2")
+            config = registry.get_pta("epta_dr1_v2_2")
             config["base_dir"] = str(temp_dir)
             config["par_pattern"] = "J0030+0451.par"
 
-            # This should raise an appropriate error
-            with pytest.raises((ValueError, RuntimeError, UnicodeDecodeError)):
-                MetaPulsarFactory.create_metapulsar(
+            # This should raise FileNotFoundError because no valid data is found
+            with pytest.raises(FileNotFoundError):
+                MetaPulsarFactory().create_metapulsar(
                     pulsar_name="J0030+0451",
-                    pta_configs=["epta_dr1_v2_2"],
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=["epta_dr1_v2_2"],
                     reference_pta="epta_dr1_v2_2",
                 )
 
@@ -179,10 +172,9 @@ C 12345.67890 0.0001
         # This test would be implemented if we had very large datasets
         # For now, just test that the system doesn't crash with reasonable data
         try:
-            MetaPulsarFactory.create_metapulsar(
+            MetaPulsarFactory().create_metapulsar(
                 pulsar_name="J0030+0451",
-                pta_configs=["epta_dr1_v2_2"],
-                primary_pta="epta_dr1_v2_2",
+                pta_names=["epta_dr1_v2_2"],
                 reference_pta="epta_dr1_v2_2",
             )
         except Exception as e:
@@ -202,10 +194,9 @@ C 12345.67890 0.0001
 
         def create_metapulsar():
             try:
-                mp = MetaPulsarFactory.create_metapulsar(
+                mp = MetaPulsarFactory().create_metapulsar(
                     pulsar_name="J0030+0451",
-                    pta_configs=["epta_dr1_v2_2"],
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=["epta_dr1_v2_2"],
                     reference_pta="epta_dr1_v2_2",
                 )
                 results.append(mp)

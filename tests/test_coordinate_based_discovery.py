@@ -145,11 +145,25 @@ class TestCoordinateBasedDiscovery:
     """Test coordinate-based pulsar discovery."""
 
     @patch("pint.models.model_builder.parse_parfile")
+    @patch("pint.models.model_builder.ModelBuilder")
     def test_discover_pulsars_by_coordinates(
-        self, mock_parse_parfile, mock_pta_registry, mock_file_system
+        self,
+        mock_model_builder_class,
+        mock_parse_parfile,
+        mock_pta_registry,
+        mock_file_system,
     ):
         """Test coordinate-based pulsar discovery."""
-        # Mock PINT model with actual coordinates from J1857+0943 par file
+        # Mock parse_parfile to return a dictionary
+        mock_par_dict = {
+            "PSRJ": ["J1857+0943"],
+            "RAJ": ["18:57:36.3906121"],
+            "DECJ": ["+09:43:17.20714"],
+            "F0": ["186.494081"],
+        }
+        mock_parse_parfile.return_value = mock_par_dict
+
+        # Mock ModelBuilder to return a TimingModel-like object
         mock_model = Mock()
         ra_angle = Angle(18.960109, unit=u.hourangle)  # 18:57:36.3906121
         dec_angle = Angle(9.721446, unit=u.deg)  # +09:43:17.20714
@@ -159,7 +173,9 @@ class TestCoordinateBasedDiscovery:
         mock_model.DECJ = type(
             "obj", (object,), {"quantity": dec_angle, "value": dec_angle.value}
         )()
-        mock_parse_parfile.return_value = mock_model
+        mock_model_builder = Mock()
+        mock_model_builder.return_value = mock_model
+        mock_model_builder_class.return_value = mock_model_builder
 
         # Update registry with real paths
         registry = mock_pta_registry
@@ -255,13 +271,29 @@ class TestMetaPulsarFactoryIntegration:
     """Test MetaPulsarFactory integration with coordinate-based discovery."""
 
     @patch("pint.models.model_builder.parse_parfile")
+    @patch("pint.models.model_builder.ModelBuilder")
     def test_discover_available_pulsars_coordinate_based(
-        self, mock_parse_parfile, mock_pta_registry, mock_file_system
+        self,
+        mock_model_builder_class,
+        mock_parse_parfile,
+        mock_pta_registry,
+        mock_file_system,
     ):
         """Test discover_available_pulsars uses coordinate-based discovery."""
-        # Mock PINT model
+        # Mock parse_parfile to return a dictionary
+        mock_par_dict = {
+            "PSRJ": ["J1857+0943"],
+            "RAJ": ["18:57:36.3906121"],
+            "DECJ": ["+09:43:17.20714"],
+            "F0": ["186.494081"],
+        }
+        mock_parse_parfile.return_value = mock_par_dict
+
+        # Mock ModelBuilder to return a TimingModel-like object
         mock_model = Mock()
-        mock_parse_parfile.return_value = mock_model
+        mock_model_builder = Mock()
+        mock_model_builder.return_value = mock_model
+        mock_model_builder_class.return_value = mock_model_builder
 
         # Update registry with real paths
         registry = mock_pta_registry
@@ -447,13 +479,29 @@ class TestEndToEndCoordinateBasedWorkflow:
     """Test complete end-to-end coordinate-based workflow."""
 
     @patch("pint.models.model_builder.parse_parfile")
+    @patch("pint.models.model_builder.ModelBuilder")
     def test_complete_workflow(
-        self, mock_parse_parfile, mock_pta_registry, mock_file_system
+        self,
+        mock_model_builder_class,
+        mock_parse_parfile,
+        mock_pta_registry,
+        mock_file_system,
     ):
         """Test complete coordinate-based pulsar discovery and MetaPulsar creation."""
-        # Mock PINT model
+        # Mock parse_parfile to return a dictionary
+        mock_par_dict = {
+            "PSRJ": ["J1857+0943"],
+            "RAJ": ["18:57:36.3906121"],
+            "DECJ": ["+09:43:17.20714"],
+            "F0": ["186.494081"],
+        }
+        mock_parse_parfile.return_value = mock_par_dict
+
+        # Mock ModelBuilder to return a TimingModel-like object
         mock_model = Mock()
-        mock_parse_parfile.return_value = mock_model
+        mock_model_builder = Mock()
+        mock_model_builder.return_value = mock_model
+        mock_model_builder_class.return_value = mock_model_builder
 
         # Update registry with real paths
         registry = mock_pta_registry

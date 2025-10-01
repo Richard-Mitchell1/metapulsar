@@ -15,7 +15,7 @@ class TestPTARegistry:
         assert len(registry.configs) > 0
 
         # Check that some expected PTAs are present
-        expected_ptas = ["epta_dr2", "ppta_dr3", "nanograv_15y"]
+        expected_ptas = ["epta_dr2", "ppta_dr2", "nanograv_15y"]
         for pta in expected_ptas:
             assert pta in registry.configs
 
@@ -82,11 +82,11 @@ class TestPTARegistry:
         """Test getting a subset of PTA configurations."""
         registry = PTARegistry()
 
-        subset = registry.get_pta_subset(["epta_dr2", "ppta_dr3"])
+        subset = registry.get_pta_subset(["epta_dr2", "ppta_dr2"])
 
         assert len(subset) == 2
         assert "epta_dr2" in subset
-        assert "ppta_dr3" in subset
+        assert "ppta_dr2" in subset
 
     def test_get_pta_subset_nonexistent(self):
         """Test that getting subset with nonexistent PTA raises KeyError."""

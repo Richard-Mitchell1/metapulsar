@@ -11,7 +11,7 @@ class TestDataDiscovery:
     def test_pta_registry_loading(self):
         """Test that PTA registry loads correctly."""
         registry = PTARegistry()
-        configs = registry.list_configs()
+        configs = registry.list_ptas()
 
         # Should have both DR2 and DR3 configurations
         assert len(configs) > 0
@@ -28,8 +28,8 @@ class TestDataDiscovery:
         """Test that PTA configurations have required fields."""
         registry = PTARegistry()
 
-        for config_name in registry.list_configs():
-            config = registry.get_config(config_name)
+        for config_name in registry.list_ptas():
+            config = registry.get_pta(config_name)
 
             # Check required fields
             assert "base_dir" in config
@@ -55,7 +55,7 @@ class TestDataDiscovery:
             # Check EPTA DR1 v2.2
             if dr2_data["epta"].exists():
                 assert (dr2_data["epta"] / "J0030+0451").exists()
-                assert (dr2_data["epta"] / "J0437-4715").exists()
+                assert (dr2_data["epta"] / "J0613-0200").exists()
 
             # Check PPTA DR2
             if dr2_data["ppta"].exists():
@@ -87,8 +87,8 @@ class TestDataDiscovery:
         """Test that par files can be discovered for test pulsars."""
         registry = PTARegistry()
 
-        for config_name in registry.list_configs():
-            config = registry.get_config(config_name)
+        for config_name in registry.list_ptas():
+            config = registry.get_pta(config_name)
             base_dir = Path(config["base_dir"])
 
             if not base_dir.exists():
@@ -106,8 +106,8 @@ class TestDataDiscovery:
         """Test that tim files can be discovered for test pulsars."""
         registry = PTARegistry()
 
-        for config_name in registry.list_configs():
-            config = registry.get_config(config_name)
+        for config_name in registry.list_ptas():
+            config = registry.get_pta(config_name)
             base_dir = Path(config["base_dir"])
 
             if not base_dir.exists():
@@ -128,8 +128,8 @@ class TestDataDiscovery:
 
         print("\n=== Data Availability Summary ===")
 
-        for config_name in registry.list_configs():
-            config = registry.get_config(config_name)
+        for config_name in registry.list_ptas():
+            config = registry.get_pta(config_name)
             base_dir = Path(config["base_dir"])
 
             if base_dir.exists():

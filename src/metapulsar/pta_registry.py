@@ -10,8 +10,16 @@ from loguru import logger
 
 # Simple, clean PTA configurations
 PTA_CONFIGS = {
+    "epta_dr1_v2_2": {
+        "base_dir": "data/ipta-dr2/EPTA_v2.2/",
+        "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1\.par",
+        "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1_all\.tim",
+        "timing_package": "tempo2",
+        "priority": 1,
+        "description": "EPTA Data Release 1 v2.2",
+    },
     "epta_dr2": {
-        "base_dir": "/data/IPTA-DR3/EPTA_DR2/",
+        "base_dir": "data/IPTA-DR3/EPTA_DR2/",
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1_all\.tim",
         "timing_package": "tempo2",
@@ -19,39 +27,31 @@ PTA_CONFIGS = {
         "description": "EPTA Data Release 2",
     },
     "ppta_dr2": {
-        "base_dir": "/data/IPTA-DR3/PPTA_DR2/",
-        "par_pattern": r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.par",
-        "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.tim",
+        "base_dir": "data/ipta-dr2/PPTA_dr1dr2/",
+        "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})_dr1dr2\.par",
+        "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})_dr1dr2\.tim",
         "timing_package": "tempo2",
         "priority": 1,
-        "description": "PPTA Data Release 2",
+        "description": "PPTA Data Release 1+2",
     },
-    "ppta_dr3": {
-        "base_dir": "/data/IPTA-DR3/PPTA_DR3/",
-        "par_pattern": r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.par",
-        "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.tim",
-        "timing_package": "tempo2",
-        "priority": 2,
-        "description": "PPTA Data Release 3",
+    "nanograv_9y": {
+        "base_dir": "data/ipta-dr2/NANOGrav_9y/",
+        "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})_NANOGrav_9yv1\.gls\.par",
+        "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})_NANOGrav_9yv1\.tim",
+        "timing_package": "pint",
+        "priority": 1,
+        "description": "NANOGrav 9-year Data Release",
     },
     "inpta_dr1": {
-        "base_dir": "/data/IPTA-DR3/InPTA_DR1/",
+        "base_dir": "data/IPTA-DR3/InPTA_DR1/",
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1_all\.tim",
         "timing_package": "tempo2",
         "priority": 1,
         "description": "InPTA Data Release 1",
     },
-    "inpta_dr1_edited": {
-        "base_dir": "/data/IPTA-DR3/InPTA_DR1_edited/",
-        "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1\.par",
-        "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1_all\.tim",
-        "timing_package": "tempo2",
-        "priority": 2,
-        "description": "InPTA Data Release 1 (Edited)",
-    },
     "mpta_dr1": {
-        "base_dir": "/data/IPTA-DR3/MPTA_DR1/",
+        "base_dir": "data/IPTA-DR3/MPTA_DR1/",
         "par_pattern": r"MTMSP-([BJ]\d{4}[+-]\d{2,4})-\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})_16ch\.tim",
         "timing_package": "tempo2",
@@ -59,7 +59,7 @@ PTA_CONFIGS = {
         "description": "MPTA Data Release 1",
     },
     "nanograv_12y": {
-        "base_dir": "/data/IPTA-DR3/NANOGrav_12y/",
+        "base_dir": "data/IPTA-DR3/NANOGrav_12y/",
         "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})(?!.*\.t2)_NANOGrav_12yv2\.gls\.par",
         "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})_NANOGrav_12yv2\.tim",
         "timing_package": "pint",
@@ -67,7 +67,7 @@ PTA_CONFIGS = {
         "description": "NANOGrav 12-year Data Release",
     },
     "nanograv_15y": {
-        "base_dir": "/data/IPTA-DR3/NANOGrav_15y/",
+        "base_dir": "data/IPTA-DR3/NANOGrav_15y/",
         "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})(?!.*(ao|gbt)).*\.par",
         "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})(?!.*(ao|gbt)).*\.tim",
         "timing_package": "pint",

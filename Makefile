@@ -68,11 +68,11 @@ check:  ## Run all checks (lint, format, test)
 	black --check src/ tests/
 	ruff check src/ tests/
 	mypy src/
-	pytest --ignore=ref-packages --ignore=research --ignore=legacy --ignore=Vela.jl
+	pytest --ignore=ref-packages --ignore=research --ignore=legacy
 
 ci:  ## Run CI pipeline locally
 	pre-commit run --all-files
-	pytest --cov=src/metapulsar --cov-report=xml --ignore=ref-packages --ignore=research --ignore=legacy --ignore=Vela.jl
+	pytest --cov=src/metapulsar --cov-report=xml --ignore=ref-packages --ignore=research --ignore=legacy
 
 dev: install-dev  ## Quick development setup
 	@echo "Development environment ready!"

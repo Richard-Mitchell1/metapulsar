@@ -108,6 +108,12 @@ class MetaPulsarFactory:
             f"Creating MetaPulsar for {pulsar_name} using {combination_strategy} strategy"
         )
 
+        # Validate reference_pta if provided
+        if reference_pta is not None and reference_pta not in self.registry.configs:
+            raise KeyError(
+                f"Invalid reference PTA: {reference_pta}. Available PTAs: {list(self.registry.configs.keys())}"
+            )
+
         if combination_strategy == "consistent":
             return self._create_consistent_metapulsar(
                 pulsar_name,
@@ -173,10 +179,42 @@ class MetaPulsarFactory:
         # 1. Discover raw par files
         raw_parfiles = self._discover_parfiles(pulsar_name, pta_names)
 
-        # 2. Create raw PINT/Tempo2 objects from files
+        # 2. Check if any par files were found
+        if not raw_parfiles:
+            # Try coordinate-based discovery as fallback
+            pta_configs = (
+                self.registry.get_pta_subset(pta_names)
+                if pta_names is not None
+                else self.registry.configs
+            )
+            coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
+
+            # Check if pulsar was found through coordinate discovery
+            matching_pulsar = None
+            for j_name, pulsar_info in coordinate_map.items():
+                if (
+                    pulsar_name == j_name
+                    or pulsar_name == pulsar_info["preferred_name"]
+                    or pulsar_name == pulsar_info["b_name"]
+                ):
+                    matching_pulsar = pulsar_info
+                    break
+
+            if not matching_pulsar:
+                raise FileNotFoundError(
+                    f"No data found for pulsar '{pulsar_name}' in PTAs: {pta_names}. "
+                    f"Please verify the pulsar name and PTA configurations."
+                )
+
+            # Use the discovered files from coordinate search
+            raw_parfiles = {}
+            for pta_name, (parfile, timfile) in matching_pulsar["files"].items():
+                raw_parfiles[pta_name] = parfile
+
+        # 3. Create raw PINT/Tempo2 objects from files
         raw_pulsars = self._create_raw_pulsars_from_files(raw_parfiles)
 
-        # 3. Get canonical name
+        # 4. Get canonical name
         pta_configs = (
             self.registry.get_pta_subset(pta_names)
             if pta_names is not None
@@ -184,7 +222,7 @@ class MetaPulsarFactory:
         )
         canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
 
-        # 4. Create MetaPulsar
+        # 5. Create MetaPulsar
         return MetaPulsar(
             pulsars=raw_pulsars,
             combination_strategy="composite",
@@ -321,14 +359,16 @@ class MetaPulsarFactory:
         self, pta_configs: Dict[str, Dict]
     ) -> Dict[str, Dict]:
         """Discover pulsars by reading par files and extracting coordinates."""
-        from pint.models.model_builder import parse_parfile
+        from pint.models.model_builder import parse_parfile, ModelBuilder
 
         coordinate_map = {}
+        builder = ModelBuilder()
 
         for pta_name, config in pta_configs.items():
             for parfile_path in self._discover_parfiles_in_pta(config):
                 try:
-                    model = parse_parfile(str(parfile_path))
+                    par_dict = parse_parfile(str(parfile_path))
+                    model = builder(par_dict)
                     j_name = bj_name_from_pulsar(model, "J")
                     b_name = bj_name_from_pulsar(model, "B")
                     suffix = self._extract_suffix_from_filename(

@@ -20,7 +20,7 @@ class TestLegacyComparison:
         tim_files = []
 
         for config_name in pta_configs:
-            config = registry.get_config(config_name)
+            config = registry.get_pta(config_name)
             base_dir = Path(config["base_dir"])
 
             if not base_dir.exists():
@@ -77,10 +77,9 @@ class TestLegacyComparison:
                 )
 
                 # Create new MetaPulsar
-                new_mp = new_module["MetaPulsarFactory"].create_metapulsar(
+                new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
                     pulsar_name=pulsar,
-                    pta_configs=test_pta_configs,
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=test_pta_configs,
                     reference_pta="epta_dr1_v2_2",
                 )
 
@@ -134,10 +133,9 @@ class TestLegacyComparison:
                     reference_pta="epta_dr1_v2_2",
                 )
 
-                new_mp = new_module["MetaPulsarFactory"].create_metapulsar(
+                new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
                     pulsar_name=pulsar,
-                    pta_configs=test_pta_configs,
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=test_pta_configs,
                     reference_pta="epta_dr1_v2_2",
                 )
 
@@ -198,10 +196,9 @@ class TestLegacyComparison:
                     reference_pta="epta_dr1_v2_2",
                 )
 
-                new_mp = new_module["MetaPulsarFactory"].create_metapulsar(
+                new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
                     pulsar_name=pulsar,
-                    pta_configs=test_pta_configs,
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=test_pta_configs,
                     reference_pta="epta_dr1_v2_2",
                 )
 
@@ -255,10 +252,9 @@ class TestLegacyComparison:
                     reference_pta="epta_dr1_v2_2",
                 )
 
-                new_mp = new_module["MetaPulsarFactory"].create_metapulsar(
+                new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
                     pulsar_name=pulsar,
-                    pta_configs=test_pta_configs,
-                    primary_pta="epta_dr1_v2_2",
+                    pta_names=test_pta_configs,
                     reference_pta="epta_dr1_v2_2",
                 )
 
