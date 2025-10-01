@@ -2,7 +2,7 @@
 
 **Version**: 1.0  
 **Date**: 2025-09-30  
-**Author**: IPTA Metapulsar Analysis Team
+**Author**: MetaPulsar Team
 
 ## Overview
 
@@ -22,7 +22,7 @@ The ParFileManager and MetaPulsarFactory classes provide a comprehensive solutio
 
 ## Introduction
 
-The IPTA Metapulsar Analysis framework enables the combination of pulsar timing data from multiple PTA collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar" objects suitable for gravitational wave detection analysis.
+The MetaPulsar framework enables the combination of pulsar timing data from multiple PTA collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar" objects suitable for gravitational wave detection analysis.
 
 ### Key Components
 

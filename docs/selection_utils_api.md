@@ -1,6 +1,6 @@
 # Selection Utilities API Documentation
 
-This document provides comprehensive API documentation for the staggered selection utilities in IPTA Metapulsar Analysis.
+This document provides comprehensive API documentation for the staggered selection utilities in MetaPulsar.
 
 ## Table of Contents
 
@@ -411,4 +411,4 @@ When contributing to the selection utilities:
 
 ## License
 
-This module is part of IPTA Metapulsar Analysis and follows the same license terms.
+This module is part of MetaPulsar and follows the same license terms.

@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: MetaPulsar Analysis Toolkit
+title: MetaPulsar
 message: "If you use this software, please cite it as below."
 type: software
 authors:
@@ -16,7 +16,7 @@ abstract: >
   gravitational wave detection analysis. Supports both PINT and libstempo/tempo2 
   timing packages with flexible parameter management and Enterprise integration.
 license: MIT
-repository-code: "https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar-analysis"
+repository-code: "https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar"
 keywords:
   - pulsar timing
   - gravitational waves

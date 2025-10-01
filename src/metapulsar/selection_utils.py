@@ -1,4 +1,4 @@
-"""Selection utilities for MetaPulsar Analysis.
+"""Selection utilities for MetaPulsar.
 
 This module provides a modern, well-documented API for creating Enterprise-compatible
 selection functions. It replaces the legacy `create_selection_stag` function with

@@ -1,6 +1,6 @@
-# Contributing to MetaPulsar Analysis Toolkit
+# Contributing to MetaPulsar
 
-We welcome contributions to the MetaPulsar Analysis Toolkit! This document provides guidelines for contributing to the project.
+We welcome contributions to MetaPulsar! This document provides guidelines for contributing to the project.
 
 ## 🚀 Getting Started
 
@@ -8,8 +8,8 @@ We welcome contributions to the MetaPulsar Analysis Toolkit! This document provi
 
 1. **Fork and Clone**
    ```bash
-   git clone https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar-analysis.git
-   cd metapulsar-analysis
+   git clone https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar.git
+   cd metapulsar
    ```
 
 2. **Install in Development Mode**
@@ -229,9 +229,9 @@ When requesting features, please include:
 
 ## 📞 Getting Help
 
-- **Issues**: [GitLab Issues](https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar-analysis/-/issues)
+- **Issues**: [GitLab Issues](https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar/-/issues)
 - **Email**: [rutger@vhaasteren.com](mailto:rutger@vhaasteren.com)
-- **Documentation**: [Read the Docs](https://metapulsar-analysis.readthedocs.io)
+- **Documentation**: [Read the Docs](https://metapulsar.readthedocs.io)
 
 ## 📄 License
 

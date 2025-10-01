@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "metapulsar-analysis"
+name = "metapulsar"
 version = "0.1.0"
 description = "Multi-PTA pulsar timing data combination framework for gravitational wave detection"
 readme = "README.md"
@@ -59,10 +59,10 @@ analysis = [
 ]
 
 [project.urls]
-Homepage = "https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar-analysis"
-Repository = "https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar-analysis"
-Documentation = "https://metapulsar-analysis.readthedocs.io"
-Issues = "https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar-analysis/-/issues"
+Homepage = "https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar"
+Repository = "https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar"
+Documentation = "https://metapulsar.readthedocs.io"
+Issues = "https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar/-/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]

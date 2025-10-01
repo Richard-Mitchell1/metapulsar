@@ -5,7 +5,7 @@ Usage examples for ParFileManager and MetaPulsarFactory.
 This script demonstrates how to use the ParFileManager and MetaPulsarFactory
 classes for multi-PTA pulsar timing data combination.
 
-Author: IPTA Metapulsar Analysis Team
+Author: MetaPulsar Team
 Date: 2025-09-30
 """
 

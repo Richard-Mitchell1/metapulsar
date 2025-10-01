@@ -1,8 +1,8 @@
-# IPTA Metapulsar Analysis - Architecture Overview
+# MetaPulsar - Architecture Overview
 
 ## Project Description
 
-**IPTA Metapulsar Analysis** is a Python package for combining pulsar timing data from multiple PTA (Pulsar Timing Array) collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar" objects for gravitational wave detection.
+**MetaPulsar** is a Python package for combining pulsar timing data from multiple PTA (Pulsar Timing Array) collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar" objects for gravitational wave detection.
 
 ## UML Class Diagram
 

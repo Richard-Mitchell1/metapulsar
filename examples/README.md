@@ -1,6 +1,6 @@
 # Examples Directory
 
-This directory contains comprehensive examples and documentation for the IPTA Metapulsar Analysis staggered selection utilities.
+This directory contains comprehensive examples and documentation for the MetaPulsar staggered selection utilities.
 
 ## Contents
 
@@ -34,7 +34,7 @@ pip install numpy matplotlib enterprise
 # Jupyter notebook support
 pip install jupyter notebook
 
-# IPTA Metapulsar Analysis
+# MetaPulsar
 pip install -e .
 ```
 
@@ -141,7 +141,7 @@ pip install -e .
 
 1. **Import Errors**:
    ```python
-   # Make sure IPTA Metapulsar Analysis is installed
+   # Make sure MetaPulsar is installed
    pip install -e .
    
    # Check Python path
@@ -216,4 +216,4 @@ pip install -e .
 
 ## License
 
-This examples directory is part of IPTA Metapulsar Analysis and follows the same license terms.
+This examples directory is part of MetaPulsar and follows the same license terms.
