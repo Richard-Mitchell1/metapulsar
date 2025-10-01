@@ -1,12 +1,12 @@
 __pycache__
 *~
-*.ipynb
 chains
-hdf5-pulsars
-dr3_mini_noise
-research
 *.egg-info/
-data/
+
+# Data submodule handling
+data/*
+!data/.gitkeep
+!data/ipta-dr2/
 
 # Additional Python and development files
 *.py[cod]
@@ -67,8 +67,6 @@ logs/
 *.rej
 
 # Project specific
-*.par
-*.tim
 *.h5
 *.hdf5
 results/
