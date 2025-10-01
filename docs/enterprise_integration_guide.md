@@ -31,7 +31,7 @@ The staggered selection utilities are designed to work seamlessly with Enterpris
 ```python
 from enterprise.signals.selections import Selection
 from enterprise.signals import white_signals
-from ipta_metapulsar.selection_utils import create_staggered_selection
+from metapulsar.selection_utils import create_staggered_selection
 
 # Create a simple group-based selection
 group_sel = create_staggered_selection("efac", {"group": None})
@@ -163,7 +163,7 @@ white_signal = white_signals.MeasurementNoise(
 from enterprise.pulsar import Pulsar
 from enterprise.signals import white_signals, red_signals
 from enterprise.models import model_singlepsr_noise
-from ipta_metapulsar.selection_utils import create_staggered_selection
+from metapulsar.selection_utils import create_staggered_selection
 
 # Load pulsar data
 psr = Pulsar(parfile, timfile)
@@ -196,7 +196,7 @@ model = model_singlepsr_noise(psr, white_signal, red_signal)
 from enterprise.pulsar import Pulsar
 from enterprise.signals import white_signals, red_signals, gp_signals
 from enterprise.models import model_singlepsr_noise
-from ipta_metapulsar.selection_utils import create_staggered_selection
+from metapulsar.selection_utils import create_staggered_selection
 
 def create_multi_pta_model(psr):
     """Create a model with multi-PTA selections."""

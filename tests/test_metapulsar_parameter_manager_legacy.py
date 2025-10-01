@@ -7,7 +7,7 @@ identical results to the legacy metapulsar.py implementation.
 import pytest
 from unittest.mock import Mock, patch
 from pint.models import TimingModel
-from ipta_metapulsar.metapulsar_parameter_manager import (
+from metapulsar.metapulsar_parameter_manager import (
     MetaPulsarParameterManager,
     ParameterInconsistencyError,
     ParameterMapping,
@@ -62,9 +62,7 @@ class TestLegacyCompatibility:
         }
 
     @pytest.mark.slow
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_parameter_discovery_consistency(self, mock_get_params):
         """Test that parameter discovery matches legacy expectations."""
         # Mock PINT parameter discovery to return legacy-compatible parameters
@@ -115,9 +113,7 @@ class TestLegacyCompatibility:
             assert param in merge_pars
 
     @pytest.mark.slow
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_parameter_mapping_structure_consistency(self, mock_get_params):
         """Test that parameter mapping structure matches legacy expectations."""
         # Mock parameter discovery
@@ -159,9 +155,7 @@ class TestLegacyCompatibility:
                 assert original_param in model.params
 
     @pytest.mark.slow
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_astrometry_parameter_handling_consistency(self, mock_get_params):
         """Test that astrometry parameters are handled consistently with legacy."""
         # Mock parameter discovery
@@ -180,9 +174,7 @@ class TestLegacyCompatibility:
         )
 
     @pytest.mark.slow
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_parameter_aliases_consistency(self, mock_get_params):
         """Test that parameter aliases are handled consistently with legacy."""
         # Mock parameter discovery
@@ -196,9 +188,7 @@ class TestLegacyCompatibility:
         assert manager.resolver.resolve_parameter_equivalence("STIG") == "STIGMA"
 
     @pytest.mark.slow
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_parameter_availability_logic_consistency(self, mock_get_params):
         """Test that parameter availability logic matches legacy expectations."""
         # Mock parameter discovery
@@ -219,9 +209,7 @@ class TestLegacyCompatibility:
         )
 
     @pytest.mark.slow
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_parameter_identifiability_logic_consistency(self, mock_get_params):
         """Test that parameter identifiability logic matches legacy expectations."""
         # Mock parameter discovery
@@ -240,9 +228,7 @@ class TestLegacyCompatibility:
         assert manager.resolver.check_parameter_identifiable("EPTA", "DECJ") is False
 
     @pytest.mark.slow
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_coordinate_system_equivalence_consistency(self, mock_get_params):
         """Test that coordinate system equivalence is handled consistently."""
         # Mock parameter discovery
@@ -256,9 +242,7 @@ class TestLegacyCompatibility:
         assert manager.resolver.check_parameter_available_across_ptas("ELONG") is True
 
     @pytest.mark.slow
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_parameter_mapping_workflow_consistency(self, mock_get_params):
         """Test that the complete parameter mapping workflow is consistent."""
         # Mock parameter discovery

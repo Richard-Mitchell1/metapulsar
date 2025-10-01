@@ -1,4 +1,4 @@
-"""Selection utilities for IPTA Metapulsar Analysis.
+"""Selection utilities for MetaPulsar Analysis.
 
 This module provides a modern, well-documented API for creating Enterprise-compatible
 selection functions. It replaces the legacy `create_selection_stag` function with
@@ -13,7 +13,7 @@ Key Features:
     - Robust error handling
 
 Basic Usage:
-    >>> from ipta_metapulsar.selection_utils import create_staggered_selection
+    >>> from metapulsar.selection_utils import create_staggered_selection
     >>> from enterprise.signals.selections import Selection
     >>> 
     >>> # Simple group-based selection
@@ -49,7 +49,7 @@ Migration from Legacy:
     >>> legacy_sel = create_selection_stag("efac", {"group": None}, lowfreq=400, highfreq=1000)
     >>> 
     >>> # New API
-    >>> from ipta_metapulsar.selection_utils import create_staggered_selection
+    >>> from metapulsar.selection_utils import create_staggered_selection
     >>> new_sel = create_staggered_selection("efac", {"group": None}, freq_range=(400, 1000))
 
 See Also:

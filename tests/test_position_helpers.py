@@ -13,7 +13,7 @@ import astropy.units as u
 from astropy.coordinates import SkyCoord, ICRS, BarycentricTrueEcliptic
 from pint.models.model_builder import ModelBuilder
 
-from ipta_metapulsar.position_helpers import (
+from metapulsar.position_helpers import (
     _skycoord_from_pint_model,
     _skycoord_from_enterprise,
     _skycoord_from_libstempo,

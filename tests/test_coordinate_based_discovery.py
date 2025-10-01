@@ -30,10 +30,10 @@ import astropy.units as u
 from astropy.coordinates import Angle
 from pint.models.model_builder import ModelBuilder
 
-from ipta_metapulsar.metapulsar_factory import MetaPulsarFactory
-from ipta_metapulsar.pta_registry import PTARegistry
-from ipta_metapulsar.position_helpers import bj_name_from_pulsar
-from ipta_metapulsar.metapulsar import MetaPulsar
+from metapulsar.metapulsar_factory import MetaPulsarFactory
+from metapulsar.pta_registry import PTARegistry
+from metapulsar.position_helpers import bj_name_from_pulsar
+from metapulsar.metapulsar import MetaPulsar
 
 
 # === FIXTURES ===
@@ -169,9 +169,7 @@ class TestCoordinateBasedDiscovery:
         factory = MetaPulsarFactory(registry)
 
         # Mock the coordinate extraction
-        with patch(
-            "ipta_metapulsar.metapulsar_factory.bj_name_from_pulsar"
-        ) as mock_bj_name:
+        with patch("metapulsar.metapulsar_factory.bj_name_from_pulsar") as mock_bj_name:
             mock_bj_name.side_effect = lambda model, name_type: (
                 "J1857+0943" if name_type == "J" else "B1855+09"
             )
@@ -273,9 +271,7 @@ class TestMetaPulsarFactoryIntegration:
         factory = MetaPulsarFactory(registry)
 
         # Mock coordinate extraction
-        with patch(
-            "ipta_metapulsar.metapulsar_factory.bj_name_from_pulsar"
-        ) as mock_bj_name:
+        with patch("metapulsar.metapulsar_factory.bj_name_from_pulsar") as mock_bj_name:
             mock_bj_name.side_effect = lambda model, name_type: (
                 "J1857+0943" if name_type == "J" else "B1855+09"
             )
@@ -292,8 +288,8 @@ class TestMetaPulsarFactoryIntegration:
     ):
         """Test MetaPulsar creation includes canonical name."""
         # Create MockPulsar objects directly instead of going through factory
-        from ipta_metapulsar.mockpulsar import MockPulsar
-        from ipta_metapulsar.mock_utils import (
+        from metapulsar.mockpulsar import MockPulsar
+        from metapulsar.mock_utils import (
             create_mock_timing_data,
             create_mock_flags,
         )
@@ -370,7 +366,7 @@ class TestMetaPulsarCanonicalName:
         """Test MetaPulsar accepts canonical_name parameter."""
         # Create a simple test that just checks the canonical_name parameter
         # without triggering complex initialization
-        from src.ipta_metapulsar.metapulsar import MetaPulsar
+        from src.metapulsar.metapulsar import MetaPulsar
 
         # Test that the parameter is accepted in the constructor
         # We'll use a minimal approach that doesn't trigger full initialization
@@ -397,7 +393,7 @@ class TestMetaPulsarCanonicalName:
     def test_metapulsar_canonical_name_docstring(self):
         """Test MetaPulsar docstring includes canonical_name parameter."""
         import inspect
-        from ipta_metapulsar.metapulsar import MetaPulsar
+        from metapulsar.metapulsar import MetaPulsar
 
         docstring = inspect.getdoc(MetaPulsar.__init__)
         assert "canonical_name" in docstring
@@ -468,9 +464,9 @@ class TestEndToEndCoordinateBasedWorkflow:
 
         # Mock coordinate extraction and Enterprise Pulsar creation
         with patch(
-            "ipta_metapulsar.metapulsar_factory.bj_name_from_pulsar"
+            "metapulsar.metapulsar_factory.bj_name_from_pulsar"
         ) as mock_bj_name, patch(
-            "ipta_metapulsar.metapulsar_factory.get_model_and_toas"
+            "metapulsar.metapulsar_factory.get_model_and_toas"
         ) as mock_get_model_and_toas:
 
             mock_bj_name.side_effect = lambda model, name_type: (
@@ -502,8 +498,8 @@ class TestEndToEndCoordinateBasedWorkflow:
             assert "B1855+09" in available_pulsars
 
             # Test MetaPulsar creation using MockPulsar directly
-            from ipta_metapulsar.mockpulsar import MockPulsar
-            from ipta_metapulsar.mock_utils import (
+            from metapulsar.mockpulsar import MockPulsar
+            from metapulsar.mock_utils import (
                 create_mock_timing_data,
                 create_mock_flags,
             )

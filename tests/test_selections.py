@@ -8,7 +8,7 @@ filtering, and Enterprise compatibility.
 import numpy as np
 from enterprise.signals.selections import Selection
 
-from ipta_metapulsar.selection_utils import create_staggered_selection
+from metapulsar.selection_utils import create_staggered_selection
 
 
 class MockPulsar:

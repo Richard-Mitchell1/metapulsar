@@ -1,6 +1,6 @@
-# Contributing to IPTA MetaPulsar Analysis Toolkit
+# Contributing to MetaPulsar Analysis Toolkit
 
-We welcome contributions to the IPTA MetaPulsar Analysis Toolkit! This document provides guidelines for contributing to the project.
+We welcome contributions to the MetaPulsar Analysis Toolkit! This document provides guidelines for contributing to the project.
 
 ## 🚀 Getting Started
 
@@ -8,8 +8,8 @@ We welcome contributions to the IPTA MetaPulsar Analysis Toolkit! This document 
 
 1. **Fork and Clone**
    ```bash
-   git clone https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis.git
-   cd ipta-metapulsar-analysis
+   git clone https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar-analysis.git
+   cd metapulsar-analysis
    ```
 
 2. **Install in Development Mode**
@@ -131,8 +131,8 @@ class TestFeatureName:
 Use MockPulsar for testing when possible:
 
 ```python
-from ipta_metapulsar.mockpulsar import MockPulsar
-from ipta_metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
+from metapulsar.mockpulsar import MockPulsar
+from metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
 
 def test_metapulsar_creation():
     """Test MetaPulsar creation with MockPulsar."""
@@ -229,9 +229,9 @@ When requesting features, please include:
 
 ## 📞 Getting Help
 
-- **Issues**: [GitLab Issues](https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis/-/issues)
+- **Issues**: [GitLab Issues](https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar-analysis/-/issues)
 - **Email**: [rutger@vhaasteren.com](mailto:rutger@vhaasteren.com)
-- **Documentation**: [Read the Docs](https://ipta-metapulsar-analysis.readthedocs.io)
+- **Documentation**: [Read the Docs](https://metapulsar-analysis.readthedocs.io)
 
 ## 📄 License
 

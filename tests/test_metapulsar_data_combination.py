@@ -10,9 +10,9 @@ This module tests the data combination methods:
 import numpy as np
 import pytest
 
-from ipta_metapulsar.metapulsar import MetaPulsar
-from ipta_metapulsar.mockpulsar import MockPulsar
-from ipta_metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
+from metapulsar.metapulsar import MetaPulsar
+from metapulsar.mockpulsar import MockPulsar
+from metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
 
 
 class TestMetaPulsarDataCombination:

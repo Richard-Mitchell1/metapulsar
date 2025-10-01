@@ -1,4 +1,4 @@
-"""IPTA Metapulsar Analysis - Multi-PTA pulsar timing data combination framework.
+"""MetaPulsar Analysis - Multi-PTA pulsar timing data combination framework.
 
 This package provides tools for combining pulsar timing data from multiple PTA 
 collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar" 

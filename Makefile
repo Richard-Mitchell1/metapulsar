@@ -29,7 +29,7 @@ install-dev:  ## Install package in development mode with all dependencies
 	pre-commit install
 
 test-cov:  ## Run tests with coverage
-	pytest --cov=src/ipta_metapulsar --cov-report=html --cov-report=term
+	pytest --cov=src/metapulsar --cov-report=html --cov-report=term
 
 lint:  ## Run linting
 	ruff check src/ tests/
@@ -60,7 +60,7 @@ check:  ## Run all checks (lint, format, test)
 
 ci:  ## Run CI pipeline locally
 	pre-commit run --all-files
-	pytest --cov=src/ipta_metapulsar --cov-report=xml
+	pytest --cov=src/metapulsar --cov-report=xml
 
 dev: install-dev  ## Quick development setup
 	@echo "Development environment ready!"

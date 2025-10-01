@@ -1,7 +1,7 @@
 """PTA Registry System for managing PTA configurations and presets.
 
 This module provides a simple dictionary-based system for managing PTA (Pulsar Timing Array)
-configurations, including preset configurations for IPTA DR3 data releases.
+configurations, including preset configurations for PTA data releases.
 """
 
 from typing import Dict, List

@@ -12,8 +12,8 @@ import pytest
 import numpy as np
 from unittest.mock import patch
 
-from ipta_metapulsar.mockpulsar import MockPulsar, create_mock_pulsar
-from ipta_metapulsar.mock_utils import (
+from metapulsar.mockpulsar import MockPulsar, create_mock_pulsar
+from metapulsar.mock_utils import (
     create_astrometry_model,
     convert_astrometry_units,
     create_mock_flags,
@@ -169,7 +169,7 @@ class TestMockPulsar:
 
     def test_astrometry_without_astropy(self):
         """Test astrometry parameter setup without astropy."""
-        with patch("ipta_metapulsar.mockpulsar.ASTROPY_AVAILABLE", False):
+        with patch("metapulsar.mockpulsar.ASTROPY_AVAILABLE", False):
             n_toas = 20
             toas = np.linspace(50000, 60000, n_toas) * 86400
             residuals = np.random.normal(0, 1e-6, n_toas)

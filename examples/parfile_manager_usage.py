@@ -10,7 +10,7 @@ Date: 2025-09-30
 """
 
 from pathlib import Path
-from ipta_metapulsar import MetaPulsarFactory, PTARegistry, ParFileManager
+from metapulsar import MetaPulsarFactory, PTARegistry, ParFileManager
 
 
 def basic_usage_example():

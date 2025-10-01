@@ -6,8 +6,8 @@ from unittest.mock import Mock, patch
 import tempfile
 import numpy as np
 
-from ipta_metapulsar.parfile_manager import ParFileManager
-from ipta_metapulsar.pta_registry import PTARegistry
+from metapulsar.parfile_manager import ParFileManager
+from metapulsar.pta_registry import PTARegistry
 
 
 class TestParFileManager:
@@ -34,7 +34,7 @@ class TestParFileManager:
         filename = self.manager._get_output_filename("J1909-3744", "epta_dr2")
         assert filename == "J1909-3744_epta_dr2.par"
 
-    @patch("ipta_metapulsar.parfile_manager.TOAs")
+    @patch("metapulsar.parfile_manager.TOAs")
     def test_calculate_dataset_timespan(self, mock_toas):
         """Test dataset timespan calculation."""
         # Mock TOAs object
@@ -55,7 +55,7 @@ class TestParFileManager:
             assert timespan == 10000.0  # 60000.0 - 50000.0
             mock_toas.assert_called_once()
 
-    @patch("ipta_metapulsar.parfile_manager.TOAs")
+    @patch("metapulsar.parfile_manager.TOAs")
     def test_calculate_dataset_timespan_no_tim_file(self, mock_toas):
         """Test dataset timespan calculation when TIM file is not found."""
         with patch.object(self.manager, "_find_file") as mock_find_file:
@@ -64,7 +64,7 @@ class TestParFileManager:
             with pytest.raises(FileNotFoundError):
                 self.manager._calculate_dataset_timespan("epta_dr2", "J1909-3744")
 
-    @patch("ipta_metapulsar.parfile_manager.TOAs")
+    @patch("metapulsar.parfile_manager.TOAs")
     def test_calculate_dataset_timespan_no_toas(self, mock_toas):
         """Test dataset timespan calculation when no TOAs are found."""
         # Mock TOAs object with empty array
@@ -117,14 +117,14 @@ class TestParFileManager:
         # Mock par file content
         parfile_content = "F0 123.456 1\nUNITS TCB\n"
 
-        with patch("ipta_metapulsar.parfile_manager.ModelBuilder") as mock_builder:
+        with patch("metapulsar.parfile_manager.ModelBuilder") as mock_builder:
             # Mock ModelBuilder and model
             mock_model = Mock()
             mock_model.write_parfile.return_value = None
             mock_builder.return_value.return_value = mock_model
 
             # Mock StringIO
-            with patch("ipta_metapulsar.parfile_manager.StringIO") as mock_stringio:
+            with patch("metapulsar.parfile_manager.StringIO") as mock_stringio:
                 mock_output = Mock()
                 mock_output.getvalue.return_value = "F0 123.456 1\nUNITS TDB\n"
                 mock_stringio.return_value = mock_output

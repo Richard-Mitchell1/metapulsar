@@ -194,7 +194,7 @@ Data class that holds the results of parameter mapping operations, including fit
 ### Basic MetaPulsar Creation
 
 ```python
-from ipta_metapulsar import MetaPulsarFactory, PTARegistry
+from metapulsar import MetaPulsarFactory, PTARegistry
 
 # Create factory with default registry
 factory = MetaPulsarFactory()
@@ -210,7 +210,7 @@ print(f"Parameter merging config: astrometry={metapulsar._merge_astrometry}")
 ### Custom PTA Configuration
 
 ```python
-from ipta_metapulsar import PTARegistry, MetaPulsarFactory
+from metapulsar import PTARegistry, MetaPulsarFactory
 
 # Create custom registry
 registry = PTARegistry()
@@ -249,7 +249,7 @@ print(f"Found {len(available_pulsars)} pulsars across all PTAs")
 ### Parameter Management
 
 ```python
-from ipta_metapulsar import MetaPulsarParameterManager
+from metapulsar import MetaPulsarParameterManager
 from pint.models import get_model_and_toas
 
 # Load PINT models from different PTAs
@@ -278,7 +278,7 @@ print(f"Fit parameters: {list(mapping.fitparameters.keys())}")
 ### PTA Registry Operations
 
 ```python
-from ipta_metapulsar import PTARegistry
+from metapulsar import PTARegistry
 
 # Create registry
 registry = PTARegistry()
@@ -300,8 +300,8 @@ print(f"EPTA base directory: {epta_config['base_dir']}")
 ### Error Handling
 
 ```python
-from ipta_metapulsar import MetaPulsarFactory
-from ipta_metapulsar.metapulsar_parameter_manager import ParameterInconsistencyError
+from metapulsar import MetaPulsarFactory
+from metapulsar.metapulsar_parameter_manager import ParameterInconsistencyError
 
 factory = MetaPulsarFactory()
 

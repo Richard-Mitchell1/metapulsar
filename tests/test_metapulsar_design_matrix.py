@@ -6,9 +6,9 @@ implemented in the MetaPulsar class.
 """
 
 import numpy as np
-from src.ipta_metapulsar.metapulsar import MetaPulsar
-from src.ipta_metapulsar.mockpulsar import MockPulsar
-from src.ipta_metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
+from src.metapulsar.metapulsar import MetaPulsar
+from src.metapulsar.mockpulsar import MockPulsar
+from src.metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
 
 
 class TestMetaPulsarDesignMatrix:

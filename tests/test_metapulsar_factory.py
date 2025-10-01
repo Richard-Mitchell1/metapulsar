@@ -3,8 +3,8 @@
 import pytest
 from unittest.mock import Mock, patch
 from pathlib import Path
-from ipta_metapulsar.metapulsar_factory import MetaPulsarFactory
-from ipta_metapulsar.pta_registry import PTARegistry
+from metapulsar.metapulsar_factory import MetaPulsarFactory
+from metapulsar.pta_registry import PTARegistry
 
 
 class TestMetaPulsarFactory:
@@ -30,8 +30,8 @@ class TestMetaPulsarFactory:
     def test_create_metapulsar_success(self):
         """Test successful MetaPulsar creation using MockPulsar directly."""
         # Create MockPulsar objects directly instead of going through factory
-        from ipta_metapulsar.mockpulsar import MockPulsar
-        from ipta_metapulsar.mock_utils import (
+        from metapulsar.mockpulsar import MockPulsar
+        from metapulsar.mock_utils import (
             create_mock_timing_data,
             create_mock_flags,
         )
@@ -44,7 +44,7 @@ class TestMetaPulsarFactory:
         )
 
         # Create MetaPulsar directly with MockPulsar
-        from ipta_metapulsar.metapulsar import MetaPulsar
+        from metapulsar.metapulsar import MetaPulsar
 
         pulsars = {"test_pta": mock_psr}
         metapulsar = MetaPulsar(
@@ -81,8 +81,8 @@ class TestMetaPulsarFactory:
             #     self.factory.create_metapulsar("J1857+0943")
             pass
 
-    @patch("ipta_metapulsar.metapulsar_factory.PintPulsar")
-    @patch("ipta_metapulsar.metapulsar_factory.get_model_and_toas")
+    @patch("metapulsar.metapulsar_factory.PintPulsar")
+    @patch("metapulsar.metapulsar_factory.get_model_and_toas")
     def test_create_metapulsar_enterprise_creation_fails(
         self, mock_get_model, mock_pint_pulsar
     ):
@@ -115,9 +115,9 @@ class TestMetaPulsarFactory:
             ):
                 self.factory.create_metapulsar("J1857+0943", ["test_pta"])
 
-    @patch("ipta_metapulsar.metapulsar_factory.PintPulsar")
-    @patch("ipta_metapulsar.metapulsar_factory.get_model_and_toas")
-    @patch("ipta_metapulsar.metapulsar_factory.bj_name_from_pulsar")
+    @patch("metapulsar.metapulsar_factory.PintPulsar")
+    @patch("metapulsar.metapulsar_factory.get_model_and_toas")
+    @patch("metapulsar.metapulsar_factory.bj_name_from_pulsar")
     def test_create_all_metapulsars(
         self, mock_j_name, mock_get_model, mock_pint_pulsar
     ):

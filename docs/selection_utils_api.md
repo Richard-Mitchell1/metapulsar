@@ -128,7 +128,7 @@ Internal helper function for creating selection masks for a specific flag.
 ### Basic Flag Selection
 
 ```python
-from ipta_metapulsar.selection_utils import create_staggered_selection
+from metapulsar.selection_utils import create_staggered_selection
 
 # Simple group-based selection (all values)
 group_sel = create_staggered_selection("efac", {"group": None})
@@ -210,7 +210,7 @@ result = multi_sel(flags, freqs)
 
 ```python
 from enterprise.signals.selections import Selection
-from ipta_metapulsar.selection_utils import create_staggered_selection
+from metapulsar.selection_utils import create_staggered_selection
 
 # Create selection function
 efac_sel = create_staggered_selection("efac", {"group": None})
@@ -266,7 +266,7 @@ from legacy.metapulsar import create_selection_stag
 legacy_sel = create_selection_stag("efac", {"group": None}, lowfreq=400, highfreq=1000)
 
 # New API
-from ipta_metapulsar.selection_utils import create_staggered_selection
+from metapulsar.selection_utils import create_staggered_selection
 
 new_sel = create_staggered_selection("efac", {"group": None}, freq_range=(400, 1000))
 ```
@@ -287,7 +287,7 @@ new_sel = create_staggered_selection("efac", {"group": None}, freq_range=(400, 1
    from legacy.metapulsar import create_selection_stag
    
    # New
-   from ipta_metapulsar.selection_utils import create_staggered_selection
+   from metapulsar.selection_utils import create_staggered_selection
    ```
 
 2. **Update function calls**:

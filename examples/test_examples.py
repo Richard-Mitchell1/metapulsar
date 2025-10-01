@@ -11,7 +11,7 @@ from pathlib import Path
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from ipta_metapulsar import MetaPulsarFactory, PTARegistry, ParFileManager
+from metapulsar import MetaPulsarFactory, PTARegistry, ParFileManager
 
 
 def test_basic_imports():
@@ -72,7 +72,7 @@ def test_metapulsar_combination_strategy():
     print("\nTesting MetaPulsar combination strategy methods...")
 
     try:
-        from ipta_metapulsar import MetaPulsar
+        from metapulsar import MetaPulsar
 
         # Create a mock MetaPulsar
         mock_pulsars = {"epta_dr2": None, "ppta_dr2": None}

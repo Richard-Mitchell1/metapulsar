@@ -189,7 +189,7 @@ is_consistent = metapulsar.combination_strategy == "consistent"
 ### Basic Usage
 
 ```python
-from ipta_metapulsar import MetaPulsarFactory
+from metapulsar import MetaPulsarFactory
 
 # Create factory
 factory = MetaPulsarFactory()
@@ -216,7 +216,7 @@ metapulsar_consistent = factory.create_metapulsar(
 ### Custom PTA Registry
 
 ```python
-from ipta_metapulsar import PTARegistry, MetaPulsarFactory
+from metapulsar import PTARegistry, MetaPulsarFactory
 
 # Create custom PTA registry
 custom_registry = PTARegistry()
@@ -269,7 +269,7 @@ metapulsar_no_dm = factory.create_metapulsar(
 ### Direct ParFileManager Usage
 
 ```python
-from ipta_metapulsar import ParFileManager
+from metapulsar import ParFileManager
 from pathlib import Path
 
 # Create ParFileManager
@@ -295,7 +295,7 @@ print(f"Created files: {consistent_files}")
 The `PTARegistry` class manages PTA configurations:
 
 ```python
-from ipta_metapulsar import PTARegistry
+from metapulsar import PTARegistry
 
 # Create empty registry
 registry = PTARegistry(configs={})

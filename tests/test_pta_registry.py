@@ -1,7 +1,7 @@
 """Tests for PTA Registry System."""
 
 import pytest
-from ipta_metapulsar.pta_registry import PTARegistry
+from metapulsar.pta_registry import PTARegistry
 
 
 class TestPTARegistry:

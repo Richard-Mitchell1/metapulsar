@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import Mock, patch
-from ipta_metapulsar.pint_helpers import (
+from metapulsar.pint_helpers import (
     get_parameters_by_type_from_pint,
     get_parameter_aliases_from_pint,
     check_component_available_in_model,
@@ -92,7 +92,7 @@ class TestGetParametersByTypeFromPint:
     def test_pint_discovery_failure_raises_error(self):
         """Test that PINT discovery failure raises PINTDiscoveryError."""
         with patch(
-            "ipta_metapulsar.pint_helpers.AllComponents",
+            "metapulsar.pint_helpers.AllComponents",
             side_effect=Exception("PINT error"),
         ):
             with pytest.raises(PINTDiscoveryError):
@@ -104,7 +104,7 @@ class TestGetParameterAliasesFromPint:
 
     def test_alias_discovery_success(self):
         """Test successful alias discovery from PINT."""
-        with patch("ipta_metapulsar.pint_helpers.AllComponents") as mock_all_components:
+        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
             # Mock the alias map
             mock_instance = Mock()
             mock_instance._param_alias_map = {
@@ -149,7 +149,7 @@ class TestGetParameterAliasesFromPint:
     def test_pint_discovery_failure_raises_error(self):
         """Test that PINT discovery failure raises PINTDiscoveryError."""
         with patch(
-            "ipta_metapulsar.pint_helpers.AllComponents",
+            "metapulsar.pint_helpers.AllComponents",
             side_effect=Exception("PINT error"),
         ):
             with pytest.raises(PINTDiscoveryError):
@@ -273,7 +273,7 @@ class TestIsAstrometryParameter:
 
     def test_astrometry_parameter_true(self, mock_astrometry_components):
         """Test that astrometry parameters are correctly identified."""
-        with patch("ipta_metapulsar.pint_helpers.AllComponents") as mock_all_components:
+        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
             mock_all_components.return_value = mock_astrometry_components
 
             # Test expected astrometry parameters
@@ -284,7 +284,7 @@ class TestIsAstrometryParameter:
 
     def test_astrometry_parameter_false(self, mock_astrometry_components):
         """Test that non-astrometry parameters are correctly identified."""
-        with patch("ipta_metapulsar.pint_helpers.AllComponents") as mock_all_components:
+        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
             mock_all_components.return_value = mock_astrometry_components
 
             # Test non-astrometry parameters
@@ -296,14 +296,14 @@ class TestIsAstrometryParameter:
 
     def test_empty_parameter_name(self, mock_astrometry_components):
         """Test handling of empty parameter name."""
-        with patch("ipta_metapulsar.pint_helpers.AllComponents") as mock_all_components:
+        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
             mock_all_components.return_value = mock_astrometry_components
 
             assert _is_astrometry_parameter("") is False
 
     def test_none_parameter_name(self, mock_astrometry_components):
         """Test handling of None parameter name."""
-        with patch("ipta_metapulsar.pint_helpers.AllComponents") as mock_all_components:
+        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
             mock_all_components.return_value = mock_astrometry_components
 
             assert _is_astrometry_parameter(None) is False

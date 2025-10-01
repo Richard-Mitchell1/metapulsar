@@ -2,8 +2,8 @@
 
 from unittest.mock import Mock, patch
 from pint.models import TimingModel
-from ipta_metapulsar.parameter_resolver import ParameterResolver
-from ipta_metapulsar.pint_helpers import _is_astrometry_parameter
+from metapulsar.parameter_resolver import ParameterResolver
+from metapulsar.pint_helpers import _is_astrometry_parameter
 
 
 class TestParameterResolver:
@@ -24,7 +24,7 @@ class TestParameterResolver:
 
         self.pint_models = {"EPTA": self.mock_model1, "PPTA": self.mock_model2}
 
-    @patch("ipta_metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
+    @patch("metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
     def test_initialization(self, mock_get_aliases):
         """Test ParameterResolver initialization."""
         mock_get_aliases.return_value = {"XDOT": "A1DOT", "E": "ECC"}
@@ -35,7 +35,7 @@ class TestParameterResolver:
         assert resolver._aliases == {"XDOT": "A1DOT", "E": "ECC"}
         assert resolver._reverse_aliases == {"A1DOT": ["XDOT"], "ECC": ["E"]}
 
-    @patch("ipta_metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
+    @patch("metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
     def test_resolve_parameter_equivalence(self, mock_get_aliases):
         """Test parameter alias resolution."""
         mock_get_aliases.return_value = {"XDOT": "A1DOT", "E": "ECC"}
@@ -48,7 +48,7 @@ class TestParameterResolver:
         # Test non-alias parameter
         assert resolver.resolve_parameter_equivalence("F0") == "F0"
 
-    @patch("ipta_metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
+    @patch("metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
     def test_check_parameter_available_across_ptas_astrometry(self, mock_get_aliases):
         """Test parameter availability checking for astrometry parameters."""
         mock_get_aliases.return_value = {}
@@ -61,7 +61,7 @@ class TestParameterResolver:
             result = resolver.check_parameter_available_across_ptas("RAJ")
             assert result is True
 
-    @patch("ipta_metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
+    @patch("metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
     def test_check_parameter_available_across_ptas_other(self, mock_get_aliases):
         """Test parameter availability checking for non-astrometry parameters."""
         mock_get_aliases.return_value = {"XDOT": "A1DOT"}
@@ -75,14 +75,14 @@ class TestParameterResolver:
         result = resolver.check_parameter_available_across_ptas("UNKNOWN")
         assert result is False
 
-    @patch("ipta_metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
+    @patch("metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
     def test_check_component_available_across_ptas(self, mock_get_aliases):
         """Test component availability checking across PTAs."""
         mock_get_aliases.return_value = {}
         resolver = ParameterResolver(self.pint_models)
 
         with patch(
-            "ipta_metapulsar.parameter_resolver.check_component_available_in_model"
+            "metapulsar.parameter_resolver.check_component_available_in_model"
         ) as mock_check:
             # All models have component
             mock_check.side_effect = [True, True]
@@ -94,14 +94,14 @@ class TestParameterResolver:
             result = resolver.check_component_available_across_ptas("astrometry")
             assert result is False
 
-    @patch("ipta_metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
+    @patch("metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
     def test_check_parameter_identifiable(self, mock_get_aliases):
         """Test parameter identifiability checking."""
         mock_get_aliases.return_value = {}
         resolver = ParameterResolver(self.pint_models)
 
         with patch(
-            "ipta_metapulsar.parameter_resolver.get_parameter_identifiability_from_model"
+            "metapulsar.parameter_resolver.get_parameter_identifiability_from_model"
         ) as mock_check:
             # Parameter is identifiable
             mock_check.return_value = True
@@ -118,7 +118,7 @@ class TestParameterResolver:
             result = resolver.check_parameter_identifiable("UNKNOWN", "F0")
             assert result is False
 
-    @patch("ipta_metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
+    @patch("metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
     def test_get_all_possible_parameter_names(self, mock_get_aliases):
         """Test getting all possible parameter names including aliases."""
         mock_get_aliases.return_value = {"XDOT": "A1DOT", "E": "ECC"}
@@ -136,7 +136,7 @@ class TestParameterResolver:
         result = resolver._get_all_possible_parameter_names("XDOT")
         assert set(result) == {"A1DOT", "XDOT"}
 
-    @patch("ipta_metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
+    @patch("metapulsar.parameter_resolver.get_parameter_aliases_from_pint")
     def test_is_astrometry_parameter(self, mock_get_aliases):
         """Test astrometry parameter identification."""
         mock_get_aliases.return_value = {}

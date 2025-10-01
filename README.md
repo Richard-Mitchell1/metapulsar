@@ -1,9 +1,9 @@
-# IPTA MetaPulsar Analysis Toolkit
+# MetaPulsar
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
-[![Tests](https://img.shields.io/badge/tests-219%20passing-brightgreen)](https://github.com/ipta-metapulsar-analysis)
+[![Tests](https://img.shields.io/badge/tests-219%20passing-brightgreen)](https://github.com/metapulsar)
 
 A comprehensive framework for combining pulsar timing data from multiple PTA (Pulsar Timing Array) collaborations into unified "metapulsar" objects for gravitational wave detection analysis.
 
@@ -22,8 +22,8 @@ A comprehensive framework for combining pulsar timing data from multiple PTA (Pu
 
 ```bash
 # Clone the repository
-git clone https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis.git
-cd ipta-metapulsar-analysis
+git clone https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar.git
+cd metapulsar
 
 # Install in development mode
 pip install -e .
@@ -35,7 +35,7 @@ pip install -e ".[dev,libstempo,analysis]"
 ### Basic Usage
 
 ```python
-from ipta_metapulsar import MetaPulsar, MetaPulsarFactory, PTARegistry
+from metapulsar import MetaPulsar, MetaPulsarFactory, PTARegistry
 
 # Create a MetaPulsar from multiple PTAs
 registry = PTARegistry()
@@ -62,7 +62,7 @@ print(f"Design matrix shape: {metapulsar._designmatrix.shape}")
 The central class that combines pulsar timing data from multiple PTAs:
 
 ```python
-from ipta_metapulsar import MetaPulsar
+from metapulsar import MetaPulsar
 
 # Create from raw pulsar objects
 metapulsar = MetaPulsar(
@@ -83,7 +83,7 @@ metapulsar = MetaPulsar(
 High-level factory for creating MetaPulsars from file configurations:
 
 ```python
-from ipta_metapulsar import MetaPulsarFactory, PTARegistry
+from metapulsar import MetaPulsarFactory, PTARegistry
 
 # Initialize factory
 registry = PTARegistry()
@@ -101,7 +101,7 @@ metapulsar = factory.create_metapulsar(
 Manages PTA configurations and data discovery:
 
 ```python
-from ipta_metapulsar import PTARegistry
+from metapulsar import PTARegistry
 
 registry = PTARegistry()
 
@@ -175,7 +175,7 @@ The package includes comprehensive test coverage:
 pytest
 
 # Run with coverage
-pytest --cov=src/ipta_metapulsar
+pytest --cov=src/metapulsar
 
 # Run specific test categories
 pytest -m "not slow"  # Skip slow tests
@@ -192,8 +192,8 @@ pytest -m integration  # Run only integration tests
 ## 📁 Project Structure
 
 ```
-ipta-metapulsar-analysis/
-├── src/ipta_metapulsar/           # Main package
+metapulsar/
+├── src/metapulsar/                # Main package
 │   ├── metapulsar.py             # Core MetaPulsar class
 │   ├── metapulsar_factory.py     # Factory for creation
 │   ├── metapulsar_parameter_manager.py  # Parameter management
@@ -241,8 +241,8 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ```bash
 # Clone and install in development mode
-git clone https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis.git
-cd ipta-metapulsar-analysis
+git clone https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar.git
+cd metapulsar
 pip install -e ".[dev]"
 
 # Install pre-commit hooks
@@ -261,11 +261,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 If you use this software in your research, please cite:
 
 ```bibtex
-@software{ipta_metapulsar_analysis,
-  title={IPTA MetaPulsar Analysis Toolkit},
+@software{metapulsar,
+  title={MetaPulsar},
   author={van Haasteren, Rutger and Yu, Wang-Wei},
   year={2025},
-  url={https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis},
+  url={https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar},
   license={MIT}
 }
 ```
@@ -286,9 +286,9 @@ If you use this software in your research, please cite:
 
 For questions, issues, or contributions:
 
-- **Issues**: [GitLab Issues](https://gitlab.aei.uni-hannover.de/vhaasteren/ipta-metapulsar-analysis/-/issues)
+- **Issues**: [GitLab Issues](https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar/-/issues)
 - **Email**: [rutger@vhaasteren.com](mailto:rutger@vhaasteren.com)
-- **Documentation**: [Read the Docs](https://ipta-metapulsar-analysis.readthedocs.io)
+- **Documentation**: [Read the Docs](https://metapulsar.readthedocs.io)
 
 ---
 

@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import Mock, patch
 from pint.models import TimingModel
-from ipta_metapulsar.metapulsar_parameter_manager import (
+from metapulsar.metapulsar_parameter_manager import (
     MetaPulsarParameterManager,
     ParameterMapping,
     ParameterInconsistencyError,
@@ -51,7 +51,7 @@ class TestMetaPulsarParameterManager:
 
         self.pint_models = {"EPTA": self.mock_model1, "PPTA": self.mock_model2}
 
-    @patch("ipta_metapulsar.metapulsar_parameter_manager.ParameterResolver")
+    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
     def test_initialization(self, mock_resolver_class):
         """Test MetaPulsarParameterManager initialization."""
         mock_resolver = Mock()
@@ -63,10 +63,8 @@ class TestMetaPulsarParameterManager:
         assert manager.resolver == mock_resolver
         mock_resolver_class.assert_called_once_with(self.pint_models)
 
-    @patch("ipta_metapulsar.metapulsar_parameter_manager.ParameterResolver")
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_build_merge_parameters_list(self, mock_get_params, mock_resolver_class):
         """Test building merge parameters list."""
         mock_resolver = Mock()
@@ -96,7 +94,7 @@ class TestMetaPulsarParameterManager:
         assert "A1" in result
         assert "PB" in result
 
-    @patch("ipta_metapulsar.metapulsar_parameter_manager.ParameterResolver")
+    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
     def test_process_pta_fit_parameters(self, mock_resolver_class):
         """Test processing fit parameters for a single PTA."""
         mock_resolver = Mock()
@@ -119,7 +117,7 @@ class TestMetaPulsarParameterManager:
         ]
         assert set(actual_calls) == {"F0", "F1", "RAJ"}
 
-    @patch("ipta_metapulsar.metapulsar_parameter_manager.ParameterResolver")
+    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
     def test_process_pta_set_parameters(self, mock_resolver_class):
         """Test processing set parameters for a single PTA."""
         mock_resolver = Mock()
@@ -140,7 +138,7 @@ class TestMetaPulsarParameterManager:
         for param in expected_params:
             assert f"{param}_EPTA" in setparameters
 
-    @patch("ipta_metapulsar.metapulsar_parameter_manager.ParameterResolver")
+    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
     def test_add_merged_parameter_success(self, mock_resolver_class):
         """Test adding merged parameter successfully."""
         mock_resolver = Mock()
@@ -155,7 +153,7 @@ class TestMetaPulsarParameterManager:
         assert "F0" in fitparameters
         assert fitparameters["F0"]["EPTA"] == "F0"
 
-    @patch("ipta_metapulsar.metapulsar_parameter_manager.ParameterResolver")
+    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
     def test_add_merged_parameter_not_available(self, mock_resolver_class):
         """Test adding merged parameter when not available across PTAs."""
         mock_resolver = Mock()
@@ -171,7 +169,7 @@ class TestMetaPulsarParameterManager:
         ):
             manager._add_merged_parameter("F0", "EPTA", "F0", fitparameters)
 
-    @patch("ipta_metapulsar.metapulsar_parameter_manager.ParameterResolver")
+    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
     def test_add_pta_specific_parameter_identifiable(self, mock_resolver_class):
         """Test adding PTA-specific parameter when identifiable."""
         mock_resolver = Mock()
@@ -186,7 +184,7 @@ class TestMetaPulsarParameterManager:
         assert "RAJ_EPTA" in fitparameters
         assert fitparameters["RAJ_EPTA"]["EPTA"] == "RAJ"
 
-    @patch("ipta_metapulsar.metapulsar_parameter_manager.ParameterResolver")
+    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
     def test_add_pta_specific_parameter_not_identifiable(self, mock_resolver_class):
         """Test adding PTA-specific parameter when not identifiable."""
         mock_resolver = Mock()
@@ -255,10 +253,8 @@ class TestMetaPulsarParameterManager:
         assert result.merged_parameters == ["F0"]
         assert set(result.pta_specific_parameters) == {"RAJ_EPTA", "ELONG_PPTA"}
 
-    @patch("ipta_metapulsar.metapulsar_parameter_manager.ParameterResolver")
-    @patch(
-        "ipta_metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint"
-    )
+    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
+    @patch("metapulsar.metapulsar_parameter_manager.get_parameters_by_type_from_pint")
     def test_build_parameter_mappings_integration(
         self, mock_get_params, mock_resolver_class
     ):
