@@ -1,6 +1,5 @@
 """Main MetaPulsar class for combining multi-PTA pulsar timing data."""
 
-import os
 from itertools import groupby
 import numpy as np
 from loguru import logger
@@ -174,7 +173,7 @@ class MetaPulsar(ep.BasePulsar):
                 pint_models.keys(), zip(pint_models.values(), pint_toas.values())
             ):
                 try:
-                    self._epulsars[pta] = ep.PintPulsar(pmodel, ptoas, planets=True)
+                    self._epulsars[pta] = ep.PintPulsar(ptoas, pmodel, planets=False)
                 except Exception as e:
                     logger.error(f"Failed to create PintPulsar for PTA {pta}: {e}")
                     raise
@@ -226,16 +225,18 @@ class MetaPulsar(ep.BasePulsar):
         return pint_models, pint_toas, lt_pulsars
 
     def _validate_pulsar_consistency(self, pint_models, lt_pulsars):
-        """Validate single pulsar across all PTAs."""
+        """Validate single pulsar across all PTAs using standardized J-names."""
         pulsar_names = []
 
-        # Extract names from PINT models
+        # Extract standardized J-names from PINT models
         for m in pint_models.values():
-            pulsar_names.append(os.path.basename(m.name.split(".")[0]))
+            j_name = bj_name_from_pulsar(m, "J")
+            pulsar_names.append(j_name)
 
-        # Extract names from libstempo pulsars
+        # Extract standardized J-names from libstempo pulsars
         for psr in lt_pulsars.values():
-            pulsar_names.append(psr.name)
+            j_name = bj_name_from_pulsar(psr, "J")
+            pulsar_names.append(j_name)
 
         if not pulsar_names:
             raise ValueError("No valid pulsars found for validation")

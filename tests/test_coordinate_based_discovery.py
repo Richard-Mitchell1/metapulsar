@@ -144,6 +144,39 @@ class TestBJNameGeneration:
 class TestCoordinateBasedDiscovery:
     """Test coordinate-based pulsar discovery."""
 
+    def _create_mock_model_with_components(self):
+        """Create a mock PINT model with proper component structure."""
+        mock_model = Mock()
+
+        # Add coordinate parameters
+        ra_angle = Angle(18.960109, unit=u.hourangle)  # 18:57:36.3906121
+        dec_angle = Angle(9.721446, unit=u.deg)  # +09:43:17.20714
+        mock_model.RAJ = type(
+            "obj", (object,), {"quantity": ra_angle, "value": ra_angle.value}
+        )()
+        mock_model.DECJ = type(
+            "obj", (object,), {"quantity": dec_angle, "value": dec_angle.value}
+        )()
+
+        # Add PSR and UNITS parameters
+        mock_model.PSR = type("obj", (object,), {"value": "J1857+0943"})()
+        mock_model.UNITS = type("obj", (object,), {"value": "TDB"})()
+
+        # Create mock components with proper structure
+        mock_astrometry = Mock()
+        mock_astrometry.category = "astrometry"
+        mock_astrometry.params = ["RAJ", "DECJ", "PMRA", "PMDEC", "PEPOCH"]
+
+        mock_spindown = Mock()
+        mock_spindown.category = "spindown"
+        mock_spindown.params = ["F0", "F1", "F2"]
+
+        # Mock components.values() to return our mock components
+        mock_model.components = Mock()
+        mock_model.components.values.return_value = [mock_astrometry, mock_spindown]
+
+        return mock_model
+
     @patch("pint.models.model_builder.parse_parfile")
     @patch("pint.models.model_builder.ModelBuilder")
     def test_discover_pulsars_by_coordinates(
@@ -163,16 +196,8 @@ class TestCoordinateBasedDiscovery:
         }
         mock_parse_parfile.return_value = mock_par_dict
 
-        # Mock ModelBuilder to return a TimingModel-like object
-        mock_model = Mock()
-        ra_angle = Angle(18.960109, unit=u.hourangle)  # 18:57:36.3906121
-        dec_angle = Angle(9.721446, unit=u.deg)  # +09:43:17.20714
-        mock_model.RAJ = type(
-            "obj", (object,), {"quantity": ra_angle, "value": ra_angle.value}
-        )()
-        mock_model.DECJ = type(
-            "obj", (object,), {"quantity": dec_angle, "value": dec_angle.value}
-        )()
+        # Mock ModelBuilder to return a TimingModel-like object with components
+        mock_model = self._create_mock_model_with_components()
         mock_model_builder = Mock()
         mock_model_builder.return_value = mock_model
         mock_model_builder_class.return_value = mock_model_builder
@@ -289,8 +314,8 @@ class TestMetaPulsarFactoryIntegration:
         }
         mock_parse_parfile.return_value = mock_par_dict
 
-        # Mock ModelBuilder to return a TimingModel-like object
-        mock_model = Mock()
+        # Mock ModelBuilder to return a TimingModel-like object with components
+        mock_model = self._create_mock_model_with_components()
         mock_model_builder = Mock()
         mock_model_builder.return_value = mock_model
         mock_model_builder_class.return_value = mock_model_builder
@@ -371,12 +396,12 @@ class TestMetaPulsarFactoryIntegration:
             }
 
             # Test with J-name
-            files = factory._discover_files("J1857+0943", mock_pta_registry.configs)
+            files = factory.discover_files("J1857+0943", mock_pta_registry.configs)
             assert "test_pta1" in files
             assert "test_pta2" in files
 
             # Test with B-name
-            files = factory._discover_files("B1855+09", mock_pta_registry.configs)
+            files = factory.discover_files("B1855+09", mock_pta_registry.configs)
             assert "test_pta1" in files
             assert "test_pta2" in files
 
@@ -388,7 +413,7 @@ class TestMetaPulsarFactoryIntegration:
             mock_discover.return_value = {}
 
             with pytest.raises(ValueError, match="Pulsar 'UNKNOWN' not found"):
-                factory._discover_files("UNKNOWN", mock_pta_registry.configs)
+                factory.discover_files("UNKNOWN", mock_pta_registry.configs)
 
 
 class TestMetaPulsarCanonicalName:
@@ -497,8 +522,8 @@ class TestEndToEndCoordinateBasedWorkflow:
         }
         mock_parse_parfile.return_value = mock_par_dict
 
-        # Mock ModelBuilder to return a TimingModel-like object
-        mock_model = Mock()
+        # Mock ModelBuilder to return a TimingModel-like object with components
+        mock_model = self._create_mock_model_with_components()
         mock_model_builder = Mock()
         mock_model_builder.return_value = mock_model
         mock_model_builder_class.return_value = mock_model_builder

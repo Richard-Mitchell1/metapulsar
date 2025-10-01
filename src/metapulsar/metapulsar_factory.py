@@ -80,7 +80,7 @@ class MetaPulsarFactory:
         self,
         pulsar_name: str,
         pta_names: List[str] = None,
-        combination_strategy: str = "composite",
+        combination_strategy: str = "consistent",
         reference_pta: str = None,
         combine_components: List[str] = None,
         add_dm_derivatives: bool = True,
@@ -91,8 +91,8 @@ class MetaPulsarFactory:
             pulsar_name: Name of the pulsar
             pta_names: List of PTA names to include. If None, uses all available.
             combination_strategy: Strategy for combining PTAs:
+                - "consistent": Astrophysical consistency (modifies par files for consistency, the default)
                 - "composite": Multi-PTA composition (preserves original parameters, Borg/FrankenStat methods)
-                - "consistent": Astrophysical consistency (modifies par files for consistency)
             reference_pta: PTA to use as reference (for consistent strategy)
             combine_components: List of components to make consistent (for consistent strategy)
             add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files (for consistent strategy)
@@ -147,7 +147,11 @@ class MetaPulsarFactory:
         add_dm_derivatives: bool,
     ) -> MetaPulsar:
         """Create MetaPulsar with astrophysically consistent parameters."""
-        # 1. Make par files consistent
+        # 1. Discover original files (regex patterns OK here)
+        pta_configs = self.registry.get_pta_subset(pta_names)
+        original_files = self.discover_files(pulsar_name, pta_configs)
+
+        # 2. Make par files consistent
         consistent_files = self.parfile_manager.write_consistent_parfiles(
             pulsar_name,
             pta_names,
@@ -156,16 +160,21 @@ class MetaPulsarFactory:
             add_dm_derivatives,
         )
 
-        # 2. Create Enterprise Pulsars from consistent files
-        enterprise_pulsars = self._create_enterprise_pulsars_from_files(
-            consistent_files
-        )
+        # 3. Create file pairs: (consistent_par, original_tim) - direct file paths!
+        file_pairs = {}
+        for pta_name in pta_names:
+            if pta_name in original_files and pta_name in consistent_files:
+                original_par, original_tim = original_files[pta_name]
+                consistent_par = consistent_files[pta_name]
+                file_pairs[pta_name] = (consistent_par, original_tim)  # Direct paths!
 
-        # 3. Get canonical name
-        pta_configs = self.registry.get_pta_subset(pta_names)
+        # 4. Create Enterprise Pulsars (no regex patterns needed)
+        enterprise_pulsars = self._create_enterprise_pulsars(file_pairs, pta_configs)
+
+        # 5. Get canonical name
         canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
 
-        # 4. Create MetaPulsar
+        # 6. Create MetaPulsar
         return MetaPulsar(
             pulsars=enterprise_pulsars,
             combination_strategy="consistent",
@@ -176,40 +185,15 @@ class MetaPulsarFactory:
         self, pulsar_name: str, pta_names: List[str]
     ) -> MetaPulsar:
         """Create MetaPulsar with composite approach (preserves original parameters, Borg/FrankenStat methods)."""
-        # 1. Discover raw par files
+        # 1. Discover raw par files using coordinate-based discovery
         raw_parfiles = self._discover_parfiles(pulsar_name, pta_names)
 
         # 2. Check if any par files were found
         if not raw_parfiles:
-            # Try coordinate-based discovery as fallback
-            pta_configs = (
-                self.registry.get_pta_subset(pta_names)
-                if pta_names is not None
-                else self.registry.configs
+            raise FileNotFoundError(
+                f"No data found for pulsar '{pulsar_name}' in PTAs: {pta_names}. "
+                f"Please verify the pulsar name and PTA configurations."
             )
-            coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
-
-            # Check if pulsar was found through coordinate discovery
-            matching_pulsar = None
-            for j_name, pulsar_info in coordinate_map.items():
-                if (
-                    pulsar_name == j_name
-                    or pulsar_name == pulsar_info["preferred_name"]
-                    or pulsar_name == pulsar_info["b_name"]
-                ):
-                    matching_pulsar = pulsar_info
-                    break
-
-            if not matching_pulsar:
-                raise FileNotFoundError(
-                    f"No data found for pulsar '{pulsar_name}' in PTAs: {pta_names}. "
-                    f"Please verify the pulsar name and PTA configurations."
-                )
-
-            # Use the discovered files from coordinate search
-            raw_parfiles = {}
-            for pta_name, (parfile, timfile) in matching_pulsar["files"].items():
-                raw_parfiles[pta_name] = parfile
 
         # 3. Create raw PINT/Tempo2 objects from files
         raw_pulsars = self._create_raw_pulsars_from_files(raw_parfiles)
@@ -235,17 +219,57 @@ class MetaPulsarFactory:
         """Discover par files using PTARegistry."""
         return self.parfile_manager._discover_parfiles(pulsar_name, pta_names)
 
+    def _extract_pulsar_name_from_pint_model(self, parfile_path: Path) -> str:
+        """Extract pulsar name from PINT model (PSR parameter)."""
+        from pint.models.model_builder import ModelBuilder
+        from io import StringIO
+
+        try:
+            # Read par file with PINT
+            with open(parfile_path, "r") as f:
+                par_content = f.read()
+
+            builder = ModelBuilder()
+            model = builder(StringIO(par_content), allow_tcb=True, allow_T2=True)
+
+            # Extract pulsar name from PINT model
+            return model.PSR.value
+
+        except Exception as e:
+            raise ValueError(f"Cannot extract pulsar name from {parfile_path}: {e}")
+
+    def _find_timfile_by_name(self, pulsar_name: str, config: Dict) -> Optional[Path]:
+        """Find corresponding tim file using simple string matching (like legacy system)."""
+        base_dir = Path(config["base_dir"])
+
+        # Find all tim files that contain the pulsar name (simple string matching)
+        for timfile_path in base_dir.rglob("*.tim"):
+            if pulsar_name in str(timfile_path):
+                return timfile_path
+
+        return None
+
     def _create_raw_pulsars_from_files(
         self, file_paths: Dict[str, Path]
     ) -> Dict[str, Any]:
         """Create raw PINT/Tempo2 objects from file paths."""
-        # Convert to file pairs format (par, tim) for the existing method
+        # Use discovery to find corresponding tim files for each par file
         file_pairs = {}
         for pta_name, parfile in file_paths.items():
-            # Find corresponding tim file
-            config = self.registry.configs[pta_name]
-            timfile = self._find_timfile(parfile, config)
-            file_pairs[pta_name] = (parfile, timfile)
+            # Use discovery to find the corresponding tim file
+            pta_configs = {pta_name: self.registry.configs[pta_name]}
+            # Extract pulsar name from par file path for discovery
+            pulsar_name = self._extract_pulsar_name_from_pint_model(parfile)
+            discovered_files = self.discover_files(pulsar_name, pta_configs)
+
+            if pta_name in discovered_files:
+                original_par, timfile = discovered_files[pta_name]
+                file_pairs[pta_name] = (
+                    parfile,
+                    timfile,
+                )  # Use the provided par file, discovered tim file
+            else:
+                raise FileNotFoundError(f"Could not find tim file for {parfile}")
 
         # Create raw PINT/Tempo2 objects
         return self._create_raw_pulsars(file_pairs, self.registry.configs)
@@ -359,7 +383,7 @@ class MetaPulsarFactory:
         self, pta_configs: Dict[str, Dict]
     ) -> Dict[str, Dict]:
         """Discover pulsars by reading par files and extracting coordinates."""
-        from pint.models.model_builder import parse_parfile, ModelBuilder
+        from pint.models.model_builder import ModelBuilder
         from io import StringIO
 
         coordinate_map = {}
@@ -368,25 +392,20 @@ class MetaPulsarFactory:
         for pta_name, config in pta_configs.items():
             for parfile_path in self._discover_parfiles_in_pta(config):
                 try:
-                    # Parse the parfile to get the parameter dictionary
-                    par_dict = parse_parfile(str(parfile_path))
+                    # Read par file with PINT to get full model
+                    with open(parfile_path, "r") as f:
+                        par_content = f.read()
 
-                    # Create a minimal parfile string with only coordinate parameters
-                    minimal_parfile = self._create_minimal_parfile_for_coordinates(
-                        par_dict
-                    )
-
-                    # Use PINT's ModelBuilder to automatically choose the right astrometry component
                     model = builder(
-                        StringIO(minimal_parfile), allow_tcb=True, allow_T2=True
+                        StringIO(par_content), allow_tcb=True, allow_T2=True
                     )
+
+                    # Extract pulsar name from PINT model (no regex needed!)
+                    pulsar_name = model.PSR.value
 
                     # Extract coordinates using PINT's full capabilities
                     j_name = bj_name_from_pulsar(model, "J")
                     b_name = bj_name_from_pulsar(model, "B")
-                    suffix = self._extract_suffix_from_filename(
-                        parfile_path, config["par_pattern"]
-                    )
 
                     if j_name not in coordinate_map:
                         coordinate_map[j_name] = {
@@ -398,10 +417,11 @@ class MetaPulsarFactory:
                         }
 
                     coordinate_map[j_name]["ptas"].append(pta_name)
-                    coordinate_map[j_name]["files"][pta_name] = (
-                        parfile_path,
-                        self._find_timfile(parfile_path, config),
-                    )
+
+                    # Find corresponding tim file using simple string matching (no recursion!)
+                    timfile = self._find_timfile_by_name(pulsar_name, config)
+
+                    coordinate_map[j_name]["files"][pta_name] = (parfile_path, timfile)
 
                     # Prefer B-name if available
                     if b_name and not coordinate_map[j_name][
@@ -409,43 +429,76 @@ class MetaPulsarFactory:
                     ].startswith("B"):
                         coordinate_map[j_name]["preferred_name"] = b_name
 
-                    if suffix:
-                        coordinate_map[j_name]["suffix"] = suffix
-
+                except ValueError as e:
+                    # Re-raise ValueError from bj_name_from_pulsar (malformed parfiles)
+                    # This will propagate up to the caller
+                    raise e
                 except Exception as e:
+                    # Log other exceptions (file I/O, etc.) as warnings
                     self.logger.warning(f"Failed to process {parfile_path}: {e}")
 
         return coordinate_map
 
-    def _create_minimal_parfile_for_coordinates(self, par_dict: Dict) -> str:
-        """Create a minimal parfile string with only coordinate-related parameters.
+    def _create_minimal_parfile_for_coordinates(self, parfile_path: Path) -> str:
+        """Create minimal parfile using PINT's component detection.
 
-        This avoids the 'duplicated keys' error from flagged parameters like EFAC, ECORR
-        while still allowing PINT to automatically choose the correct astrometry component.
+        This approach:
+        1. Loads the full parfile with PINT to detect components
+        2. Extracts parameters from astrometry and spindown components
+        3. Includes base parameters (PSR, UNITS)
+        4. Creates a minimal parfile with only essential parameters
         """
-        coordinate_params = [
-            "PSRJ",
-            "PSRB",
-            "RAJ",
-            "DECJ",
-            "PMRA",
-            "PMDEC",
-            "PEPOCH",
-            "UNITS",
-        ]
+        from pint.models.model_builder import ModelBuilder
+
+        # Load the full parfile with PINT
+        builder = ModelBuilder()
+        model = builder(str(parfile_path), allow_tcb=True, allow_T2=True)
 
         lines = []
-        for param in coordinate_params:
-            if param in par_dict:
-                # Take the first value (ignore flags for now)
-                value = (
-                    par_dict[param][0]
-                    if isinstance(par_dict[param], list)
-                    else par_dict[param]
+
+        # Helper function to safely get parameter value
+        def get_param_value(param_name):
+            """Safely extract parameter value from model."""
+            try:
+                param_obj = getattr(model, param_name, None)
+                if param_obj is None:
+                    return None
+                return (
+                    param_obj.value if hasattr(param_obj, "value") else str(param_obj)
                 )
-                if isinstance(value, list):
-                    value = value[0]
+            except (AttributeError, TypeError):
+                return None
+
+        # Base parameters that are always needed
+        base_params = ["PSR", "UNITS"]
+        for param in base_params:
+            value = get_param_value(param)
+            if value is not None:
                 lines.append(f"{param}    {value}")
+
+        # Extract parameters from astrometry components
+        for comp in model.components.values():
+            if not (hasattr(comp, "category") and comp.category == "astrometry"):
+                continue
+            if not hasattr(comp, "params"):
+                continue
+
+            for param_name in comp.params:
+                value = get_param_value(param_name)
+                if value is not None:
+                    lines.append(f"{param_name}    {value}")
+
+        # Extract parameters from spindown components
+        for comp in model.components.values():
+            if not (hasattr(comp, "category") and comp.category == "spindown"):
+                continue
+            if not hasattr(comp, "params"):
+                continue
+
+            for param_name in comp.params:
+                value = get_param_value(param_name)
+                if value is not None:
+                    lines.append(f"{param_name}    {value}")
 
         return "\n".join(lines) + "\n"
 
@@ -463,32 +516,15 @@ class MetaPulsarFactory:
 
         return parfiles
 
-    def _extract_suffix_from_filename(self, file_path: Path, pattern: str) -> str:
-        """Extract suffix (A, B, etc.) from filename if present."""
-        import re
-
-        match = re.search(pattern, str(file_path))
-        if match:
-            coord_part = match.group(1)
-            # Check if the coordinate part ends with a letter (suffix)
-            suffix_match = re.search(r"([A-Z])$", coord_part)
-            if suffix_match:
-                return suffix_match.group(1)
-        return ""
-
     def _find_timfile(self, parfile_path: Path, config: Dict) -> Path:
-        """Find corresponding tim file for a par file."""
-        import re
+        """Find corresponding tim file for a par file using PINT-based approach."""
+        # Extract pulsar name from PINT model
+        pulsar_name = self._extract_pulsar_name_from_pint_model(parfile_path)
 
-        match = re.search(config["par_pattern"], str(parfile_path))
-        if match:
-            pulsar_name = match.group(1)
-            return self._find_file(
-                pulsar_name, config["base_dir"], config["tim_pattern"]
-            )
-        return None
+        # Find tim file using simple string matching
+        return self._find_timfile_by_name(pulsar_name, config)
 
-    def _discover_files(
+    def discover_files(
         self, pulsar_name: str, pta_configs: Dict[str, Dict]
     ) -> Dict[str, Tuple[Path, Path]]:
         """Discover par/tim files for a pulsar across PTAs using coordinate matching.
@@ -605,7 +641,12 @@ class MetaPulsarFactory:
         self, pulsar_name: str, pta_configs: Dict[str, Dict]
     ) -> str:
         """Get the canonical name (with suffix) for a pulsar."""
-        coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
+        # Avoid recursion by using a cached coordinate map if available
+        if hasattr(self, "_cached_coordinate_map"):
+            coordinate_map = self._cached_coordinate_map
+        else:
+            coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
+            self._cached_coordinate_map = coordinate_map
 
         for j_name, pulsar_info in coordinate_map.items():
             if (
@@ -642,41 +683,8 @@ class MetaPulsarFactory:
             "creation_timestamp": datetime.now().isoformat(),
         }
 
-    def _find_file(
-        self, pulsar_name: str, base_dir: str, pattern: str
-    ) -> Optional[Path]:
-        """Find a file matching the pattern in the base directory.
-
-        Args:
-            pulsar_name: Name of the pulsar to search for
-            base_dir: Base directory to search in
-            pattern: Regex pattern to match (must capture pulsar name in group 1)
-
-        Returns:
-            Path to the matching file, or None if not found
-        """
-        base_path = Path(base_dir)
-        if not base_path.exists():
-            return None
-
-        # Compile regex pattern
-        try:
-            regex = re.compile(pattern)
-        except re.error as e:
-            self.logger.error(f"Invalid regex pattern '{pattern}': {e}")
-            return None
-
-        # Search for matching files
-        for file_path in base_path.rglob("*"):
-            if file_path.is_file():
-                match = regex.search(str(file_path))
-                if match and match.group(1) == pulsar_name:
-                    return file_path
-
-        return None
-
     def _discover_pulsars_in_pta(self, config: Dict) -> List[str]:
-        """Discover all pulsars in a single PTA.
+        """Discover all pulsars in a single PTA using PINT models.
 
         Args:
             config: PTA configuration to search
@@ -690,6 +698,7 @@ class MetaPulsarFactory:
 
         pulsars = set()
 
+        # Use regex only for initial file discovery (this is the ONLY place regex should be used)
         try:
             regex = re.compile(config["par_pattern"])
         except re.error as e:
@@ -697,8 +706,14 @@ class MetaPulsarFactory:
             return []
 
         for file_path in base_path.rglob("*.par"):
-            match = regex.search(str(file_path))
-            if match:
-                pulsars.add(match.group(1))
+            if regex.search(str(file_path)):  # Only check if file matches pattern
+                try:
+                    # Extract pulsar name from PINT model (no regex!)
+                    pulsar_name = self._extract_pulsar_name_from_pint_model(file_path)
+                    pulsars.add(pulsar_name)
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to extract pulsar name from {file_path}: {e}"
+                    )
 
         return list(pulsars)

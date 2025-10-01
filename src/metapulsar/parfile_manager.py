@@ -81,8 +81,15 @@ class ParFileManager:
         if not parfile_paths:
             raise FileNotFoundError(f"No par files found for pulsar {pulsar_name}")
 
-        # 2. If reference_pta is None, auto-select using _select_reference_pta()
+        # 2. Validate reference_pta exists in discovered data, fallback to auto-selection if not
         if reference_pta is None:
+            reference_pta = self._select_reference_pta(parfile_paths)
+            self.logger.info(f"Auto-selected reference PTA: {reference_pta}")
+        elif reference_pta not in parfile_paths:
+            self.logger.warning(
+                f"Requested reference PTA '{reference_pta}' not found in discovered data. "
+                f"Available PTAs: {list(parfile_paths.keys())}. Auto-selecting reference PTA."
+            )
             reference_pta = self._select_reference_pta(parfile_paths)
             self.logger.info(f"Auto-selected reference PTA: {reference_pta}")
 
@@ -107,27 +114,26 @@ class ParFileManager:
     def _discover_parfiles(
         self, pulsar_name: str, pta_names: List[str] = None
     ) -> Dict[str, Path]:
-        """Discover par files using existing PTARegistry functionality.
+        """Discover par files using coordinate-based discovery.
 
-        Uses the existing PTARegistry and file discovery logic from the current codebase.
+        Uses coordinate-based discovery to find par files for a pulsar across PTAs.
+        This ensures consistency with the project's coordinate-based pulsar matching approach.
         """
         if pta_names is None:
             pta_configs = self.registry.configs
         else:
             pta_configs = self.registry.get_pta_subset(pta_names)
 
+        # Use coordinate-based discovery to find files
+        from .metapulsar_factory import MetaPulsarFactory
+
+        factory = MetaPulsarFactory(self.registry)
+        file_pairs = factory.discover_files(pulsar_name, pta_configs)
+
+        # Extract just the par files from the file pairs
         parfiles = {}
-        for pta_name, config in pta_configs.items():
-            parfile = self._find_file(
-                pulsar_name, config["base_dir"], config["par_pattern"]
-            )
-            if parfile:
-                parfiles[pta_name] = parfile
-                self.logger.debug(
-                    f"Found par file for {pulsar_name} in {pta_name}: {parfile}"
-                )
-            else:
-                self.logger.debug(f"No par file found for {pulsar_name} in {pta_name}")
+        for pta_name, (parfile, timfile) in file_pairs.items():
+            parfiles[pta_name] = parfile
 
         return parfiles
 
@@ -193,7 +199,6 @@ class ParFileManager:
                     pta_name, parfile_paths[pta_name].parent.name
                 )
                 timespans[pta_name] = timespan
-                self.logger.debug(f"PTA {pta_name}: {timespan:.1f} days")
             except Exception as e:
                 self.logger.warning(
                     f"Could not calculate timespan for PTA {pta_name}: {e}"
@@ -289,7 +294,11 @@ class ParFileManager:
         )
 
         # Validate add_dm_derivatives parameter
-        if add_dm_derivatives and "dispersion" not in combine_components:
+        if (
+            add_dm_derivatives
+            and combine_components is not None
+            and "dispersion" not in combine_components
+        ):
             self.logger.warning(
                 "add_dm_derivatives=True but 'dispersion' not in combine_components. "
                 "Ignoring DM derivatives parameter."
@@ -302,7 +311,6 @@ class ParFileManager:
             try:
                 parfile_dict = parse_parfile(StringIO(parfile_content))
                 parfile_dicts[pta_name] = parfile_dict
-                self.logger.debug(f"Parsed par file for PTA {pta_name}")
             except Exception as e:
                 self.logger.error(f"Error parsing par file for PTA {pta_name}: {e}")
                 raise RuntimeError(
@@ -311,9 +319,11 @@ class ParFileManager:
 
         # Get reference PTA parameters
         reference_dict = parfile_dicts[reference_pta]
-        self.logger.debug(f"Using reference PTA {reference_pta} for parameter values")
 
-        # Process each component
+        # Process each component - default to all components if None
+        if combine_components is None:
+            combine_components = ["astrometry", "spin", "binary", "dispersion"]
+
         for component in combine_components:
             self.logger.info(f"Making {component} parameters consistent")
 
@@ -366,24 +376,22 @@ class ParFileManager:
         for param in component_params:
             if param in reference_dict:
                 reference_values[param] = reference_dict[param]
-                self.logger.debug(f"Reference {param}: {reference_dict[param]}")
 
         # Apply to all PTAs
         for pta_name, parfile_dict in parfile_dicts.items():
             if pta_name == reference_pta:
                 continue  # Skip reference PTA
 
-            # Remove existing parameters
+            # Remove ALL existing parameters for this component (regardless of coordinate system)
+            # This includes both equatorial and ecliptic parameters
             for param in component_params:
                 if param in parfile_dict:
-                    old_value = parfile_dict[param]
                     parfile_dict.pop(param)
-                    self.logger.debug(f"PTA {pta_name}: Removed {param} = {old_value}")
 
-            # Add reference values
+            # Add reference values (simple copy - no conversion)
+            # Only add parameters that exist in the reference PTA
             for param, value in reference_values.items():
                 parfile_dict[param] = value
-                self.logger.debug(f"PTA {pta_name}: Set {param} = {value}")
 
     def _make_dm_parameters_consistent(
         self,
@@ -400,83 +408,71 @@ class ParFileManager:
             reference_pta: Name of the reference PTA
             add_dm_derivatives: Whether to add DM1, DM2 parameters
         """
-        # Extract reference DM values
-        reference_dm = reference_dict.get("DM", [["0.0", "1"]])[0]
-        if isinstance(reference_dm, list):
-            reference_dm = reference_dm[0]
-        else:
-            reference_dm = reference_dm.split()[0]
+        # Get dispersion parameters using the same component discovery logic
+        dispersion_params = self._get_component_parameters("dispersion")
 
-        reference_dm1 = reference_dict.get("DM1", [["0.0", "1"]])[0]
-        if isinstance(reference_dm1, list):
-            reference_dm1 = reference_dm1[0]
-        else:
-            reference_dm1 = reference_dm1.split()[0]
+        # Extract reference DM values - only what exists in reference PTA
+        reference_values = {}
+        for param in dispersion_params:
+            if param in reference_dict:
+                reference_values[param] = reference_dict[param]
+                self.logger.debug(f"Reference {param}: {reference_dict[param]}")
 
-        reference_dm2 = reference_dict.get("DM2", [["0.0", "1"]])[0]
-        if isinstance(reference_dm2, list):
-            reference_dm2 = reference_dm2[0]
-        else:
-            reference_dm2 = reference_dm2.split()[0]
-
-        reference_dmepoch = reference_dict.get("DMEPOCH", [["55000.0", "1"]])[0]
+        # Handle DMEPOCH explicitly - always add to all PTAs
+        reference_dmepoch = reference_dict.get("DMEPOCH", [["55000"]])[0]
         if isinstance(reference_dmepoch, list):
             reference_dmepoch = reference_dmepoch[0]
         else:
             reference_dmepoch = reference_dmepoch.split()[0]
-
-        self.logger.debug(
-            f"Reference DM values: DM={reference_dm}, DM1={reference_dm1}, DM2={reference_dm2}, DMEPOCH={reference_dmepoch}"
-        )
+        self.logger.debug(f"Reference DMEPOCH: {reference_dmepoch}")
 
         # Process each PTA (including reference PTA)
         for pta_name, parfile_dict in parfile_dicts.items():
-            # Remove all DMX parameters from ALL PTAs
+            # Remove all DMX parameters from ALL PTAs (special case for dispersion)
             dmx_params = [key for key in parfile_dict.keys() if key.startswith("DMX")]
             for dmx_param in dmx_params:
                 old_value = parfile_dict[dmx_param]
                 parfile_dict.pop(dmx_param)
                 self.logger.debug(f"PTA {pta_name}: Removed {dmx_param} = {old_value}")
 
-            # Set DM parameter for ALL PTAs
-            parfile_dict["DM"] = [[f"{reference_dm}", "1"]]
-            self.logger.debug(f"PTA {pta_name}: Set DM = {reference_dm}")
+            # Remove existing dispersion parameters from target PTAs
+            if pta_name != reference_pta:
+                for param in dispersion_params:
+                    if param in parfile_dict:
+                        old_value = parfile_dict[param]
+                        parfile_dict.pop(param)
+                        self.logger.debug(
+                            f"PTA {pta_name}: Removed {param} = {old_value}"
+                        )
 
-            # Set DMEPOCH for ALL PTAs
-            parfile_dict["DMEPOCH"] = [[f"{reference_dmepoch}", "1"]]
-            self.logger.debug(f"PTA {pta_name}: Set DMEPOCH = {reference_dmepoch}")
+            # Copy reference values (simple copy - no conversion)
+            for param, value in reference_values.items():
+                parfile_dict[param] = value
+                self.logger.debug(f"PTA {pta_name}: Set {param} = {value}")
 
-            # Handle DM derivatives for ALL PTAs
+            # Set DMEPOCH for ALL PTAs (always add, matching old logic)
+            parfile_dict["DMEPOCH"] = [[f"{reference_dmepoch}", "0"]]  # 0 = frozen
+            self.logger.debug(
+                f"PTA {pta_name}: Set DMEPOCH = {reference_dmepoch} (frozen)"
+            )
+
+            # Handle DM derivatives based on add_dm_derivatives flag
             if add_dm_derivatives:
-                # Add DM1 and DM2 to ALL PTAs
-                parfile_dict["DM1"] = [[f"{reference_dm1}", "1"]]
-                parfile_dict["DM2"] = [[f"{reference_dm2}", "1"]]
-                self.logger.debug(
-                    f"PTA {pta_name}: Added DM1 = {reference_dm1}, DM2 = {reference_dm2}"
-                )
+                # Add DM1 and DM2 if they don't exist (matching legacy behavior)
+                if "DM1" not in parfile_dict:
+                    parfile_dict["DM1"] = [["0.0", "1"]]
+                    self.logger.debug(f"PTA {pta_name}: Added DM1 = 0.0")
+                if "DM2" not in parfile_dict:
+                    parfile_dict["DM2"] = [["0.0", "1"]]
+                    self.logger.debug(f"PTA {pta_name}: Added DM2 = 0.0")
             else:
-                # Align existing DM1, DM2 if present in ALL PTAs
-                if "DM1" in parfile_dict:
-                    old_dm1 = parfile_dict["DM1"][0]
-                    if isinstance(old_dm1, list):
-                        old_dm1 = old_dm1[0]
-                    else:
-                        old_dm1 = old_dm1.split()[0]
-                    parfile_dict["DM1"] = [[f"{reference_dm1}", "1"]]
-                    self.logger.debug(
-                        f"PTA {pta_name}: Aligned DM1: {old_dm1} -> {reference_dm1}"
-                    )
-
-                if "DM2" in parfile_dict:
-                    old_dm2 = parfile_dict["DM2"][0]
-                    if isinstance(old_dm2, list):
-                        old_dm2 = old_dm2[0]
-                    else:
-                        old_dm2 = old_dm2.split()[0]
-                    parfile_dict["DM2"] = [[f"{reference_dm2}", "1"]]
-                    self.logger.debug(
-                        f"PTA {pta_name}: Aligned DM2: {old_dm2} -> {reference_dm2}"
-                    )
+                # Only keep DM1/DM2 if they exist in reference PTA
+                if "DM1" not in reference_values and "DM1" in parfile_dict:
+                    parfile_dict.pop("DM1")
+                    self.logger.debug(f"PTA {pta_name}: Removed DM1 (not in reference)")
+                if "DM2" not in reference_values and "DM2" in parfile_dict:
+                    parfile_dict.pop("DM2")
+                    self.logger.debug(f"PTA {pta_name}: Removed DM2 (not in reference)")
 
     def _get_component_parameters(self, component: str) -> List[str]:
         """Get parameter names for a specific component using SSOT from pint_helpers.
@@ -505,9 +501,26 @@ class ParFileManager:
         try:
             # Use SSOT from pint_helpers
             params = get_parameters_by_type_from_pint(param_type)
-            self.logger.debug(
-                f"Discovered {len(params)} parameters for {component}: {params}"
-            )
+
+            # Add parameter aliases for astrometry to handle different PTA naming conventions
+            if component == "astrometry":
+                from .pint_helpers import get_parameter_aliases_from_pint
+
+                aliases = get_parameter_aliases_from_pint()
+
+                # Get all astrometry-related aliases
+                astrometry_aliases = []
+                for alias, canonical in aliases.items():
+                    if (
+                        canonical in params
+                    ):  # Only include aliases for parameters we already have
+                        astrometry_aliases.append(alias)
+
+                # Add any aliases that aren't already in the list
+                for alias in astrometry_aliases:
+                    if alias not in params:
+                        params.append(alias)
+
             return params
         except Exception as e:
             self.logger.error(f"Failed to get parameters for {component}: {e}")
@@ -538,10 +551,7 @@ class ParFileManager:
             # Use PINT's as_parfile() method
             return model.as_parfile()
 
-        except Exception as e:
-            self.logger.debug(
-                f"PINT as_parfile() failed, using custom implementation: {e}"
-            )
+        except Exception:
             return self._dict_to_parfile_string_custom(parfile_dict)
 
     def _dict_to_parfile_string_custom(self, parfile_dict: Dict) -> str:
@@ -599,8 +609,6 @@ class ParFileManager:
 
                 file_units[pta_name] = current_units
                 parfile_contents[pta_name] = parfile_content
-
-                self.logger.debug(f"PTA {pta_name}: {current_units} units")
 
             except Exception as e:
                 self.logger.error(f"Error reading par file for PTA {pta_name}: {e}")
@@ -668,7 +676,6 @@ class ParFileManager:
             if current_units == "TDB":
                 # Already in TDB, no conversion needed
                 converted_parfiles[pta_name] = parfile_content
-                self.logger.debug(f"PTA {pta_name}: Already in TDB units")
             else:
                 # Convert to TDB
                 try:
@@ -684,9 +691,6 @@ class ParFileManager:
                         converted_content = self._convert_pint_to_tdb(parfile_content)
 
                     converted_parfiles[pta_name] = converted_content
-                    self.logger.debug(
-                        f"PTA {pta_name}: Converted from {current_units} to TDB"
-                    )
 
                 except Exception as e:
                     self.logger.error(f"Error converting units for PTA {pta_name}: {e}")

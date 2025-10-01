@@ -58,8 +58,8 @@ F0 123.456 1 0.001
                 config["base_dir"] = str(temp_dir)
                 config["par_pattern"] = "J0030+0451.par"
 
-                # This should raise FileNotFoundError because no valid data is found
-                with pytest.raises(FileNotFoundError):
+                # This should raise ValueError because the parfile is malformed (missing coordinates)
+                with pytest.raises(ValueError):
                     MetaPulsarFactory().create_metapulsar(
                         pulsar_name="J0030+0451",
                         pta_names=["epta_dr1_v2_2"],
@@ -90,8 +90,8 @@ C 12345.67890 0.0001
                 config["base_dir"] = str(temp_dir)
                 config["tim_pattern"] = "J0030+0451.tim"
 
-                # This should raise FileNotFoundError because no valid data is found
-                with pytest.raises(FileNotFoundError):
+                # This should raise ValueError because the tim file is malformed
+                with pytest.raises(ValueError):
                     MetaPulsarFactory().create_metapulsar(
                         pulsar_name="J0030+0451",
                         pta_names=["epta_dr1_v2_2"],
@@ -130,8 +130,8 @@ C 12345.67890 0.0001
             config["base_dir"] = str(temp_dir)
             config["par_pattern"] = "J0030+0451.par"
 
-            # This should raise FileNotFoundError because no valid data is found
-            with pytest.raises(FileNotFoundError):
+            # This should raise ValueError because the par file is empty
+            with pytest.raises(ValueError):
                 MetaPulsarFactory().create_metapulsar(
                     pulsar_name="J0030+0451",
                     pta_names=["epta_dr1_v2_2"],
@@ -157,8 +157,8 @@ C 12345.67890 0.0001
             config["base_dir"] = str(temp_dir)
             config["par_pattern"] = "J0030+0451.par"
 
-            # This should raise FileNotFoundError because no valid data is found
-            with pytest.raises(FileNotFoundError):
+            # This should raise ValueError because the par file is corrupted
+            with pytest.raises(ValueError):
                 MetaPulsarFactory().create_metapulsar(
                     pulsar_name="J0030+0451",
                     pta_names=["epta_dr1_v2_2"],
