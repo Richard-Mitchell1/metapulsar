@@ -360,6 +360,7 @@ class MetaPulsarFactory:
     ) -> Dict[str, Dict]:
         """Discover pulsars by reading par files and extracting coordinates."""
         from pint.models.model_builder import parse_parfile, ModelBuilder
+        from io import StringIO
 
         coordinate_map = {}
         builder = ModelBuilder()
@@ -367,8 +368,20 @@ class MetaPulsarFactory:
         for pta_name, config in pta_configs.items():
             for parfile_path in self._discover_parfiles_in_pta(config):
                 try:
+                    # Parse the parfile to get the parameter dictionary
                     par_dict = parse_parfile(str(parfile_path))
-                    model = builder(par_dict)
+
+                    # Create a minimal parfile string with only coordinate parameters
+                    minimal_parfile = self._create_minimal_parfile_for_coordinates(
+                        par_dict
+                    )
+
+                    # Use PINT's ModelBuilder to automatically choose the right astrometry component
+                    model = builder(
+                        StringIO(minimal_parfile), allow_tcb=True, allow_T2=True
+                    )
+
+                    # Extract coordinates using PINT's full capabilities
                     j_name = bj_name_from_pulsar(model, "J")
                     b_name = bj_name_from_pulsar(model, "B")
                     suffix = self._extract_suffix_from_filename(
@@ -403,6 +416,38 @@ class MetaPulsarFactory:
                     self.logger.warning(f"Failed to process {parfile_path}: {e}")
 
         return coordinate_map
+
+    def _create_minimal_parfile_for_coordinates(self, par_dict: Dict) -> str:
+        """Create a minimal parfile string with only coordinate-related parameters.
+
+        This avoids the 'duplicated keys' error from flagged parameters like EFAC, ECORR
+        while still allowing PINT to automatically choose the correct astrometry component.
+        """
+        coordinate_params = [
+            "PSRJ",
+            "PSRB",
+            "RAJ",
+            "DECJ",
+            "PMRA",
+            "PMDEC",
+            "PEPOCH",
+            "UNITS",
+        ]
+
+        lines = []
+        for param in coordinate_params:
+            if param in par_dict:
+                # Take the first value (ignore flags for now)
+                value = (
+                    par_dict[param][0]
+                    if isinstance(par_dict[param], list)
+                    else par_dict[param]
+                )
+                if isinstance(value, list):
+                    value = value[0]
+                lines.append(f"{param}    {value}")
+
+        return "\n".join(lines) + "\n"
 
     def _discover_parfiles_in_pta(self, config: Dict) -> List[Path]:
         """Discover par files in a single PTA configuration."""
