@@ -20,6 +20,18 @@ test:
 fast:
 	@pytest -m "not slow"
 
+test-integration:
+	@pytest tests/integration/ -v
+
+test-legacy:
+	@pytest -m "legacy_comparison" -v
+
+test-real-data:
+	@pytest -m "real_data" -v
+
+test-slow:
+	@pytest -m "slow" -v
+
 # --- Development -------------------------------------------------------------
 install:  ## Install package in production mode
 	pip install -e .
@@ -76,6 +88,10 @@ help:
 	@echo "Testing targets:"
 	@echo "  test             - run all tests with pytest"
 	@echo "  fast             - run fast tests only (excludes slow tests)"
+	@echo "  test-integration - run integration tests only"
+	@echo "  test-legacy      - run legacy comparison tests"
+	@echo "  test-real-data   - run real data tests"
+	@echo "  test-slow        - run slow tests only"
 	@echo "  test-cov         - run tests with coverage report"
 	@echo ""
 	@echo "Development targets:"
