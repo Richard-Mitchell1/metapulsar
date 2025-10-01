@@ -4,6 +4,7 @@ chains
 *.egg-info/
 
 # Data submodule handling
+# Exclude data directory contents but allow submodules
 data/*
 !data/.gitkeep
 !data/ipta-dr2/
