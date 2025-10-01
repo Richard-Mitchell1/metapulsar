@@ -15,22 +15,22 @@ datetime: datetime-full
 
 # --- Testing -----------------------------------------------------------------
 test:
-	@pytest --ignore=ref-packages --ignore=research --ignore=legacy --ignore=Vela.jl
+	@pytest --ignore=ref-packages --ignore=research --ignore=legacy
 
 fast:
-	@pytest -m "not slow" --ignore=ref-packages --ignore=research --ignore=legacy --ignore=Vela.jl
+	@pytest -m "not slow" --ignore=ref-packages --ignore=research --ignore=legacy
 
 test-integration:
-	@pytest tests/integration/ -v --ignore=ref-packages --ignore=research --ignore=legacy --ignore=Vela.jl
+	@pytest tests/integration/ -v --ignore=ref-packages --ignore=research --ignore=legacy
 
 test-legacy:
-	@pytest -m "legacy_comparison" -v --ignore=ref-packages --ignore=research --ignore=legacy --ignore=Vela.jl
+	@pytest -m "legacy_comparison" -v --ignore=ref-packages --ignore=research --ignore=legacy
 
 test-real-data:
-	@pytest -m "real_data" -v --ignore=ref-packages --ignore=research --ignore=legacy --ignore=Vela.jl
+	@pytest -m "real_data" -v --ignore=ref-packages --ignore=research --ignore=legacy
 
 test-slow:
-	@pytest -m "slow" -v --ignore=ref-packages --ignore=research --ignore=legacy --ignore=Vela.jl
+	@pytest -m "slow" -v --ignore=ref-packages --ignore=research --ignore=legacy
 
 # --- Development -------------------------------------------------------------
 install:  ## Install package in production mode
@@ -41,7 +41,7 @@ install-dev:  ## Install package in development mode with all dependencies
 	pre-commit install
 
 test-cov:  ## Run tests with coverage
-	pytest --cov=src/metapulsar --cov-report=html --cov-report=term --ignore=ref-packages --ignore=research --ignore=legacy --ignore=Vela.jl
+	pytest --cov=src/metapulsar --cov-report=html --cov-report=term --ignore=ref-packages --ignore=research --ignore=legacy
 
 lint:  ## Run linting
 	ruff check src/ tests/
