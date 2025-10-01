@@ -60,14 +60,19 @@ class TestEndToEnd:
                 )
 
                 # Basic validation
-                assert mp.pulsar_name == pulsar
-                assert len(mp.par_files) > 0
-                assert len(mp.tim_files) > 0
+                assert mp.name == pulsar
+                assert len(mp.pulsars) > 0  # Should have pulsar data from PTAs
+                assert len(mp._epulsars) > 0  # Should have Enterprise pulsars
 
                 # Test design matrix
-                dm = mp.get_design_matrix()
+                dm = mp._designmatrix
                 assert dm.shape[0] > 0  # Should have observations
                 assert dm.shape[1] > 0  # Should have parameters
+
+                # Test flags
+                flags = mp._flags
+                assert len(flags) == dm.shape[0]  # Flags should match observations
+                assert len(np.unique(flags)) > 0  # Should have some variety in flags
 
     @pytest.mark.slow
     @pytest.mark.real_data

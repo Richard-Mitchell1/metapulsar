@@ -69,13 +69,27 @@ class TestLegacyComparison:
                 continue
 
             try:
+                # Prepare input files in the format expected by legacy create_metapulsar
+                input_files = []
+                for i, (par_file, tim_file) in enumerate(zip(par_files, tim_files)):
+                    pta_name = test_pta_configs[i]
+                    # Determine timing package based on PTA
+                    package = (
+                        "tempo2"
+                        if pta_name in ["epta_dr1_v2_2", "ppta_dr2"]
+                        else "pint"
+                    )
+                    input_files.append(
+                        {
+                            "pta": pta_name,
+                            "parfile": par_file,
+                            "timfile": tim_file,
+                            "package": package,
+                        }
+                    )
+
                 # Create legacy MetaPulsar
-                legacy_mp = legacy_module.create_metapulsar(
-                    par_files,
-                    tim_files,
-                    primary_pta="epta_dr1_v2_2",
-                    reference_pta="epta_dr1_v2_2",
-                )
+                legacy_mp = legacy_module.create_metapulsar(input_files)
 
                 # Create new MetaPulsar
                 new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
@@ -85,21 +99,21 @@ class TestLegacyComparison:
                 )
 
                 # Compare basic properties
-                assert legacy_mp.pulsar_name == new_mp.pulsar_name
-                assert len(legacy_mp.par_files) == len(new_mp.par_files)
-                assert len(legacy_mp.tim_files) == len(new_mp.tim_files)
+                assert legacy_mp.name == new_mp.name
+                assert len(legacy_mp.pulsars) == len(new_mp.pulsars)
+                assert len(legacy_mp._epulsars) == len(new_mp._epulsars)
 
                 # Compare design matrix shapes
-                legacy_dm = legacy_mp.get_design_matrix()
-                new_dm = new_mp.get_design_matrix()
+                legacy_dm = legacy_mp._designmatrix
+                new_dm = new_mp._designmatrix
                 assert legacy_dm.shape == new_dm.shape
 
                 # Compare design matrix values (within tolerance)
                 np.testing.assert_allclose(legacy_dm, new_dm, rtol=1e-10, atol=1e-12)
 
                 # Compare flags
-                legacy_flags = legacy_mp.get_flags()
-                new_flags = new_mp.get_flags()
+                legacy_flags = legacy_mp._flags
+                new_flags = new_mp._flags
                 assert len(legacy_flags) == len(new_flags)
                 assert np.array_equal(legacy_flags, new_flags)
 
@@ -126,13 +140,26 @@ class TestLegacyComparison:
                 continue
 
             try:
+                # Prepare input files in the format expected by legacy create_metapulsar
+                input_files = []
+                for i, (par_file, tim_file) in enumerate(zip(par_files, tim_files)):
+                    pta_name = test_pta_configs[i]
+                    package = (
+                        "tempo2"
+                        if pta_name in ["epta_dr1_v2_2", "ppta_dr2"]
+                        else "pint"
+                    )
+                    input_files.append(
+                        {
+                            "pta": pta_name,
+                            "parfile": par_file,
+                            "timfile": tim_file,
+                            "package": package,
+                        }
+                    )
+
                 # Create both implementations
-                legacy_mp = legacy_module.create_metapulsar(
-                    par_files,
-                    tim_files,
-                    primary_pta="epta_dr1_v2_2",
-                    reference_pta="epta_dr1_v2_2",
-                )
+                legacy_mp = legacy_module.create_metapulsar(input_files)
 
                 new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
                     pulsar_name=pulsar,
@@ -141,8 +168,8 @@ class TestLegacyComparison:
                 )
 
                 # Get design matrices
-                legacy_dm = legacy_mp.get_design_matrix()
-                new_dm = new_mp.get_design_matrix()
+                legacy_dm = legacy_mp._designmatrix
+                new_dm = new_mp._designmatrix
 
                 # Compare shapes
                 assert legacy_dm.shape == new_dm.shape
@@ -189,13 +216,26 @@ class TestLegacyComparison:
                 continue
 
             try:
+                # Prepare input files in the format expected by legacy create_metapulsar
+                input_files = []
+                for i, (par_file, tim_file) in enumerate(zip(par_files, tim_files)):
+                    pta_name = test_pta_configs[i]
+                    package = (
+                        "tempo2"
+                        if pta_name in ["epta_dr1_v2_2", "ppta_dr2"]
+                        else "pint"
+                    )
+                    input_files.append(
+                        {
+                            "pta": pta_name,
+                            "parfile": par_file,
+                            "timfile": tim_file,
+                            "package": package,
+                        }
+                    )
+
                 # Create both implementations
-                legacy_mp = legacy_module.create_metapulsar(
-                    par_files,
-                    tim_files,
-                    primary_pta="epta_dr1_v2_2",
-                    reference_pta="epta_dr1_v2_2",
-                )
+                legacy_mp = legacy_module.create_metapulsar(input_files)
 
                 new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
                     pulsar_name=pulsar,
@@ -204,8 +244,8 @@ class TestLegacyComparison:
                 )
 
                 # Get flags
-                legacy_flags = legacy_mp.get_flags()
-                new_flags = new_mp.get_flags()
+                legacy_flags = legacy_mp._flags
+                new_flags = new_mp._flags
 
                 # Compare flags
                 assert len(legacy_flags) == len(new_flags)
@@ -245,13 +285,26 @@ class TestLegacyComparison:
                 continue
 
             try:
+                # Prepare input files in the format expected by legacy create_metapulsar
+                input_files = []
+                for i, (par_file, tim_file) in enumerate(zip(par_files, tim_files)):
+                    pta_name = test_pta_configs[i]
+                    package = (
+                        "tempo2"
+                        if pta_name in ["epta_dr1_v2_2", "ppta_dr2"]
+                        else "pint"
+                    )
+                    input_files.append(
+                        {
+                            "pta": pta_name,
+                            "parfile": par_file,
+                            "timfile": tim_file,
+                            "package": package,
+                        }
+                    )
+
                 # Create both implementations
-                legacy_mp = legacy_module.create_metapulsar(
-                    par_files,
-                    tim_files,
-                    primary_pta="epta_dr1_v2_2",
-                    reference_pta="epta_dr1_v2_2",
-                )
+                legacy_mp = legacy_module.create_metapulsar(input_files)
 
                 new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
                     pulsar_name=pulsar,
