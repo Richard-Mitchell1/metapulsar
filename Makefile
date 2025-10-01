@@ -15,22 +15,22 @@ datetime: datetime-full
 
 # --- Testing -----------------------------------------------------------------
 test:
-	@pytest --ignore=ref-packages --ignore=research --ignore=legacy
+	@pytest tests/
 
 fast:
-	@pytest -m "not slow" --ignore=ref-packages --ignore=research --ignore=legacy
+	@pytest tests/ -m "not slow"
 
 test-integration:
-	@pytest tests/integration/ -v --ignore=ref-packages --ignore=research --ignore=legacy
+	@pytest tests/ -m "integration" -v
 
 test-legacy:
-	@pytest -m "legacy_comparison" -v --ignore=ref-packages --ignore=research --ignore=legacy
+	@pytest tests/ -m "legacy_comparison" -v
 
 test-real-data:
-	@pytest -m "real_data" -v --ignore=ref-packages --ignore=research --ignore=legacy
+	@pytest tests/ -m "real_data" -v
 
 test-slow:
-	@pytest -m "slow" -v --ignore=ref-packages --ignore=research --ignore=legacy
+	@pytest tests/ -m "slow" -v
 
 # --- Development -------------------------------------------------------------
 install:  ## Install package in production mode
@@ -41,7 +41,7 @@ install-dev:  ## Install package in development mode with all dependencies
 	pre-commit install
 
 test-cov:  ## Run tests with coverage
-	pytest --cov=src/metapulsar --cov-report=html --cov-report=term --ignore=ref-packages --ignore=research --ignore=legacy
+	pytest --cov=src/metapulsar --cov-report=html --cov-report=term
 
 lint:  ## Run linting
 	ruff check src/ tests/
@@ -68,11 +68,11 @@ check:  ## Run all checks (lint, format, test)
 	black --check src/ tests/
 	ruff check src/ tests/
 	mypy src/
-	pytest --ignore=ref-packages --ignore=research --ignore=legacy
+	pytest
 
 ci:  ## Run CI pipeline locally
 	pre-commit run --all-files
-	pytest --cov=src/metapulsar --cov-report=xml --ignore=ref-packages --ignore=research --ignore=legacy
+	pytest --cov=src/metapulsar --cov-report=xml
 
 dev: install-dev  ## Quick development setup
 	@echo "Development environment ready!"

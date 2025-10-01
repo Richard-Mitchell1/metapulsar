@@ -6,6 +6,7 @@ from pathlib import Path
 from metapulsar import PTARegistry
 
 
+@pytest.mark.integration
 class TestLegacyComparison:
     """Test comparison between legacy and new implementations."""
 

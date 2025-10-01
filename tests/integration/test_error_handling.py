@@ -6,6 +6,7 @@ from pathlib import Path
 from metapulsar import MetaPulsarFactory, PTARegistry
 
 
+@pytest.mark.integration
 class TestErrorHandling:
     """Test error handling and malformed data robustness."""
 

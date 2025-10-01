@@ -5,6 +5,7 @@ from pathlib import Path
 from metapulsar import PTARegistry
 
 
+@pytest.mark.integration
 class TestDataDiscovery:
     """Test data discovery functionality."""
 

@@ -48,6 +48,11 @@ coverage.xml
 *.swp
 *.swo
 
+# Virtual environments
+.venv/
+venv/
+env/
+
 # OS files
 .DS_Store
 .DS_Store?
