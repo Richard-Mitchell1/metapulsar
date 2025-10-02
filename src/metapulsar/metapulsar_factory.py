@@ -82,7 +82,7 @@ class MetaPulsarFactory:
         pta_names: List[str] = None,
         combination_strategy: str = "consistent",
         reference_pta: str = None,
-        combine_components: List[str] = None,
+        combine_components: List[str] = ["astrometry", "spin", "binary", "dispersion"],
         add_dm_derivatives: bool = True,
     ) -> MetaPulsar:
         """Create MetaPulsar using specified combination strategy.
@@ -94,7 +94,8 @@ class MetaPulsarFactory:
                 - "consistent": Astrophysical consistency (modifies par files for consistency, the default)
                 - "composite": Multi-PTA composition (preserves original parameters, Borg/FrankenStat methods)
             reference_pta: PTA to use as reference (for consistent strategy)
-            combine_components: List of components to make consistent (for consistent strategy)
+            combine_components: List of components to make consistent (for consistent strategy).
+                Defaults to all components: ["astrometry", "spin", "binary", "dispersion"]
             add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files (for consistent strategy)
 
         Returns:
@@ -392,15 +393,17 @@ class MetaPulsarFactory:
         for pta_name, config in pta_configs.items():
             for parfile_path in self._discover_parfiles_in_pta(config):
                 try:
-                    # Read par file with PINT to get full model
-                    with open(parfile_path, "r") as f:
-                        par_content = f.read()
-
-                    model = builder(
-                        StringIO(par_content), allow_tcb=True, allow_T2=True
+                    # Create minimal parfile to avoid noise parameter validation
+                    minimal_par_content = self._create_minimal_parfile_for_coordinates(
+                        parfile_path
                     )
 
-                    # Extract pulsar name from PINT model (no regex needed!)
+                    # Use minimal parfile for coordinate extraction
+                    model = builder(
+                        StringIO(minimal_par_content), allow_tcb=True, allow_T2=True
+                    )
+
+                    # Extract pulsar name from PINT model
                     pulsar_name = model.PSR.value
 
                     # Extract coordinates using PINT's full capabilities
@@ -418,7 +421,7 @@ class MetaPulsarFactory:
 
                     coordinate_map[j_name]["ptas"].append(pta_name)
 
-                    # Find corresponding tim file using simple string matching (no recursion!)
+                    # Find corresponding tim file using simple string matching
                     timfile = self._find_timfile_by_name(pulsar_name, config)
 
                     coordinate_map[j_name]["files"][pta_name] = (parfile_path, timfile)
@@ -431,7 +434,6 @@ class MetaPulsarFactory:
 
                 except ValueError as e:
                     # Re-raise ValueError from bj_name_from_pulsar (malformed parfiles)
-                    # This will propagate up to the caller
                     raise e
                 except Exception as e:
                     # Log other exceptions (file I/O, etc.) as warnings
@@ -440,67 +442,22 @@ class MetaPulsarFactory:
         return coordinate_map
 
     def _create_minimal_parfile_for_coordinates(self, parfile_path: Path) -> str:
-        """Create minimal parfile using PINT's component detection.
+        """Create minimal parfile for coordinate discovery using ParFileManager."""
 
-        This approach:
-        1. Loads the full parfile with PINT to detect components
-        2. Extracts parameters from astrometry and spindown components
-        3. Includes base parameters (PSR, UNITS)
-        4. Creates a minimal parfile with only essential parameters
-        """
-        from pint.models.model_builder import ModelBuilder
+        # Read and parse the parfile
+        with open(parfile_path, "r") as f:
+            parfile_content = f.read()
 
-        # Load the full parfile with PINT
-        builder = ModelBuilder()
-        model = builder(str(parfile_path), allow_tcb=True, allow_T2=True)
+        # Parse into dictionary using PINT
+        from pint.models.model_builder import parse_parfile
+        from io import StringIO
 
-        lines = []
+        parfile_dict = parse_parfile(StringIO(parfile_content))
 
-        # Helper function to safely get parameter value
-        def get_param_value(param_name):
-            """Safely extract parameter value from model."""
-            try:
-                param_obj = getattr(model, param_name, None)
-                if param_obj is None:
-                    return None
-                return (
-                    param_obj.value if hasattr(param_obj, "value") else str(param_obj)
-                )
-            except (AttributeError, TypeError):
-                return None
-
-        # Base parameters that are always needed
-        base_params = ["PSR", "UNITS"]
-        for param in base_params:
-            value = get_param_value(param)
-            if value is not None:
-                lines.append(f"{param}    {value}")
-
-        # Extract parameters from astrometry components
-        for comp in model.components.values():
-            if not (hasattr(comp, "category") and comp.category == "astrometry"):
-                continue
-            if not hasattr(comp, "params"):
-                continue
-
-            for param_name in comp.params:
-                value = get_param_value(param_name)
-                if value is not None:
-                    lines.append(f"{param_name}    {value}")
-
-        # Extract parameters from spindown components
-        for comp in model.components.values():
-            if not (hasattr(comp, "category") and comp.category == "spindown"):
-                continue
-            if not hasattr(comp, "params"):
-                continue
-
-            for param_name in comp.params:
-                value = get_param_value(param_name)
-                if value is not None:
-                    lines.append(f"{param_name}    {value}")
-
-        return "\n".join(lines) + "\n"
+        # Use ParFileManager's generalized method
+        return self.parfile_manager._create_minimal_parfile_for_component(
+            parfile_dict, "astrometry"
+        )
 
     def _discover_parfiles_in_pta(self, config: Dict) -> List[Path]:
         """Discover par files in a single PTA configuration."""
@@ -586,7 +543,9 @@ class MetaPulsarFactory:
                     if get_model_and_toas is None:
                         raise RuntimeError("PINT not available for PintPulsar creation")
 
-                    model, toas = get_model_and_toas(str(parfile), str(timfile))
+                    model, toas = get_model_and_toas(
+                        str(parfile), str(timfile), planets=True
+                    )
                     enterprise_pulsars[pta_name] = PintPulsar(toas, model, planets=True)
 
                 else:  # tempo2

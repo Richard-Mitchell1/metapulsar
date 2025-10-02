@@ -19,12 +19,17 @@ def get_category_mapping_from_pint() -> Dict[str, str]:
     Returns:
         Dictionary mapping parameter type names to PINT category names
     """
-    return {
+    from collections import defaultdict
+
+    mapping = {
         "astrometry": "astrometry",
         "spindown": "spindown",
         "binary": "pulsar_system",
         "dispersion": "dispersion_constant",
     }
+
+    # Return defaultdict that returns the key itself if not found
+    return defaultdict(lambda key: key, mapping)
 
 
 def get_parameters_by_type_from_pint(param_type: str) -> List[str]:

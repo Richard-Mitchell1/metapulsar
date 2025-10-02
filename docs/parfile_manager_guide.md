@@ -373,7 +373,7 @@ if "J1909-3744" not in available:
 #### `__init__(self, registry: PTARegistry = None)`
 Initialize ParFileManager with optional PTA registry.
 
-#### `write_consistent_parfiles(self, pulsar_name: str, pta_names: List[str], reference_pta: str, combine_components: List[str], add_dm_derivatives: bool = False, output_dir: Path = None) -> Dict[str, Path]`
+#### `write_consistent_parfiles(self, pulsar_name: str, pta_names: List[str], reference_pta: str, combine_components: List[str] = ["astrometry", "spin", "binary", "dispersion"], add_dm_derivatives: bool = False, output_dir: Path = None) -> Dict[str, Path]`
 Create astrophysically consistent par files.
 
 ### MetaPulsarFactory
@@ -381,7 +381,7 @@ Create astrophysically consistent par files.
 #### `__init__(self, registry: PTARegistry = None, parfile_manager: ParFileManager = None)`
 Initialize factory with optional registry and parfile manager.
 
-#### `create_metapulsar(self, pulsar_name: str, pta_names: List[str], combination_strategy: str = "composite", reference_pta: str = None, combine_components: List[str] = None, add_dm_derivatives: bool = False) -> MetaPulsar`
+#### `create_metapulsar(self, pulsar_name: str, pta_names: List[str], combination_strategy: str = "composite", reference_pta: str = None, combine_components: List[str] = ["astrometry", "spin", "binary", "dispersion"], add_dm_derivatives: bool = False) -> MetaPulsar`
 Create MetaPulsar with specified strategy.
 
 #### `list_available_pulsars(self, pta_names: List[str] = None) -> List[str]`

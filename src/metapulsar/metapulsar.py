@@ -112,7 +112,7 @@ class MetaPulsar(ep.BasePulsar):
         if merge_astrometry:
             combine_components.append("astrometry")
         if merge_spin:
-            combine_components.append("spin")
+            combine_components.append("spindown")
         if merge_binary:
             combine_components.append("binary")
         if merge_dispersion:

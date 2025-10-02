@@ -46,7 +46,12 @@ class ParFileManager:
         pulsar_name: str,
         pta_names: List[str] = None,
         reference_pta: str = None,
-        combine_components: List[str] = None,
+        combine_components: List[str] = [
+            "astrometry",
+            "spindown",
+            "binary",
+            "dispersion",
+        ],
         add_dm_derivatives: bool = True,
         output_dir: Path = None,
     ) -> Dict[str, Path]:
@@ -57,7 +62,7 @@ class ParFileManager:
             pta_names: List of PTA names to include. If None, uses all available.
             reference_pta: PTA to use as reference. If None, auto-selects.
             combine_components: List of components to make consistent:
-                ['spin', 'astrometry', 'binary', 'dispersion']. If None, makes all consistent.
+                ['spin', 'astrometry', 'binary', 'dispersion']. Defaults to all components.
             add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files.
                 If True: Add DM1, DM2 if missing, align values if present.
                 If False: Do not add DM parameters, but align existing DM1, DM2 to reference PTA.
@@ -270,8 +275,8 @@ class ParFileManager:
            - Check if PINT is available, raise ImportError if not
            - Check if libstempo is available, raise ImportError if not
            - Validate add_dm_derivatives parameter:
-             * If add_dm_derivatives=True but 'dm' not in combine_components: Issue warning and ignore
-             * If add_dm_derivatives=True and 'dm' in combine_components: Proceed with DM derivative handling
+             * If add_dm_derivatives=True but 'dispersion' not in combine_components: Issue warning and ignore
+             * If add_dm_derivatives=True and 'dispersion' in combine_components: Proceed with DM derivative handling
         2. Parse reference PTA par file to extract parameter values using existing parameter mapping
         3. For each non-reference PTA:
            a. Parse par file using PINT's parse_parfile()
@@ -293,18 +298,6 @@ class ParFileManager:
             f"Making parameters consistent using reference PTA: {reference_pta}"
         )
 
-        # Validate add_dm_derivatives parameter
-        if (
-            add_dm_derivatives
-            and combine_components is not None
-            and "dispersion" not in combine_components
-        ):
-            self.logger.warning(
-                "add_dm_derivatives=True but 'dispersion' not in combine_components. "
-                "Ignoring DM derivatives parameter."
-            )
-            add_dm_derivatives = False
-
         # Parse all par files
         parfile_dicts = {}
         for pta_name, parfile_content in parfile_data.items():
@@ -320,22 +313,20 @@ class ParFileManager:
         # Get reference PTA parameters
         reference_dict = parfile_dicts[reference_pta]
 
-        # Process each component - default to all components if None
-        if combine_components is None:
-            combine_components = ["astrometry", "spin", "binary", "dispersion"]
+        # Process each component
 
         for component in combine_components:
             self.logger.info(f"Making {component} parameters consistent")
 
+            # Always call standard component consistency logic first
+            self._make_component_parameters_consistent(
+                parfile_dicts, reference_dict, component
+            )
+
+            # For dispersion, also apply special DM logic
             if component == "dispersion":
-                # Handle dispersion parameters with special logic for DMX removal and derivatives
-                self._make_dm_parameters_consistent(
+                self._handle_dm_special_cases(
                     parfile_dicts, reference_dict, reference_pta, add_dm_derivatives
-                )
-            else:
-                # Handle other components using standard parameter consistency logic
-                self._make_component_parameters_consistent(
-                    parfile_dicts, reference_dict, reference_pta, component
                 )
 
         # Convert back to par file strings
@@ -369,7 +360,7 @@ class ParFileManager:
             component: Component name ('spin', 'astrometry', 'binary')
         """
         # Get parameters for this component
-        component_params = self._get_component_parameters(component)
+        component_params = self._get_component_parameters(component, parfile_dicts)
 
         # Extract reference values
         reference_values = {}
@@ -393,30 +384,13 @@ class ParFileManager:
             for param, value in reference_values.items():
                 parfile_dict[param] = value
 
-    def _make_dm_parameters_consistent(
+    def _handle_dm_special_cases(
         self,
         parfile_dicts: Dict[str, Dict],
         reference_dict: Dict,
-        reference_pta: str,
         add_dm_derivatives: bool,
     ) -> None:
-        """Make DM parameters consistent with special handling for DMX and derivatives.
-
-        Args:
-            parfile_dicts: Dictionary mapping PTA names to parsed par file dictionaries
-            reference_dict: Reference PTA par file dictionary
-            reference_pta: Name of the reference PTA
-            add_dm_derivatives: Whether to add DM1, DM2 parameters
-        """
-        # Get dispersion parameters using the same component discovery logic
-        dispersion_params = self._get_component_parameters("dispersion")
-
-        # Extract reference DM values - only what exists in reference PTA
-        reference_values = {}
-        for param in dispersion_params:
-            if param in reference_dict:
-                reference_values[param] = reference_dict[param]
-                self.logger.debug(f"Reference {param}: {reference_dict[param]}")
+        """Handle DM-specific special cases: DMX removal, DMEPOCH, DM1/DM2 derivatives."""
 
         # Handle DMEPOCH explicitly - always add to all PTAs
         reference_dmepoch = reference_dict.get("DMEPOCH", [["55000"]])[0]
@@ -428,27 +402,12 @@ class ParFileManager:
 
         # Process each PTA (including reference PTA)
         for pta_name, parfile_dict in parfile_dicts.items():
-            # Remove all DMX parameters from ALL PTAs (special case for dispersion)
-            dmx_params = [key for key in parfile_dict.keys() if key.startswith("DMX")]
+            # Remove DMX parameters using PINT component discovery
+            dmx_params = self._get_dmx_parameters_from_parfile(parfile_dict)
             for dmx_param in dmx_params:
                 old_value = parfile_dict[dmx_param]
                 parfile_dict.pop(dmx_param)
                 self.logger.debug(f"PTA {pta_name}: Removed {dmx_param} = {old_value}")
-
-            # Remove existing dispersion parameters from target PTAs
-            if pta_name != reference_pta:
-                for param in dispersion_params:
-                    if param in parfile_dict:
-                        old_value = parfile_dict[param]
-                        parfile_dict.pop(param)
-                        self.logger.debug(
-                            f"PTA {pta_name}: Removed {param} = {old_value}"
-                        )
-
-            # Copy reference values (simple copy - no conversion)
-            for param, value in reference_values.items():
-                parfile_dict[param] = value
-                self.logger.debug(f"PTA {pta_name}: Set {param} = {value}")
 
             # Set DMEPOCH for ALL PTAs (always add, matching old logic)
             parfile_dict["DMEPOCH"] = [[f"{reference_dmepoch}", "0"]]  # 0 = frozen
@@ -458,75 +417,115 @@ class ParFileManager:
 
             # Handle DM derivatives based on add_dm_derivatives flag
             if add_dm_derivatives:
-                # Add DM1 and DM2 if they don't exist (matching legacy behavior)
-                if "DM1" not in parfile_dict:
-                    parfile_dict["DM1"] = [["0.0", "1"]]
-                    self.logger.debug(f"PTA {pta_name}: Added DM1 = 0.0")
-                if "DM2" not in parfile_dict:
-                    parfile_dict["DM2"] = [["0.0", "1"]]
-                    self.logger.debug(f"PTA {pta_name}: Added DM2 = 0.0")
-            else:
-                # Only keep DM1/DM2 if they exist in reference PTA
-                if "DM1" not in reference_values and "DM1" in parfile_dict:
-                    parfile_dict.pop("DM1")
-                    self.logger.debug(f"PTA {pta_name}: Removed DM1 (not in reference)")
-                if "DM2" not in reference_values and "DM2" in parfile_dict:
-                    parfile_dict.pop("DM2")
-                    self.logger.debug(f"PTA {pta_name}: Removed DM2 (not in reference)")
+                # ALWAYS add DM1 and DM2 (matching legacy behavior)
+                parfile_dict["DM1"] = [["0.0", "1"]]
+                parfile_dict["DM2"] = [["0.0", "1"]]
+                self.logger.info(f"PTA {pta_name}: Set DM1 = 0.0, DM2 = 0.0")
 
-    def _get_component_parameters(self, component: str) -> List[str]:
-        """Get parameter names for a specific component using SSOT from pint_helpers.
+    def _get_component_parameters(
+        self, component: str, parfile_dicts: Dict[str, Dict]
+    ) -> List[str]:
+        """Get parameter names for a specific component from ALL PTAs using PINT discovery."""
+
+        all_params = set()
+
+        for pta_name, parfile_dict in parfile_dicts.items():
+            # Create PINT model directly from dictionary - NO CONVERSION!
+            from pint.models.model_builder import ModelBuilder
+
+            builder = ModelBuilder()
+            model = builder(parfile_dict, allow_tcb=True, allow_T2=True)
+
+            # Extract parameters for the specific component
+            from .pint_helpers import get_category_mapping_from_pint
+
+            category_mapping = get_category_mapping_from_pint()
+            target_category = category_mapping[component]
+
+            for comp in model.components.values():
+                if hasattr(comp, "category") and comp.category == target_category:
+                    if hasattr(comp, "params"):
+                        all_params.update(comp.params)
+
+        self.logger.debug(
+            f"Component {component}: Found {len(all_params)} parameters across all PTAs"
+        )
+        return list(all_params)
+
+    def _create_minimal_parfile_for_component(
+        self, parfile_dict: Dict, component: str
+    ) -> str:
+        """Create minimal parfile for a specific component using PINT's component detection.
 
         Args:
-            component: Component name ('spin', 'astrometry', 'binary', 'dispersion')
+            parfile_dict: Parsed parfile dictionary (from parse_parfile)
+            component: Component name ('astrometry', 'spin', 'binary', 'dispersion')
 
         Returns:
-            List of parameter names for the component
+            Minimal parfile string with only essential parameters for the component
         """
-        from .pint_helpers import get_parameters_by_type_from_pint
+        from pint.models.model_builder import ModelBuilder
 
-        # Map component names to parameter types
-        component_mapping = {
-            "spin": "spindown",
-            "astrometry": "astrometry",
-            "binary": "binary",
-            "dispersion": "dispersion",
-        }
+        # Create PINT model directly from dictionary - NO CONVERSION!
+        builder = ModelBuilder()
+        model = builder(parfile_dict, allow_tcb=True, allow_T2=True)
 
-        param_type = component_mapping.get(component)
-        if not param_type:
-            self.logger.warning(f"Unknown component: {component}")
-            return []
+        lines = []
 
-        try:
-            # Use SSOT from pint_helpers
-            params = get_parameters_by_type_from_pint(param_type)
+        # Helper function to safely get parameter value
+        def get_param_value(param_name):
+            try:
+                param_obj = getattr(model, param_name, None)
+                if param_obj is None:
+                    return None
+                return (
+                    param_obj.value if hasattr(param_obj, "value") else str(param_obj)
+                )
+            except (AttributeError, TypeError):
+                return None
 
-            # Add parameter aliases for astrometry to handle different PTA naming conventions
-            if component == "astrometry":
-                from .pint_helpers import get_parameter_aliases_from_pint
+        # Base parameters that are always needed
+        base_params = ["PSR", "UNITS"]
+        for param in base_params:
+            value = get_param_value(param)
+            if value is not None:
+                lines.append(f"{param}    {value}")
 
-                aliases = get_parameter_aliases_from_pint()
+        # Extract parameters from the specific component
+        from .pint_helpers import get_category_mapping_from_pint
 
-                # Get all astrometry-related aliases
-                astrometry_aliases = []
-                for alias, canonical in aliases.items():
-                    if (
-                        canonical in params
-                    ):  # Only include aliases for parameters we already have
-                        astrometry_aliases.append(alias)
+        category_mapping = get_category_mapping_from_pint()
+        target_category = category_mapping[component]
 
-                # Add any aliases that aren't already in the list
-                for alias in astrometry_aliases:
-                    if alias not in params:
-                        params.append(alias)
+        for comp in model.components.values():
+            if not (hasattr(comp, "category") and comp.category == target_category):
+                continue
+            if not hasattr(comp, "params"):
+                continue
 
-            return params
-        except Exception as e:
-            self.logger.error(f"Failed to get parameters for {component}: {e}")
-            raise RuntimeError(
-                f"Failed to discover parameters for component '{component}': {e}"
-            ) from e
+            for param_name in comp.params:
+                value = get_param_value(param_name)
+                if value is not None:
+                    lines.append(f"{param_name}    {value}")
+
+        return "\n".join(lines) + "\n"
+
+    def _get_dmx_parameters_from_parfile(self, parfile_dict: Dict) -> List[str]:
+        """Get DMX parameters from a parfile using PINT component discovery."""
+        from pint.models.model_builder import ModelBuilder
+
+        # Create PINT model directly from dictionary - NO CONVERSION!
+        builder = ModelBuilder()
+        model = builder(parfile_dict, allow_tcb=True, allow_T2=True)
+
+        # Find DMX parameters from dispersion_dmx component
+        dmx_params = []
+        for comp in model.components.values():
+            if hasattr(comp, "category") and comp.category == "dispersion_dmx":
+                if hasattr(comp, "params"):
+                    dmx_params.extend(comp.params)
+
+        return dmx_params
 
     def _dict_to_parfile_string(self, parfile_dict: Dict) -> str:
         """Convert par file dictionary back to string format.
