@@ -82,7 +82,12 @@ class MetaPulsarFactory:
         pta_names: List[str] = None,
         combination_strategy: str = "consistent",
         reference_pta: str = None,
-        combine_components: List[str] = ["astrometry", "spin", "binary", "dispersion"],
+        combine_components: List[str] = [
+            "astrometry",
+            "spindown",
+            "binary",
+            "dispersion",
+        ],
         add_dm_derivatives: bool = True,
     ) -> MetaPulsar:
         """Create MetaPulsar using specified combination strategy.
@@ -95,7 +100,7 @@ class MetaPulsarFactory:
                 - "composite": Multi-PTA composition (preserves original parameters, Borg/FrankenStat methods)
             reference_pta: PTA to use as reference (for consistent strategy)
             combine_components: List of components to make consistent (for consistent strategy).
-                Defaults to all components: ["astrometry", "spin", "binary", "dispersion"]
+                Defaults to all components: ["astrometry", "spindown", "binary", "dispersion"]
             add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files (for consistent strategy)
 
         Returns:

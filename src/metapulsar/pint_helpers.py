@@ -13,14 +13,19 @@ class PINTDiscoveryError(Exception):
     """Raised when PINT component discovery fails"""
 
 
+class KeyReturningDict(dict):
+    """Dictionary that returns the key itself when key is not found."""
+
+    def __missing__(self, key):
+        return key
+
+
 def get_category_mapping_from_pint() -> Dict[str, str]:
     """Get component category mappings from PINT.
 
     Returns:
         Dictionary mapping parameter type names to PINT category names
     """
-    from collections import defaultdict
-
     mapping = {
         "astrometry": "astrometry",
         "spindown": "spindown",
@@ -28,8 +33,7 @@ def get_category_mapping_from_pint() -> Dict[str, str]:
         "dispersion": "dispersion_constant",
     }
 
-    # Return defaultdict that returns the key itself if not found
-    return defaultdict(lambda key: key, mapping)
+    return KeyReturningDict(mapping)
 
 
 def get_parameters_by_type_from_pint(param_type: str) -> List[str]:

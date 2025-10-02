@@ -4,7 +4,7 @@ This module provides functionality for managing par files across multiple PTAs,
 including making astrophysical parameters consistent and handling unit conversions.
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 from pathlib import Path
 import tempfile
 import subprocess
@@ -62,7 +62,7 @@ class ParFileManager:
             pta_names: List of PTA names to include. If None, uses all available.
             reference_pta: PTA to use as reference. If None, auto-selects.
             combine_components: List of components to make consistent:
-                ['spin', 'astrometry', 'binary', 'dispersion']. Defaults to all components.
+                ['spindown', 'astrometry', 'binary', 'dispersion']. Defaults to all components.
             add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files.
                 If True: Add DM1, DM2 if missing, align values if present.
                 If False: Do not add DM parameters, but align existing DM1, DM2 to reference PTA.
@@ -313,20 +313,37 @@ class ParFileManager:
         # Get reference PTA parameters
         reference_dict = parfile_dicts[reference_pta]
 
-        # Process each component
+        # Pre-compute component parameters for ALL components (using clean dictionaries)
+        component_params_map = {}
+        for component in combine_components:
+            component_params_map[component] = self._get_component_parameters(
+                component, parfile_dicts
+            )
 
+        # Pre-compute DMX parameters for ALL PTAs (using clean dictionaries)
+        dmx_params_map = {}
+        for pta_name, parfile_dict in parfile_dicts.items():
+            dmx_params_map[pta_name] = self._get_dmx_parameters_from_parfile(
+                parfile_dict
+            )
+
+        # Process each component
         for component in combine_components:
             self.logger.info(f"Making {component} parameters consistent")
 
             # Always call standard component consistency logic first
             self._make_component_parameters_consistent(
-                parfile_dicts, reference_dict, component
+                parfile_dicts,
+                reference_dict,
+                reference_pta,
+                component,
+                component_params_map[component],
             )
 
             # For dispersion, also apply special DM logic
             if component == "dispersion":
                 self._handle_dm_special_cases(
-                    parfile_dicts, reference_dict, reference_pta, add_dm_derivatives
+                    parfile_dicts, reference_dict, add_dm_derivatives, dmx_params_map
                 )
 
         # Convert back to par file strings
@@ -350,6 +367,7 @@ class ParFileManager:
         reference_dict: Dict,
         reference_pta: str,
         component: str,
+        component_params: List[str],
     ) -> None:
         """Make parameters for a specific component consistent.
 
@@ -357,10 +375,15 @@ class ParFileManager:
             parfile_dicts: Dictionary mapping PTA names to parsed par file dictionaries
             reference_dict: Reference PTA par file dictionary
             reference_pta: Name of the reference PTA
-            component: Component name ('spin', 'astrometry', 'binary')
+            component: Component name ('spindown', 'astrometry', 'binary')
+            component_params: Pre-computed component parameters
         """
-        # Get parameters for this component
-        component_params = self._get_component_parameters(component, parfile_dicts)
+        # If no parameters to process, nothing to do
+        if not component_params:
+            self.logger.debug(
+                f"No parameters found for component {component}, skipping"
+            )
+            return
 
         # Extract reference values
         reference_values = {}
@@ -389,6 +412,7 @@ class ParFileManager:
         parfile_dicts: Dict[str, Dict],
         reference_dict: Dict,
         add_dm_derivatives: bool,
+        dmx_params_map: Dict[str, List[str]],
     ) -> None:
         """Handle DM-specific special cases: DMX removal, DMEPOCH, DM1/DM2 derivatives."""
 
@@ -402,8 +426,8 @@ class ParFileManager:
 
         # Process each PTA (including reference PTA)
         for pta_name, parfile_dict in parfile_dicts.items():
-            # Remove DMX parameters using PINT component discovery
-            dmx_params = self._get_dmx_parameters_from_parfile(parfile_dict)
+            # Remove DMX parameters using pre-computed list
+            dmx_params = dmx_params_map[pta_name]
             for dmx_param in dmx_params:
                 old_value = parfile_dict[dmx_param]
                 parfile_dict.pop(dmx_param)
@@ -425,7 +449,7 @@ class ParFileManager:
     def _get_component_parameters(
         self, component: str, parfile_dicts: Dict[str, Dict]
     ) -> List[str]:
-        """Get parameter names for a specific component from ALL PTAs using PINT discovery."""
+        """Get parameter names for a specific component from ALL PTAs using PINT discovery, including all aliases."""
 
         all_params = set()
 
@@ -447,22 +471,45 @@ class ParFileManager:
                     if hasattr(comp, "params"):
                         all_params.update(comp.params)
 
+        # Get parameter aliases from PINT
+        from .pint_helpers import get_parameter_aliases_from_pint
+
+        alias_map = get_parameter_aliases_from_pint()
+
+        # Create reverse mapping: canonical -> all aliases
+        canonical_to_aliases = {}
+        for alias, canonical in alias_map.items():
+            if canonical not in canonical_to_aliases:
+                canonical_to_aliases[canonical] = []
+            canonical_to_aliases[canonical].append(alias)
+
+        # Build complete parameter list including all aliases
+        all_params_with_aliases = set()
+        for canonical_param in all_params:
+            all_params_with_aliases.add(canonical_param)  # Add canonical name
+            if canonical_param in canonical_to_aliases:
+                all_params_with_aliases.update(
+                    canonical_to_aliases[canonical_param]
+                )  # Add all aliases
+
         self.logger.debug(
-            f"Component {component}: Found {len(all_params)} parameters across all PTAs"
+            f"Component {component}: Found {len(all_params)} canonical parameters, {len(all_params_with_aliases)} total with aliases"
         )
-        return list(all_params)
+        return list(all_params_with_aliases)
 
     def _create_minimal_parfile_for_component(
-        self, parfile_dict: Dict, component: str
+        self, parfile_dict: Dict, component: Union[str, List[str]]
     ) -> str:
-        """Create minimal parfile for a specific component using PINT's component detection.
+        """Create minimal parfile for specific component(s) using PINT's component detection.
 
         Args:
             parfile_dict: Parsed parfile dictionary (from parse_parfile)
-            component: Component name ('astrometry', 'spin', 'binary', 'dispersion')
+            component: Component name ('astrometry', 'spindown', 'binary', 'dispersion')
+                      or list of component names. Note: 'spindown' is always included
+                      regardless of input, as PINT requires spindown parameters.
 
         Returns:
-            Minimal parfile string with only essential parameters for the component
+            Minimal parfile string with only essential parameters for the component(s)
         """
         from pint.models.model_builder import ModelBuilder
 
@@ -491,22 +538,37 @@ class ParFileManager:
             if value is not None:
                 lines.append(f"{param}    {value}")
 
-        # Extract parameters from the specific component
+        # Handle both single component and list of components
+        components_to_process = [component] if isinstance(component, str) else component
+
+        # CRITICAL: Always include spindown component as PINT requires it
+        if "spindown" not in components_to_process:
+            components_to_process.append("spindown")
+
+        # Extract parameters from the specific component(s)
         from .pint_helpers import get_category_mapping_from_pint
 
         category_mapping = get_category_mapping_from_pint()
-        target_category = category_mapping[component]
 
-        for comp in model.components.values():
-            if not (hasattr(comp, "category") and comp.category == target_category):
-                continue
-            if not hasattr(comp, "params"):
-                continue
+        # Keep track of processed parameters to avoid duplicates
+        processed_params = set()
 
-            for param_name in comp.params:
-                value = get_param_value(param_name)
-                if value is not None:
-                    lines.append(f"{param_name}    {value}")
+        for comp_name in components_to_process:
+            target_category = category_mapping[comp_name]
+
+            for comp in model.components.values():
+                if not (hasattr(comp, "category") and comp.category == target_category):
+                    continue
+                if not hasattr(comp, "params"):
+                    continue
+
+                for param_name in comp.params:
+                    # Only add if not already processed (avoid duplicates)
+                    if param_name not in processed_params:
+                        value = get_param_value(param_name)
+                        if value is not None:
+                            lines.append(f"{param_name}    {value}")
+                            processed_params.add(param_name)
 
         return "\n".join(lines) + "\n"
 
