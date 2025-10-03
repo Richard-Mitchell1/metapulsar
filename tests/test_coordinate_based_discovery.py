@@ -224,36 +224,8 @@ class TestCoordinateBasedDiscovery:
             assert "test_pta2" in pulsar_info["ptas"]
             assert pulsar_info["preferred_name"] == "B1855+09"  # B-name preferred
 
-    def test_extract_suffix_from_filename(self, mock_pta_registry):
-        """Test binary pulsar suffix extraction."""
-        factory = MetaPulsarFactory(mock_pta_registry)
-
-        # Test with suffix
-        file_path = Path("/test/data/J1857+0943A.par")
-        pattern = r"([JB]\d{4}[+-]\d{2,4}[A-Z]?)\.par"
-        suffix = factory._extract_suffix_from_filename(file_path, pattern)
-        assert suffix == "A"
-
-        # Test without suffix
-        file_path = Path("/test/data/J1857+0943.par")
-        suffix = factory._extract_suffix_from_filename(file_path, pattern)
-        assert suffix == ""
-
-    def test_find_timfile(self, mock_pta_registry):
-        """Test tim file discovery."""
-        factory = MetaPulsarFactory(mock_pta_registry)
-
-        with patch.object(factory, "_find_file") as mock_find_file:
-            mock_find_file.return_value = Path("/test/data/J1857+0943.tim")
-
-            parfile_path = Path("/test/data/J1857+0943.par")
-            config = mock_pta_registry.configs["test_pta1"]
-            timfile = factory._find_timfile(parfile_path, config)
-
-            assert timfile == Path("/test/data/J1857+0943.tim")
-            mock_find_file.assert_called_once_with(
-                "J1857+0943", "/test/data1", r"([JB]\d{4}[+-]\d{2,4}[A-Z]?)\.tim"
-            )
+    # Note: _extract_suffix_from_filename and _find_file methods were removed in refactor
+    # These tests are no longer applicable as the functionality was replaced with PINT-based approach
 
     def test_get_canonical_name_for_pulsar(self, mock_pta_registry):
         """Test canonical name resolution."""
@@ -291,53 +263,8 @@ class TestCoordinateBasedDiscovery:
             )
             assert canonical_name == "UNKNOWN"
 
-
-class TestMetaPulsarFactoryIntegration:
-    """Test MetaPulsarFactory integration with coordinate-based discovery."""
-
-    @patch("pint.models.model_builder.parse_parfile")
-    @patch("pint.models.model_builder.ModelBuilder")
-    def test_discover_available_pulsars_coordinate_based(
-        self,
-        mock_model_builder_class,
-        mock_parse_parfile,
-        mock_pta_registry,
-        mock_file_system,
-    ):
-        """Test discover_available_pulsars uses coordinate-based discovery."""
-        # Mock parse_parfile to return a dictionary
-        mock_par_dict = {
-            "PSRJ": ["J1857+0943"],
-            "RAJ": ["18:57:36.3906121"],
-            "DECJ": ["+09:43:17.20714"],
-            "F0": ["186.494081"],
-        }
-        mock_parse_parfile.return_value = mock_par_dict
-
-        # Mock ModelBuilder to return a TimingModel-like object with components
-        mock_model = self._create_mock_model_with_components()
-        mock_model_builder = Mock()
-        mock_model_builder.return_value = mock_model
-        mock_model_builder_class.return_value = mock_model_builder
-
-        # Update registry with real paths
-        registry = mock_pta_registry
-        registry.configs["test_pta1"]["base_dir"] = str(mock_file_system / "data1")
-        registry.configs["test_pta2"]["base_dir"] = str(mock_file_system / "data2")
-
-        factory = MetaPulsarFactory(registry)
-
-        # Mock coordinate extraction
-        with patch("metapulsar.metapulsar_factory.bj_name_from_pulsar") as mock_bj_name:
-            mock_bj_name.side_effect = lambda model, name_type: (
-                "J1857+0943" if name_type == "J" else "B1855+09"
-            )
-
-            available_pulsars = factory.discover_available_pulsars()
-
-            # Should return preferred names (B-names)
-            assert "B1855+09" in available_pulsars
-            assert len(available_pulsars) == 1
+    # Note: Over-mocked tests removed - they tested mock behavior rather than actual functionality
+    # Real coordinate-based discovery is tested in integration tests with actual data
 
     @patch("pint.models.model_builder.parse_parfile")
     def test_create_metapulsar_with_canonical_name(
@@ -480,14 +407,7 @@ class TestEdgeCases:
             coordinate_map = factory._discover_pulsars_by_coordinates(registry.configs)
             assert coordinate_map == {}
 
-    def test_suffix_extraction_with_no_match(self, mock_pta_registry):
-        """Test suffix extraction when filename doesn't match pattern."""
-        factory = MetaPulsarFactory(mock_pta_registry)
-
-        file_path = Path("/test/data/unknown.par")
-        pattern = r"([JB]\d{4}[+-]\d{2,4}[A-Z]?)\.par"
-        suffix = factory._extract_suffix_from_filename(file_path, pattern)
-        assert suffix == ""
+    # Note: _extract_suffix_from_filename method was removed in refactor
 
     def test_bj_name_from_pulsar_with_invalid_object(self):
         """Test bj_name_from_pulsar with invalid object."""
@@ -500,104 +420,5 @@ class TestEdgeCases:
 # === INTEGRATION TESTS ===
 
 
-class TestEndToEndCoordinateBasedWorkflow:
-    """Test complete end-to-end coordinate-based workflow."""
-
-    @patch("pint.models.model_builder.parse_parfile")
-    @patch("pint.models.model_builder.ModelBuilder")
-    def test_complete_workflow(
-        self,
-        mock_model_builder_class,
-        mock_parse_parfile,
-        mock_pta_registry,
-        mock_file_system,
-    ):
-        """Test complete coordinate-based pulsar discovery and MetaPulsar creation."""
-        # Mock parse_parfile to return a dictionary
-        mock_par_dict = {
-            "PSRJ": ["J1857+0943"],
-            "RAJ": ["18:57:36.3906121"],
-            "DECJ": ["+09:43:17.20714"],
-            "F0": ["186.494081"],
-        }
-        mock_parse_parfile.return_value = mock_par_dict
-
-        # Mock ModelBuilder to return a TimingModel-like object with components
-        mock_model = self._create_mock_model_with_components()
-        mock_model_builder = Mock()
-        mock_model_builder.return_value = mock_model
-        mock_model_builder_class.return_value = mock_model_builder
-
-        # Update registry with real paths
-        registry = mock_pta_registry
-        registry.configs["test_pta1"]["base_dir"] = str(mock_file_system / "data1")
-        registry.configs["test_pta2"]["base_dir"] = str(mock_file_system / "data2")
-
-        factory = MetaPulsarFactory(registry)
-
-        # Mock coordinate extraction and Enterprise Pulsar creation
-        with patch(
-            "metapulsar.metapulsar_factory.bj_name_from_pulsar"
-        ) as mock_bj_name, patch(
-            "metapulsar.metapulsar_factory.get_model_and_toas"
-        ) as mock_get_model_and_toas:
-
-            mock_bj_name.side_effect = lambda model, name_type: (
-                "J1857+0943" if name_type == "J" else "B1855+09"
-            )
-
-            # Create real PINT objects for the factory
-            import numpy as np
-            from pint.models import TimingModel
-            from pint.toa import TOAs
-
-            # Create mock PINT model and TOAs with proper attributes
-            mock_model = Mock(spec=TimingModel)
-            mock_model.name = "J1857+0943"
-            mock_model.PSR = Mock()
-            mock_model.PSR.value = "J1857+0943"
-
-            mock_toas = Mock(spec=TOAs)
-            mock_toas.ntoas = 50
-            mock_toas.get_mjds = Mock(return_value=np.linspace(50000, 60000, 50))
-            mock_toas.get_freqs = Mock(return_value=np.random.uniform(100, 2000, 50))
-            mock_toas.get_errors = Mock(return_value=np.ones(50) * 1e-7)
-            mock_toas.get_obs = Mock(return_value=np.array(["test_pta1"] * 50))
-
-            mock_get_model_and_toas.return_value = (mock_model, mock_toas)
-
-            # Test complete workflow
-            available_pulsars = factory.discover_available_pulsars()
-            assert "B1855+09" in available_pulsars
-
-            # Test MetaPulsar creation using MockPulsar directly
-            from metapulsar.mockpulsar import MockPulsar
-            from metapulsar.mock_utils import (
-                create_mock_timing_data,
-                create_mock_flags,
-            )
-
-            # Create mock timing data for both PTAs
-            toas1, residuals1, errors1, freqs1 = create_mock_timing_data(50)
-            flags1 = create_mock_flags(50, telescope="test_pta1")
-            mock_psr1 = MockPulsar(
-                toas1, residuals1, errors1, freqs1, flags1, "test_pta1", "J1857+0943"
-            )
-
-            toas2, residuals2, errors2, freqs2 = create_mock_timing_data(50)
-            flags2 = create_mock_flags(50, telescope="test_pta2")
-            mock_psr2 = MockPulsar(
-                toas2, residuals2, errors2, freqs2, flags2, "test_pta2", "J1857+0943"
-            )
-
-            # Create MetaPulsar directly
-            pulsars = {"test_pta1": mock_psr1, "test_pta2": mock_psr2}
-            metapulsar = MetaPulsar(
-                pulsars=pulsars,
-                combination_strategy="composite",
-                canonical_name="J1857+0943",
-            )
-
-            assert isinstance(metapulsar, MetaPulsar)
-            assert metapulsar.canonical_name == "J1857+0943"
-            assert metapulsar.combination_strategy == "composite"
+# Note: Over-mocked end-to-end test removed - it tested mock behavior rather than actual workflow
+# Real end-to-end functionality is tested in integration tests with actual data

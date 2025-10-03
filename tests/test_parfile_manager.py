@@ -242,15 +242,15 @@ class TestParFileManager:
             assert "UNITS TDB" in result["epta_dr2"]
             assert "UNITS TDB" in result["ppta_dr2"]
 
-    def test_make_parameters_consistent_spin(self):
-        """Test making spin parameters consistent."""
+    def test_make_parameters_consistent_spindown(self):
+        """Test making spindown parameters consistent."""
         parfile_data = {
             "epta_dr2": "F0 123.456 1\nF1 -1.23e-15 1\nPEPOCH 55000.0\n",
             "ppta_dr2": "F0 124.000 1\nF1 -1.50e-15 1\nPEPOCH 55000.0\n",
         }
 
         result = self.manager._make_parameters_consistent(
-            parfile_data, "epta_dr2", ["spin"], False
+            parfile_data, "epta_dr2", ["spindown"], False
         )
 
         # Both should have the same F0 and F1 values from reference PTA
@@ -286,8 +286,8 @@ class TestParFileManager:
     def test_make_parameters_consistent_dm_without_derivatives(self):
         """Test making DM parameters consistent without adding derivatives."""
         parfile_data = {
-            "epta_dr2": "DM 10.5 1\nDMEPOCH 55000.0\nDM1 0.1 1\n",
-            "ppta_dr2": "DM 11.0 1\nDMEPOCH 55000.0\nDM1 0.2 1\n",
+            "epta_dr2": "PSR J1857+0943\nF0 123.456 1\nDM 10.5 1\nDMEPOCH 55000.0\nDM1 0.1 1\n",
+            "ppta_dr2": "PSR J1857+0943\nF0 123.456 1\nDM 11.0 1\nDMEPOCH 55000.0\nDM1 0.2 1\n",
         }
 
         result = self.manager._make_parameters_consistent(
@@ -303,8 +303,8 @@ class TestParFileManager:
     def test_make_parameters_consistent_astrometry(self):
         """Test making astrometry parameters consistent."""
         parfile_data = {
-            "epta_dr2": "RAJ 12:34:56.789\nDECJ 12:34:56.789\nPMRA 10.5 1\n",
-            "ppta_dr2": "RAJ 12:35:00.000\nDECJ 12:35:00.000\nPMRA 11.0 1\n",
+            "epta_dr2": "PSR J1857+0943\nF0 123.456 1\nRAJ 12:34:56.789\nDECJ 12:34:56.789\nPMRA 10.5 1\nPOSEPOCH 55000.0\n",
+            "ppta_dr2": "PSR J1857+0943\nF0 123.456 1\nRAJ 12:35:00.000\nDECJ 12:35:00.000\nPMRA 11.0 1\nPOSEPOCH 55000.0\n",
         }
 
         result = self.manager._make_parameters_consistent(
@@ -321,13 +321,16 @@ class TestParFileManager:
 
     def test_make_parameters_consistent_dm_derivatives_warning(self):
         """Test warning when add_dm_derivatives=True but dispersion not in combine_components."""
-        parfile_data = {"epta_dr2": "F0 123.456 1\n", "ppta_dr2": "F0 124.000 1\n"}
+        parfile_data = {
+            "epta_dr2": "PSR J1857+0943\nF0 123.456 1\n",
+            "ppta_dr2": "PSR J1857+0943\nF0 124.000 1\n",
+        }
 
         with patch("loguru.logger.warning") as mock_warning:
             self.manager._make_parameters_consistent(
                 parfile_data,
                 "epta_dr2",
-                ["spin"],
+                ["spindown"],
                 True,  # add_dm_derivatives=True but no 'dispersion'
             )
 
@@ -340,26 +343,8 @@ class TestParFileManager:
             ]
             assert len(warning_calls) == 1
 
-    def test_get_component_parameters(self):
-        """Test getting component parameters."""
-        spin_params = self.manager._get_component_parameters("spin")
-        assert "F0" in spin_params
-        assert "F1" in spin_params
-        assert "PEPOCH" in spin_params
-
-        astrometry_params = self.manager._get_component_parameters("astrometry")
-        assert "RAJ" in astrometry_params
-        assert "DECJ" in astrometry_params
-        assert "PMRA" in astrometry_params
-
-        binary_params = self.manager._get_component_parameters("binary")
-        assert "PB" in binary_params
-        assert "A1" in binary_params
-        assert "ECC" in binary_params
-
-        # Test unknown component
-        unknown_params = self.manager._get_component_parameters("unknown")
-        assert unknown_params == []
+    # Note: _get_component_parameters method was removed in refactor
+    # Component parameter discovery is now handled by get_parameters_by_type_from_parfiles in pint_helpers.py
 
     def test_dict_to_parfile_string(self):
         """Test converting par file dictionary back to string."""

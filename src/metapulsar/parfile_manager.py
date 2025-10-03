@@ -13,7 +13,7 @@ from loguru import logger
 
 # Import PINT for par file parsing and unit conversion
 try:
-    from pint.models.model_builder import parse_parfile, ModelBuilder
+    from pint.models.model_builder import parse_parfile
     from pint.toa import TOAs
 except ImportError as e:
     logger.error("PINT is required but not available. Please install pint-pulsar.")
@@ -316,7 +316,9 @@ class ParFileManager:
         # Pre-compute component parameters for ALL components (using clean dictionaries)
         component_params_map = {}
         for component in combine_components:
-            component_params_map[component] = self._get_component_parameters(
+            from .pint_helpers import get_parameters_by_type_from_parfiles
+
+            component_params_map[component] = get_parameters_by_type_from_parfiles(
                 component, parfile_dicts
             )
 
@@ -446,57 +448,6 @@ class ParFileManager:
                 parfile_dict["DM2"] = [["0.0", "1"]]
                 self.logger.info(f"PTA {pta_name}: Set DM1 = 0.0, DM2 = 0.0")
 
-    def _get_component_parameters(
-        self, component: str, parfile_dicts: Dict[str, Dict]
-    ) -> List[str]:
-        """Get parameter names for a specific component from ALL PTAs using PINT discovery, including all aliases."""
-
-        all_params = set()
-
-        for pta_name, parfile_dict in parfile_dicts.items():
-            # Create PINT model directly from dictionary - NO CONVERSION!
-            from pint.models.model_builder import ModelBuilder
-
-            builder = ModelBuilder()
-            model = builder(parfile_dict, allow_tcb=True, allow_T2=True)
-
-            # Extract parameters for the specific component
-            from .pint_helpers import get_category_mapping_from_pint
-
-            category_mapping = get_category_mapping_from_pint()
-            target_category = category_mapping[component]
-
-            for comp in model.components.values():
-                if hasattr(comp, "category") and comp.category == target_category:
-                    if hasattr(comp, "params"):
-                        all_params.update(comp.params)
-
-        # Get parameter aliases from PINT
-        from .pint_helpers import get_parameter_aliases_from_pint
-
-        alias_map = get_parameter_aliases_from_pint()
-
-        # Create reverse mapping: canonical -> all aliases
-        canonical_to_aliases = {}
-        for alias, canonical in alias_map.items():
-            if canonical not in canonical_to_aliases:
-                canonical_to_aliases[canonical] = []
-            canonical_to_aliases[canonical].append(alias)
-
-        # Build complete parameter list including all aliases
-        all_params_with_aliases = set()
-        for canonical_param in all_params:
-            all_params_with_aliases.add(canonical_param)  # Add canonical name
-            if canonical_param in canonical_to_aliases:
-                all_params_with_aliases.update(
-                    canonical_to_aliases[canonical_param]
-                )  # Add all aliases
-
-        self.logger.debug(
-            f"Component {component}: Found {len(all_params)} canonical parameters, {len(all_params_with_aliases)} total with aliases"
-        )
-        return list(all_params_with_aliases)
-
     def _create_minimal_parfile_for_component(
         self, parfile_dict: Dict, component: Union[str, List[str]]
     ) -> str:
@@ -511,11 +462,10 @@ class ParFileManager:
         Returns:
             Minimal parfile string with only essential parameters for the component(s)
         """
-        from pint.models.model_builder import ModelBuilder
+        from .pint_helpers import create_pint_model
 
         # Create PINT model directly from dictionary - NO CONVERSION!
-        builder = ModelBuilder()
-        model = builder(parfile_dict, allow_tcb=True, allow_T2=True)
+        model = create_pint_model(parfile_dict)
 
         lines = []
 
@@ -574,11 +524,10 @@ class ParFileManager:
 
     def _get_dmx_parameters_from_parfile(self, parfile_dict: Dict) -> List[str]:
         """Get DMX parameters from a parfile using PINT component discovery."""
-        from pint.models.model_builder import ModelBuilder
+        from .pint_helpers import create_pint_model
 
         # Create PINT model directly from dictionary - NO CONVERSION!
-        builder = ModelBuilder()
-        model = builder(parfile_dict, allow_tcb=True, allow_T2=True)
+        model = create_pint_model(parfile_dict)
 
         # Find DMX parameters from dispersion_dmx component
         dmx_params = []
@@ -606,8 +555,9 @@ class ParFileManager:
             temp_content = self._dict_to_parfile_string_custom(parfile_dict)
 
             # Create PINT model from string
-            mb = ModelBuilder()
-            model = mb(StringIO(temp_content))
+            from .pint_helpers import create_pint_model
+
+            model = create_pint_model(temp_content)
 
             # Use PINT's as_parfile() method
             return model.as_parfile()
@@ -806,9 +756,10 @@ class ParFileManager:
     def _convert_pint_to_tdb(self, parfile_content: str) -> str:
         """Convert par file from TCB to TDB using PINT ModelBuilder."""
         try:
-            # Create ModelBuilder and parse par file
-            mb = ModelBuilder()
-            model = mb(StringIO(parfile_content), allow_tcb=True, allow_T2=True)
+            # Create PINT model and parse par file
+            from .pint_helpers import create_pint_model
+
+            model = create_pint_model(parfile_content)
 
             # Write par file with TDB units
             new_file = StringIO()

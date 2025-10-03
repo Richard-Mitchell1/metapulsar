@@ -7,7 +7,6 @@ the complete workflow of building parameter mappings from multiple PINT models.
 from typing import Dict, List, Tuple
 from pint.models import TimingModel
 from .parameter_resolver import ParameterResolver
-from .pint_helpers import get_parameters_by_type_from_pint
 
 
 class ParameterMapping:
@@ -38,21 +37,37 @@ class MetaPulsarParameterManager:
     parameter/component checks and PINT helpers for discovery.
     """
 
-    def __init__(self, pint_models: Dict[str, TimingModel]):
-        """Initialize manager with PINT models from multiple PTAs.
+    def __init__(
+        self, pint_models: Dict[str, TimingModel], parfile_dicts: Dict[str, Dict]
+    ):
+        """Initialize manager with PINT models and parfile dictionaries from multiple PTAs.
 
         Args:
             pint_models: Dictionary mapping PTA names to PINT TimingModel instances
+            parfile_dicts: Dictionary mapping PTA names to parfile dictionaries
+
+        Raises:
+            ValueError: If PTA names in pint_models and parfile_dicts don't match
         """
+        # Validate input consistency
+        if set(pint_models.keys()) != set(parfile_dicts.keys()):
+            raise ValueError(
+                f"PTA names mismatch: pint_models has {set(pint_models.keys())}, "
+                f"parfile_dicts has {set(parfile_dicts.keys())}"
+            )
+
         self.pint_models = pint_models
+        self.parfile_dicts = parfile_dicts  # NEW: Add parfile dictionaries
         self.resolver = ParameterResolver(pint_models)
 
     def build_parameter_mappings(
         self,
-        merge_astrometry: bool = True,
-        merge_spin: bool = True,
-        merge_binary: bool = True,
-        merge_dm: bool = True,
+        combine_components: List[str] = [
+            "astrometry",
+            "spindown",
+            "binary",
+            "dispersion",
+        ],
     ) -> ParameterMapping:
         """Build parameter mappings from PINT models.
 
@@ -63,10 +78,7 @@ class MetaPulsarParameterManager:
         4. Validates consistency and returns structured result
 
         Args:
-            merge_astrometry: Whether to merge astrometry parameters
-            merge_spin: Whether to merge spindown parameters
-            merge_binary: Whether to merge binary parameters
-            merge_dm: Whether to merge dispersion parameters
+            combine_components: List of component types to merge
 
         Returns:
             ParameterMapping with fitparameters, setparameters, etc.
@@ -75,18 +87,13 @@ class MetaPulsarParameterManager:
             ParameterInconsistencyError: If parameters are inconsistent
             MissingComponentError: If required components are missing
         """
-        # Step 1: Build merge_pars list using PINT helpers
-        merge_pars = self._build_merge_parameters_list(
-            {
-                "astrometry": merge_astrometry,
-                "spindown": merge_spin,
-                "binary": merge_binary,
-                "dispersion": merge_dm,
-            }
-        )
+        # Step 1: Discover parameters for components that should be merged
+        mergeable_params = self._discover_mergeable_parameters(combine_components)
 
         # Step 2-6: Process parameters using resolver
-        fitparameters, setparameters = self._process_all_pta_parameters(merge_pars)
+        fitparameters, setparameters = self._process_all_pta_parameters(
+            mergeable_params
+        )
 
         # Step 7: Validate consistency
         self._validate_parameter_consistency(fitparameters, setparameters)
@@ -94,27 +101,34 @@ class MetaPulsarParameterManager:
         # Step 8: Build result
         return self._build_parameter_mapping_result(fitparameters, setparameters)
 
-    def _build_merge_parameters_list(self, merge_config: Dict[str, bool]) -> List[str]:
-        """Build list of parameters to merge based on configuration.
+    def _discover_mergeable_parameters(
+        self, combine_components: List[str]
+    ) -> List[str]:
+        """Discover parameters that can be merged based on component types.
 
         Args:
-            merge_config: Dictionary mapping parameter types to merge flags
+            combine_components: List of component types to merge
 
         Returns:
-            List of parameter names to merge
+            List of parameter names that can potentially be merged
         """
-        merge_pars = []
-        for param_type, should_merge in merge_config.items():
-            if should_merge:
-                params = get_parameters_by_type_from_pint(param_type)
-                merge_pars.extend(params)
-        return merge_pars
+        from .pint_helpers import get_parameters_by_type_from_parfiles
 
-    def _process_all_pta_parameters(self, merge_pars: List[str]) -> Tuple[Dict, Dict]:
+        mergeable_params = []
+        for component_type in combine_components:
+            params = get_parameters_by_type_from_parfiles(
+                component_type, self.parfile_dicts
+            )
+            mergeable_params.extend(params)
+        return mergeable_params
+
+    def _process_all_pta_parameters(
+        self, mergeable_params: List[str]
+    ) -> Tuple[Dict, Dict]:
         """Process parameters from all PTAs.
 
         Args:
-            merge_pars: List of parameters to merge
+            mergeable_params: List of parameters that should be merged
 
         Returns:
             Tuple of (fitparameters, setparameters) dictionaries
@@ -123,7 +137,9 @@ class MetaPulsarParameterManager:
         setparameters = {}
 
         for pta_name, model in self.pint_models.items():
-            self._process_pta_fit_parameters(pta_name, model, merge_pars, fitparameters)
+            self._process_pta_fit_parameters(
+                pta_name, model, mergeable_params, fitparameters
+            )
             self._process_pta_set_parameters(pta_name, model, setparameters)
 
         return fitparameters, setparameters
@@ -132,7 +148,7 @@ class MetaPulsarParameterManager:
         self,
         pta_name: str,
         model: TimingModel,
-        merge_pars: List[str],
+        mergeable_params: List[str],  # Renamed from merge_pars
         fitparameters: Dict,
     ) -> None:
         """Process FREE parameters for a single PINT model.
@@ -140,17 +156,23 @@ class MetaPulsarParameterManager:
         Args:
             pta_name: Name of the PTA
             model: PINT TimingModel instance
-            merge_pars: List of parameters to merge
+            mergeable_params: List of parameters that should be merged
             fitparameters: Dictionary to update with fit parameters
+
+        Raises:
+            ParameterInconsistencyError: If a parameter that should be merged is not available across all PTAs
         """
         for param_name in model.free_params:  # Only free (unfrozen) parameters
             meta_parname = self.resolver.resolve_parameter_equivalence(param_name)
 
-            if param_name in merge_pars:
+            # Check if this parameter should be merged (is in mergeable_params)
+            if param_name in mergeable_params:
+                # Add as merged parameter - will fail if not available across PTAs
                 self._add_merged_parameter(
                     meta_parname, pta_name, param_name, fitparameters
                 )
             else:
+                # Parameter not mergeable (detector-specific), make it PTA-specific
                 self._add_pta_specific_parameter(
                     meta_parname, pta_name, param_name, fitparameters
                 )
@@ -166,8 +188,8 @@ class MetaPulsarParameterManager:
             setparameters: Dictionary to update with ALL model parameters
         """
         for param_name in model.params:  # ALL parameters present in model
-            meta_parname = self.resolver.resolve_parameter_equivalence(param_name)
-            full_parname = f"{meta_parname}_{pta_name}"
+            # For setparameters, always use PTA-specific naming like legacy
+            full_parname = f"{param_name}_{pta_name}"
             setparameters[full_parname] = {pta_name: param_name}
 
     def _add_merged_parameter(
@@ -204,7 +226,9 @@ class MetaPulsarParameterManager:
         """
         # PTA-specific parameter - check identifiability using resolver
         if self.resolver.check_parameter_identifiable(pta_name, param_name):
-            full_parname = f"{meta_parname}_{pta_name}"
+            # For PTA-specific parameters, use the original parameter name
+            # This preserves the PTA-specific naming convention
+            full_parname = f"{param_name}_{pta_name}"
             fitparameters[full_parname] = {pta_name: param_name}
 
     def _validate_parameter_consistency(

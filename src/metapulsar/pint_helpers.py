@@ -36,66 +36,6 @@ def get_category_mapping_from_pint() -> Dict[str, str]:
     return KeyReturningDict(mapping)
 
 
-def get_parameters_by_type_from_pint(param_type: str) -> List[str]:
-    """Get parameters by type using PINT component discovery.
-
-    Args:
-        param_type: Type of parameters to discover ('astrometry', 'spindown', etc.)
-
-    Returns:
-        List of parameter names discovered from PINT components
-
-    Raises:
-        PINTDiscoveryError: If PINT component discovery fails
-    """
-    from loguru import logger
-
-    try:
-        all_components = AllComponents()
-
-        # Discover category mapping from PINT
-        category_mapping = get_category_mapping_from_pint()
-
-        if param_type not in category_mapping:
-            logger.warning(f"Unknown parameter type: {param_type}")
-            return []
-
-        target_category = category_mapping[param_type]
-
-        # Get all parameters from components with matching category
-        all_params = set()
-        category_components = all_components.category_component_map.get(
-            target_category, []
-        )
-
-        for component_name in category_components:
-            try:
-                # Components are already instantiated in all_components.components
-                component_instance = all_components.components[component_name]
-                if hasattr(component_instance, "params"):
-                    all_params.update(component_instance.params)
-
-            except (KeyError, AttributeError, TypeError, Exception):
-                # Component not available, continue
-                continue
-
-        # Add derivative parameters that are commonly used but not in base components
-        if param_type == "spindown":
-            # Add common frequency derivatives
-            all_params.update([f"F{i}" for i in range(1, 20)])  # F1, F2, ..., F19
-            all_params.update([f"P{i}" for i in range(1, 20)])  # P1, P2, ..., P19
-
-        logger.debug(f"Discovered {len(all_params)} parameters for type '{param_type}'")
-        return list(all_params)
-
-    except Exception as e:
-        logger.error(f"PINT component discovery failed: {e}")
-        # NO FALLBACK - fail gracefully as per SSOT principle
-        raise PINTDiscoveryError(
-            f"Failed to discover parameters for type '{param_type}': {e}"
-        )
-
-
 def get_parameter_aliases_from_pint() -> Dict[str, str]:
     """Get simple parameter aliases from PINT.
 
@@ -212,3 +152,124 @@ def _is_astrometry_parameter(param_name: str) -> bool:
             continue
 
     return param_name in astrometry_params
+
+
+def get_parameters_by_type_from_parfiles(
+    param_type: str, parfile_dicts: Dict[str, Dict]
+) -> List[str]:
+    """Get parameters by type from parfile dictionaries using PINT, including dynamic derivatives and aliases.
+
+    Args:
+        param_type: Type of parameters to discover ('astrometry', 'spindown', etc.)
+        parfile_dicts: Dictionary mapping PTA names to parfile dictionaries
+
+    Returns:
+        List of parameter names discovered from actual parfiles, including all aliases
+
+    Raises:
+        PINTDiscoveryError: If PINT model creation fails
+    """
+    from loguru import logger
+
+    all_params = set()
+
+    # Get category mapping
+    category_mapping = get_category_mapping_from_pint()
+    target_category = category_mapping[param_type]
+
+    # Discover parameters from each PTA's actual parfile
+    for pta_name, parfile_dict in parfile_dicts.items():
+        try:
+            # Create PINT model from parfile data using consolidated function
+            model = create_pint_model(parfile_dict)
+
+            # Extract parameters for the specific component
+            for comp in model.components.values():
+                if hasattr(comp, "category") and comp.category == target_category:
+                    if hasattr(comp, "params"):
+                        all_params.update(comp.params)  # Includes dynamic derivatives!
+
+        except Exception as e:
+            logger.warning(f"Failed to parse parfile for PTA {pta_name}: {e}")
+            continue
+
+    # Get parameter aliases from PINT
+    alias_map = get_parameter_aliases_from_pint()
+
+    # Create reverse mapping: canonical -> all aliases
+    canonical_to_aliases = {}
+    for alias, canonical in alias_map.items():
+        if canonical not in canonical_to_aliases:
+            canonical_to_aliases[canonical] = []
+        canonical_to_aliases[canonical].append(alias)
+
+    # Build complete parameter list including all aliases
+    all_params_with_aliases = set()
+    for canonical_param in all_params:
+        all_params_with_aliases.add(canonical_param)  # Add canonical name
+        if canonical_param in canonical_to_aliases:
+            all_params_with_aliases.update(
+                canonical_to_aliases[canonical_param]
+            )  # Add all aliases
+
+    logger.debug(
+        f"Component {param_type}: Found {len(all_params)} canonical parameters, {len(all_params_with_aliases)} total with aliases"
+    )
+    return list(all_params_with_aliases)
+
+
+def create_pint_model(parfile_data) -> TimingModel:
+    """Create PINT model from parfile data (string or dict).
+
+    Args:
+        parfile_data: String content or dictionary representation of parfile
+
+    Returns:
+        PINT TimingModel instance
+
+    Raises:
+        PINTDiscoveryError: If model creation fails
+    """
+    from pint.models.model_builder import ModelBuilder
+    from pint.exceptions import (
+        TimingModelError,
+        MissingParameter,
+        UnknownParameter,
+        UnknownBinaryModel,
+        InvalidModelParameters,
+        ComponentConflict,
+    )
+    from io import StringIO
+    from loguru import logger
+
+    try:
+        builder = ModelBuilder()
+
+        # Handle both string and dict inputs
+        if isinstance(parfile_data, str):
+            model = builder(StringIO(parfile_data), allow_tcb=True, allow_T2=True)
+        else:  # dict
+            model = builder(parfile_data, allow_tcb=True, allow_T2=True)
+
+        return model
+    except (
+        TimingModelError,
+        MissingParameter,
+        UnknownParameter,
+        UnknownBinaryModel,
+        InvalidModelParameters,
+        ComponentConflict,
+    ) as e:
+        logger.error(f"PINT model creation failed: {e}")
+        raise  # Re-raise the original exception
+    except Exception as e:
+        logger.error(f"Unexpected error creating PINT model: {e}")
+        raise PINTDiscoveryError(f"Unexpected error creating PINT model: {e}")
+
+
+def _is_detector_specific_parameter(param_name: str) -> bool:
+    """Check if parameter is detector-specific and should remain PTA-specific."""
+    detector_params = ["Offset", "JUMP", "DMJUMP", "EFAC", "EQUAD", "ECORR"]
+    return any(
+        param_name.startswith(detector_prefix) for detector_prefix in detector_params
+    )

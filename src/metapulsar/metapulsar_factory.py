@@ -177,12 +177,16 @@ class MetaPulsarFactory:
         # 4. Create Enterprise Pulsars (no regex patterns needed)
         enterprise_pulsars = self._create_enterprise_pulsars(file_pairs, pta_configs)
 
-        # 5. Get canonical name
+        # 5. Create parfile dictionaries from consistent files
+        parfile_dicts = self._create_parfile_dicts_from_files(consistent_files)
+
+        # 6. Get canonical name
         canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
 
-        # 6. Create MetaPulsar
+        # 7. Create MetaPulsar with BOTH
         return MetaPulsar(
             pulsars=enterprise_pulsars,
+            parfile_dicts=parfile_dicts,  # NEW: Pass parfile dicts directly
             combination_strategy="consistent",
             canonical_name=canonical_name,
         )
@@ -204,7 +208,10 @@ class MetaPulsarFactory:
         # 3. Create raw PINT/Tempo2 objects from files
         raw_pulsars = self._create_raw_pulsars_from_files(raw_parfiles)
 
-        # 4. Get canonical name
+        # 4. Create parfile dictionaries from raw files
+        parfile_dicts = self._create_parfile_dicts_from_files(raw_parfiles)
+
+        # 5. Get canonical name
         pta_configs = (
             self.registry.get_pta_subset(pta_names)
             if pta_names is not None
@@ -212,9 +219,10 @@ class MetaPulsarFactory:
         )
         canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
 
-        # 5. Create MetaPulsar
+        # 6. Create MetaPulsar with BOTH
         return MetaPulsar(
             pulsars=raw_pulsars,
+            parfile_dicts=parfile_dicts,  # NEW: Pass parfile dicts directly
             combination_strategy="composite",
             canonical_name=canonical_name,
         )
@@ -224,6 +232,23 @@ class MetaPulsarFactory:
     ) -> Dict[str, Path]:
         """Discover par files using PTARegistry."""
         return self.parfile_manager._discover_parfiles(pulsar_name, pta_names)
+
+    def _create_parfile_dicts_from_files(
+        self, parfile_files: Dict[str, Path]
+    ) -> Dict[str, Dict]:
+        """Create parfile dictionaries from parfile files."""
+        from .pint_helpers import create_pint_model
+
+        parfile_dicts = {}
+        for pta_name, parfile_path in parfile_files.items():
+            with open(parfile_path, "r") as f:
+                parfile_content = f.read()
+            # Use our consolidated function that handles string content properly
+            model = create_pint_model(parfile_content)
+            # Convert model back to dictionary format
+            parfile_dicts[pta_name] = model.get_params_dict()
+
+        return parfile_dicts
 
     def _extract_pulsar_name_from_pint_model(self, parfile_path: Path) -> str:
         """Extract pulsar name from PINT model (PSR parameter)."""

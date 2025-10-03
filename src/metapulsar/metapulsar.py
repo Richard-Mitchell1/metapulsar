@@ -34,6 +34,7 @@ class MetaPulsar(ep.BasePulsar):
     def __init__(
         self,
         pulsars,
+        parfile_dicts=None,
         *,
         combination_strategy="consistent",
         canonical_name=None,
@@ -49,6 +50,7 @@ class MetaPulsar(ep.BasePulsar):
             pulsars: Dict mapping PTA names to pulsar data:
                 - PINT: {pta: (pint_model, pint_toas)}
                 - Tempo2: {pta: tempo2_psr}
+            parfile_dicts: Dict mapping PTA names to parfile dictionaries (optional)
             combination_strategy: Strategy for combining PTAs:
                 - "consistent": Astrophysical consistency (modifies par files for consistency)
                 - "composite": Multi-PTA composition (preserves original parameters)
@@ -61,6 +63,7 @@ class MetaPulsar(ep.BasePulsar):
         """
         self._pulsars = pulsars
         self.pulsars = pulsars  # Public attribute for compatibility
+        self._parfile_dicts = parfile_dicts  # NEW: Store parfile dictionaries
         self.combination_strategy = combination_strategy
         self.canonical_name = canonical_name
         self._merge_astrometry = merge_astrometry
@@ -270,12 +273,10 @@ class MetaPulsar(ep.BasePulsar):
             self._setup_parameters_from_enterprise_pulsars()
             return
 
-        manager = MetaPulsarParameterManager(pint_models)
+        # NEW: Pass parfile_dicts to MetaPulsarParameterManager
+        manager = MetaPulsarParameterManager(pint_models, self._parfile_dicts)
         mapping = manager.build_parameter_mappings(
-            merge_astrometry=False,  # Don't merge for composite
-            merge_spin=False,
-            merge_binary=False,
-            merge_dm=False,
+            combine_components=[]  # Empty list for composite (no merging)
         )
 
         self._fitparameters = mapping.fitparameters
@@ -293,12 +294,21 @@ class MetaPulsar(ep.BasePulsar):
             self._setup_parameters_from_enterprise_pulsars()
             return
 
-        manager = MetaPulsarParameterManager(pint_models)
+        # Convert individual merge flags to combine_components list
+        combine_components = []
+        if self._merge_astrometry:
+            combine_components.append("astrometry")
+        if self._merge_spin:
+            combine_components.append("spindown")
+        if self._merge_binary:
+            combine_components.append("binary")
+        if self._merge_dispersion:
+            combine_components.append("dispersion")
+
+        # NEW: Pass parfile_dicts to MetaPulsarParameterManager
+        manager = MetaPulsarParameterManager(pint_models, self._parfile_dicts)
         mapping = manager.build_parameter_mappings(
-            merge_astrometry=self._merge_astrometry,
-            merge_spin=self._merge_spin,
-            merge_binary=self._merge_binary,
-            merge_dm=self._merge_dispersion,
+            combine_components=combine_components  # Pass the list directly
         )
 
         self._fitparameters = mapping.fitparameters
@@ -446,6 +456,13 @@ class MetaPulsar(ep.BasePulsar):
         elif hasattr(psr, "_lt_pulsar"):
             return "tempo2"
         else:
+            # Fallback: check Enterprise Pulsar type
+            if hasattr(psr, "__class__"):
+                class_name = psr.__class__.__name__
+                if "PintPulsar" in class_name:
+                    return "pint"
+                elif "Tempo2Pulsar" in class_name:
+                    return "tempo2"
             return "unknown"
 
     def _build_design_matrix(self):
@@ -474,9 +491,15 @@ class MetaPulsar(ep.BasePulsar):
             # Get design matrix from Enterprise Pulsar
             if hasattr(psr, "_designmatrix"):
                 dm = psr._designmatrix
-                if full_parname in psr.fitpars:
-                    par_idx = psr.fitpars.index(full_parname)
-                    column[slice_obj] = dm[:, par_idx]
+                # CORRECT: Use the parameter mapping like legacy system
+                if full_parname in self._fitparameters:
+                    for mapped_pta, mapped_param in self._fitparameters[
+                        full_parname
+                    ].items():
+                        if mapped_pta == pta:
+                            par_idx = psr.fitpars.index(mapped_param)
+                            column[slice_obj] = dm[:, par_idx]
+                            break
 
             # Apply unit conversion if needed
             column[slice_obj] = self._convert_design_matrix_units(
@@ -487,25 +510,31 @@ class MetaPulsar(ep.BasePulsar):
 
     def _convert_design_matrix_units(self, column, param_name, timing_package):
         """Convert design matrix units between PINT and libstempo."""
-        # Only convert coordinate parameters that actually need it
-        coordinate_conversions = {
-            ("raj", "pint"): 1.0,  # PINT uses degrees
-            ("raj", "tempo2"): np.pi / 180.0,  # libstempo uses radians
-            ("decj", "pint"): 1.0,  # PINT uses degrees
-            ("decj", "tempo2"): np.pi / 180.0,  # libstempo uses radians
-            ("elong", "pint"): 1.0,  # PINT uses degrees
-            ("elong", "tempo2"): np.pi / 180.0,  # libstempo uses radians
-            ("elat", "pint"): 1.0,  # PINT uses degrees
-            ("elat", "tempo2"): np.pi / 180.0,  # libstempo uses radians
-            ("lambda", "pint"): 1.0,  # PINT uses degrees
-            ("lambda", "tempo2"): np.pi / 180.0,  # libstempo uses radians
-            ("beta", "pint"): 1.0,  # PINT uses degrees
-            ("beta", "tempo2"): np.pi / 180.0,  # libstempo uses radians
+        import astropy.units as u
+
+        # Complete units correction matching legacy system
+        units_correction = {
+            ("elong", "tempo2"): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
+            ("elong", "pint"): 1.0,
+            ("elat", "tempo2"): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
+            ("elat", "pint"): 1.0,
+            ("lambda", "tempo2"): (1.0 * u.second / u.radian)
+            .to(u.second / u.deg)
+            .value,
+            ("lambda", "pint"): 1.0,
+            ("beta", "tempo2"): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
+            ("beta", "pint"): 1.0,
+            ("raj", "tempo2"): (1.0 * u.second / u.radian)
+            .to(u.second / u.hourangle)
+            .value,
+            ("raj", "pint"): 1.0,
+            ("decj", "tempo2"): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
+            ("decj", "pint"): 1.0,
         }
 
         if param_name.lower() in ["raj", "decj", "elong", "elat", "lambda", "beta"]:
             key = (param_name.lower(), timing_package.lower())
-            factor = coordinate_conversions.get(key, 1.0)
+            factor = units_correction.get(key, 1.0)
             return column * factor
 
         return column
