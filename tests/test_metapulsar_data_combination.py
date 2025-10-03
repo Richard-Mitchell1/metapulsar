@@ -11,12 +11,16 @@ import numpy as np
 import pytest
 
 from metapulsar.metapulsar import MetaPulsar
-from metapulsar.mockpulsar import MockPulsar
+from metapulsar.mockpulsar import MockPulsar, create_libstempo_adapter
 from metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
 
 
 class TestMetaPulsarDataCombination:
     """Tests for MetaPulsar data combination functionality."""
+
+    def _create_adapted_pulsars(self, mock_pulsars):
+        """Helper function to convert MockPulsar objects to libstempo adapters."""
+        return {pta: create_libstempo_adapter(psr) for pta, psr in mock_pulsars.items()}
 
     @pytest.fixture
     def mock_pulsars(self):
@@ -25,20 +29,37 @@ class TestMetaPulsarDataCombination:
         toas1, residuals1, errors1, freqs1 = create_mock_timing_data(50)
         flags1 = create_mock_flags(50, telescope="test_pta1")
         mock_psr1 = MockPulsar(
-            toas1, residuals1, errors1, freqs1, flags1, "test_pta1", "J1857+0943"
+            toas1,
+            residuals1,
+            errors1,
+            freqs1,
+            flags1,
+            "test_pta1",
+            "J1857+0943",
+            astrometry=True,
+            spin=True,
         )
 
         toas2, residuals2, errors2, freqs2 = create_mock_timing_data(50)
         flags2 = create_mock_flags(50, telescope="test_pta2")
         mock_psr2 = MockPulsar(
-            toas2, residuals2, errors2, freqs2, flags2, "test_pta2", "J1857+0943"
+            toas2,
+            residuals2,
+            errors2,
+            freqs2,
+            flags2,
+            "test_pta2",
+            "J1857+0943",
+            astrometry=True,
+            spin=True,
         )
 
         return {"test_pta1": mock_psr1, "test_pta2": mock_psr2}
 
     def test_timing_data_combination_basic(self, mock_pulsars):
         """Test basic timing data combination."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
         # Check that data is properly combined
         assert len(metapulsar._toas) == 100  # 50 + 50
@@ -56,7 +77,8 @@ class TestMetaPulsarDataCombination:
 
     def test_timing_data_combination_ordering(self, mock_pulsars):
         """Test that timing data is combined in correct order."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
         # Check that first 50 elements come from first PTA
         pta1_toas = mock_pulsars["test_pta1"]._toas
@@ -68,7 +90,11 @@ class TestMetaPulsarDataCombination:
 
     def test_flag_combination(self, mock_pulsars):
         """Test flag combination."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        # Convert MockPulsar objects to libstempo adapters
+        adapted_pulsars = {
+            pta: create_libstempo_adapter(psr) for pta, psr in mock_pulsars.items()
+        }
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
         # Check that flags is a structured numpy array
         assert isinstance(metapulsar._flags, np.ndarray)
@@ -98,7 +124,8 @@ class TestMetaPulsarDataCombination:
 
     def test_pta_slice_calculation(self, mock_pulsars):
         """Test PTA slice calculation."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
         slices = metapulsar._get_pta_slices()
 
         # Check that slices are correct
@@ -111,7 +138,8 @@ class TestMetaPulsarDataCombination:
 
     def test_pta_slice_data_access(self, mock_pulsars):
         """Test that PTA slices correctly access data."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
         slices = metapulsar._get_pta_slices()
 
         # Test accessing data through slices
@@ -140,7 +168,15 @@ class TestMetaPulsarDataCombination:
         toas, residuals, errors, freqs = create_mock_timing_data(25)
         flags = create_mock_flags(25, telescope="single_pta")
         mock_psr = MockPulsar(
-            toas, residuals, errors, freqs, flags, "single_pta", "J1857+0943"
+            toas,
+            residuals,
+            errors,
+            freqs,
+            flags,
+            "single_pta",
+            "J1857+0943",
+            astrometry=True,
+            spin=True,
         )
 
         metapulsar = MetaPulsar(
@@ -158,13 +194,29 @@ class TestMetaPulsarDataCombination:
         toas1, residuals1, errors1, freqs1 = create_mock_timing_data(30)
         flags1 = create_mock_flags(30, telescope="small_pta")
         mock_psr1 = MockPulsar(
-            toas1, residuals1, errors1, freqs1, flags1, "small_pta", "J1857+0943"
+            toas1,
+            residuals1,
+            errors1,
+            freqs1,
+            flags1,
+            "small_pta",
+            "J1857+0943",
+            astrometry=True,
+            spin=True,
         )
 
         toas2, residuals2, errors2, freqs2 = create_mock_timing_data(70)
         flags2 = create_mock_flags(70, telescope="large_pta")
         mock_psr2 = MockPulsar(
-            toas2, residuals2, errors2, freqs2, flags2, "large_pta", "J1857+0943"
+            toas2,
+            residuals2,
+            errors2,
+            freqs2,
+            flags2,
+            "large_pta",
+            "J1857+0943",
+            astrometry=True,
+            spin=True,
         )
 
         metapulsar = MetaPulsar(
@@ -182,7 +234,8 @@ class TestMetaPulsarDataCombination:
 
     def test_timing_package_detection(self, mock_pulsars):
         """Test timing package detection."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
         # MockPulsar doesn't have _pint_model or _lt_pulsar, so should return "unknown"
         for pta, psr in mock_pulsars.items():
@@ -191,7 +244,8 @@ class TestMetaPulsarDataCombination:
 
     def test_timing_data_frequency_handling(self, mock_pulsars):
         """Test that frequency data is properly handled."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
         # Check that frequencies are combined correctly
         assert len(metapulsar._ssbfreqs) == 100
@@ -205,7 +259,8 @@ class TestMetaPulsarDataCombination:
 
     def test_timing_data_consistency(self, mock_pulsars):
         """Test that all timing data arrays have consistent lengths."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
         # All arrays should have the same length
         arrays = [
@@ -223,7 +278,8 @@ class TestMetaPulsarDataCombination:
 
     def test_flag_structure(self, mock_pulsars):
         """Test that combined flags have correct structure."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
         # Flags should be a structured numpy array
         assert isinstance(metapulsar._flags, np.ndarray)
@@ -245,7 +301,8 @@ class TestMetaPulsarDataCombination:
 
     def test_data_combination_integration(self, mock_pulsars):
         """End-to-end integration test for data combination functionality."""
-        metapulsar = MetaPulsar(mock_pulsars, combination_strategy="composite")
+        adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
+        metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
         # Test that all data combination methods work together
         slices = metapulsar._get_pta_slices()

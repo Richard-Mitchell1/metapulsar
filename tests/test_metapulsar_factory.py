@@ -39,13 +39,23 @@ class TestMetaPulsarFactory:
         toas, residuals, errors, freqs = create_mock_timing_data(50)
         flags = create_mock_flags(50, telescope="test_pta")
         mock_psr = MockPulsar(
-            toas, residuals, errors, freqs, flags, "test_pta", "J1857+0943"
+            toas,
+            residuals,
+            errors,
+            freqs,
+            flags,
+            "test_pta",
+            "J1857+0943",
+            astrometry=True,
+            spin=True,
         )
 
-        # Create MetaPulsar directly with MockPulsar
+        # Create MetaPulsar with adapted MockPulsar
         from metapulsar.metapulsar import MetaPulsar
+        from metapulsar.mockpulsar import create_libstempo_adapter
 
-        pulsars = {"test_pta": mock_psr}
+        adapted_pulsar = create_libstempo_adapter(mock_psr)
+        pulsars = {"test_pta": adapted_pulsar}
         metapulsar = MetaPulsar(
             pulsars=pulsars,
             combination_strategy="composite",

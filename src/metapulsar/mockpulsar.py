@@ -244,3 +244,209 @@ def create_mock_pulsar(
     return MockPulsar(
         toas, residuals, errors, freqs, flags or {}, telescope, name, astrometry, spin
     )
+
+
+class MockParameter:
+    """Mock parameter object with .val and .err attributes for libstempo compatibility."""
+
+    def __init__(self, value, error=0.0):
+        """Initialize mock parameter.
+
+        Args:
+            value: Parameter value
+            error: Parameter error (default: 0.0)
+        """
+        self.val = value
+        self.err = error
+
+
+class LibstempoMockPulsarAdapter:
+    """Adapter to make MockPulsar look like libstempo.tempopulsar.
+
+    This class provides the libstempo.tempopulsar interface that Tempo2Pulsar
+    expects, allowing MockPulsar to be used as a raw timing object in tests.
+
+    Parameters
+    ----------
+    mock_pulsar : MockPulsar
+        The MockPulsar instance to wrap
+    """
+
+    def __init__(self, mock_pulsar: MockPulsar):
+        """Initialize the adapter.
+
+        Args:
+            mock_pulsar: MockPulsar instance to wrap
+        """
+        self._mock = mock_pulsar
+
+    # Core data methods (libstempo interface)
+    def toas(self):
+        """Return TOAs in MJD (converted from seconds)."""
+        # Convert seconds to days using astropy units
+        toas_days = (self._mock._toas * u.s).to(u.day).value
+        return toas_days
+
+    @property
+    def stoas(self):
+        """Return station TOAs in MJD (same as toas for mock data)."""
+        # Convert seconds to days using astropy units
+        stoas_days = (self._mock._toas * u.s).to(u.day).value
+        return stoas_days
+
+    def residuals(self):
+        """Return timing residuals in seconds."""
+        return self._mock._residuals
+
+    @property
+    def toaerrs(self):
+        """Return TOA errors in microseconds."""
+        # Convert seconds to microseconds using astropy units
+        toaerrs_us = (self._mock._toaerrs * u.s).to(u.us).value
+        return toaerrs_us
+
+    def designmatrix(self):
+        """Return design matrix for parameter fitting."""
+        return self._mock._designmatrix
+
+    def ssbfreqs(self):
+        """Return SSB frequencies in Hz."""
+        # Convert MHz to Hz using astropy units
+        freqs_hz = (self._mock._freqs * u.MHz).to(u.Hz).value
+        return freqs_hz
+
+    def telescope(self):
+        """Return telescope names as bytes."""
+        return self._mock._telescope.astype("S")
+
+    # Parameter management (libstempo interface)
+    def pars(self, which="fit"):
+        """Return parameter names as libstempo would."""
+        if which == "fit":
+            return tuple(self._mock.fitpars)
+        else:  # set
+            return tuple(self._mock.setpars)
+
+    def __getitem__(self, param_name):
+        """Get parameter value (dict-like access).
+
+        Args:
+            param_name: Parameter name
+
+        Returns:
+            MockParameter object with .val and .err attributes
+        """
+        # Map common parameter names to MockPulsar attributes
+        param_mapping = {
+            "RAJ": "_raj",
+            "DECJ": "_decj",
+            "F0": "_f0",
+            "F1": "_f1",
+            "F2": "_f2",
+            "PMRA": "_pmra",
+            "PMDEC": "_pmdec",
+            "PX": "_px",
+            "DM": "_dm",
+        }
+
+        attr_name = param_mapping.get(param_name, f"_{param_name.lower()}")
+        value = getattr(self._mock, attr_name, 0.0)
+        error = 0.0  # Mock data has no errors
+
+        return MockParameter(value, error)
+
+    # Flag system (libstempo interface)
+    def flags(self):
+        """Return list of flag names."""
+        if self._mock._flags.dtype.names:
+            return list(self._mock._flags.dtype.names)
+        return []
+
+    def flagvals(self, key):
+        """Return flag values for specific key.
+
+        Args:
+            key: Flag name
+
+        Returns:
+            Array of flag values
+        """
+        return self._mock._flags[key]
+
+    # Position and astrometry (libstempo interface)
+    @property
+    def psrPos(self):
+        """Return pulsar position vectors over time."""
+        return self._mock._pos_t
+
+    @property
+    def name(self):
+        """Return pulsar name."""
+        return self._mock.name
+
+    # Planetary data (mock implementations)
+    def formbats(self):
+        """Form barycentric arrival times (no-op for mock)."""
+        pass
+
+    @property
+    def mercury_ssb(self):
+        """Return Mercury position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+    @property
+    def venus_ssb(self):
+        """Return Venus position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+    @property
+    def earth_ssb(self):
+        """Return Earth position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+    @property
+    def mars_ssb(self):
+        """Return Mars position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+    @property
+    def jupiter_ssb(self):
+        """Return Jupiter position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+    @property
+    def saturn_ssb(self):
+        """Return Saturn position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+    @property
+    def uranus_ssb(self):
+        """Return Uranus position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+    @property
+    def neptune_ssb(self):
+        """Return Neptune position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+    @property
+    def pluto_ssb(self):
+        """Return Pluto position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+    @property
+    def sun_ssb(self):
+        """Return Sun position vectors (mock data)."""
+        return np.zeros((len(self._mock._toas), 6))
+
+
+def create_libstempo_adapter(mock_pulsar: MockPulsar) -> LibstempoMockPulsarAdapter:
+    """Create a libstempo adapter for MockPulsar.
+
+    Args:
+        mock_pulsar: MockPulsar instance to wrap
+
+    Returns:
+        LibstempoMockPulsarAdapter instance
+    """
+    return LibstempoMockPulsarAdapter(mock_pulsar)

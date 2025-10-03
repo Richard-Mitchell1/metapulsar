@@ -8,7 +8,7 @@ methods implemented in the MetaPulsar class.
 import numpy as np
 import pytest
 from src.metapulsar.metapulsar import MetaPulsar
-from src.metapulsar.mockpulsar import MockPulsar
+from src.metapulsar.mockpulsar import MockPulsar, create_libstempo_adapter
 from src.metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
 
 
@@ -46,9 +46,12 @@ class TestMetaPulsarPositionAndFinalization:
             spin=True,
         )
 
-        # Create MetaPulsar
+        # Create MetaPulsar with adapted pulsars
         self.pulsars = {"test_pta1": self.mock_psr1, "test_pta2": self.mock_psr2}
-        self.metapulsar = MetaPulsar(self.pulsars, combination_strategy="composite")
+        adapted_pulsars = {
+            pta: create_libstempo_adapter(psr) for pta, psr in self.pulsars.items()
+        }
+        self.metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
     def test_setup_position_and_planets_basic(self):
         """Test basic position and planetary data setup."""

@@ -42,6 +42,8 @@ class MetaPulsarFactory:
 
     This class provides methods to discover files, create Enterprise Pulsars,
     and wrap them in MetaPulsar objects with appropriate metadata.
+
+    TODO: factor out the registry. Now it is unclear which pulsars will be loaded
     """
 
     def __init__(self, registry: PTARegistry = None):
@@ -58,7 +60,10 @@ class MetaPulsarFactory:
         self._check_dependencies()
 
     def _check_dependencies(self) -> None:
-        """Check that required dependencies are available."""
+        """Check that required dependencies are available.
+
+        TODO : the dependencies are imported at the top of the file, so this is not needed. Remove
+        """
         missing_deps = []
 
         if PintPulsar is None or Tempo2Pulsar is None:
@@ -153,7 +158,7 @@ class MetaPulsarFactory:
         add_dm_derivatives: bool,
     ) -> MetaPulsar:
         """Create MetaPulsar with astrophysically consistent parameters."""
-        # 1. Discover original files (regex patterns OK here)
+        # 1. Discover original files
         pta_configs = self.registry.get_pta_subset(pta_names)
         original_files = self.discover_files(pulsar_name, pta_configs)
 
@@ -166,15 +171,15 @@ class MetaPulsarFactory:
             add_dm_derivatives,
         )
 
-        # 3. Create file pairs: (consistent_par, original_tim) - direct file paths!
+        # 3. Create file pairs: (consistent_par, original_tim)
         file_pairs = {}
         for pta_name in pta_names:
             if pta_name in original_files and pta_name in consistent_files:
                 original_par, original_tim = original_files[pta_name]
                 consistent_par = consistent_files[pta_name]
-                file_pairs[pta_name] = (consistent_par, original_tim)  # Direct paths!
+                file_pairs[pta_name] = (consistent_par, original_tim)
 
-        # 4. Create Enterprise Pulsars (no regex patterns needed)
+        # 4. Create Enterprise Pulsars
         enterprise_pulsars = self._create_enterprise_pulsars(file_pairs, pta_configs)
 
         # 5. Create parfile dictionaries from consistent files
@@ -183,7 +188,7 @@ class MetaPulsarFactory:
         # 6. Get canonical name
         canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
 
-        # 7. Create MetaPulsar with BOTH
+        # 7. Create MetaPulsar
         return MetaPulsar(
             pulsars=enterprise_pulsars,
             parfile_dicts=parfile_dicts,  # NEW: Pass parfile dicts directly

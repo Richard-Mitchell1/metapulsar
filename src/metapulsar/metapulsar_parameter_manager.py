@@ -162,16 +162,37 @@ class MetaPulsarParameterManager:
         Raises:
             ParameterInconsistencyError: If a parameter that should be merged is not available across all PTAs
         """
+        from loguru import logger
+
+        logger.debug(
+            f"_process_pta_fit_parameters: Processing PTA '{pta_name}' with {len(model.free_params)} free parameters"
+        )
+        logger.debug(
+            f"_process_pta_fit_parameters: mergeable_params = {mergeable_params}"
+        )
+        logger.debug(
+            f"_process_pta_fit_parameters: model.free_params = {model.free_params}"
+        )
+
         for param_name in model.free_params:  # Only free (unfrozen) parameters
             meta_parname = self.resolver.resolve_parameter_equivalence(param_name)
+            logger.debug(
+                f"_process_pta_fit_parameters: param_name='{param_name}' -> meta_parname='{meta_parname}'"
+            )
 
             # Check if this parameter should be merged (is in mergeable_params)
             if param_name in mergeable_params:
+                logger.debug(
+                    f"_process_pta_fit_parameters: '{param_name}' is mergeable, calling _add_merged_parameter"
+                )
                 # Add as merged parameter - will fail if not available across PTAs
                 self._add_merged_parameter(
                     meta_parname, pta_name, param_name, fitparameters
                 )
             else:
+                logger.debug(
+                    f"_process_pta_fit_parameters: '{param_name}' is NOT mergeable, calling _add_pta_specific_parameter"
+                )
                 # Parameter not mergeable (detector-specific), make it PTA-specific
                 self._add_pta_specific_parameter(
                     meta_parname, pta_name, param_name, fitparameters
@@ -203,6 +224,12 @@ class MetaPulsarParameterManager:
             param_name: Original parameter name
             fitparameters: Dictionary to update
         """
+        from loguru import logger
+
+        logger.debug(
+            f"_add_merged_parameter: meta_parname='{meta_parname}', pta_name='{pta_name}', param_name='{param_name}'"
+        )
+
         # Check availability using resolver
         if not self.resolver.check_parameter_available_across_ptas(param_name):
             raise ParameterInconsistencyError(
@@ -212,6 +239,10 @@ class MetaPulsarParameterManager:
         if meta_parname not in fitparameters:
             fitparameters[meta_parname] = {}
         fitparameters[meta_parname][pta_name] = param_name
+
+        logger.debug(
+            f"_add_merged_parameter: Added to fitparameters['{meta_parname}']['{pta_name}'] = '{param_name}'"
+        )
 
     def _add_pta_specific_parameter(
         self, meta_parname: str, pta_name: str, param_name: str, fitparameters: Dict
@@ -224,12 +255,32 @@ class MetaPulsarParameterManager:
             param_name: Original parameter name
             fitparameters: Dictionary to update
         """
+        from loguru import logger
+
+        logger.debug(
+            f"_add_pta_specific_parameter: meta_parname='{meta_parname}', pta_name='{pta_name}', param_name='{param_name}'"
+        )
+
         # PTA-specific parameter - check identifiability using resolver
-        if self.resolver.check_parameter_identifiable(pta_name, param_name):
+        is_identifiable = self.resolver.check_parameter_identifiable(
+            pta_name, param_name
+        )
+        logger.debug(
+            f"_add_pta_specific_parameter: check_parameter_identifiable('{pta_name}', '{param_name}') = {is_identifiable}"
+        )
+
+        if is_identifiable:
             # For PTA-specific parameters, use the original parameter name
             # This preserves the PTA-specific naming convention
             full_parname = f"{param_name}_{pta_name}"
             fitparameters[full_parname] = {pta_name: param_name}
+            logger.debug(
+                f"_add_pta_specific_parameter: Added to fitparameters['{full_parname}'] = {{'{pta_name}': '{param_name}'}}"
+            )
+        else:
+            logger.debug(
+                f"_add_pta_specific_parameter: Parameter '{param_name}' not identifiable, skipping"
+            )
 
     def _validate_parameter_consistency(
         self, fitparameters: Dict, setparameters: Dict
