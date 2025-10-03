@@ -57,14 +57,24 @@ class TestMetaPulsarDesignMatrix:
         assert hasattr(self.metapulsar, "_designmatrix")
         assert self.metapulsar._designmatrix.shape == (
             60,
-            8,
-        )  # 30 + 30 TOAs, 8 parameters
+            9,
+        )  # 30 + 30 TOAs, 9 parameters (including Offset)
         assert np.count_nonzero(self.metapulsar._designmatrix) > 0
 
     def test_design_matrix_parameters(self):
         """Test that design matrix has correct parameters."""
-        expected_params = ["F0", "F1", "F2", "RAJ", "DECJ", "PMRA", "PMDEC", "PX"]
-        assert len(self.metapulsar.fitpars) == 8
+        expected_params = [
+            "Offset",
+            "F0",
+            "F1",
+            "F2",
+            "RAJ",
+            "DECJ",
+            "PMRA",
+            "PMDEC",
+            "PX",
+        ]
+        assert len(self.metapulsar.fitpars) == 9
         for param in expected_params:
             assert param in self.metapulsar.fitpars
 
@@ -142,14 +152,17 @@ class TestMetaPulsarDesignMatrix:
     def test_design_matrix_with_different_strategies(self):
         """Test design matrix with different combination strategies."""
         # Test composite strategy
-        composite_mp = MetaPulsar(self.pulsars, combination_strategy="composite")
+        adapted_pulsars = {
+            pta: create_libstempo_adapter(psr) for pta, psr in self.pulsars.items()
+        }
+        composite_mp = MetaPulsar(adapted_pulsars, combination_strategy="composite")
         assert hasattr(composite_mp, "_designmatrix")
-        assert composite_mp._designmatrix.shape == (60, 8)
+        assert composite_mp._designmatrix.shape == (60, 9)
 
         # Test consistent strategy
-        consistent_mp = MetaPulsar(self.pulsars, combination_strategy="consistent")
+        consistent_mp = MetaPulsar(adapted_pulsars, combination_strategy="consistent")
         assert hasattr(consistent_mp, "_designmatrix")
-        assert consistent_mp._designmatrix.shape == (60, 8)
+        assert consistent_mp._designmatrix.shape == (60, 9)
 
     def test_design_matrix_empty_pulsars(self):
         """Test design matrix with empty pulsar list."""
@@ -167,7 +180,7 @@ class TestMetaPulsarDesignMatrix:
         """Test that parameter mapping works correctly."""
         # Check that _fitparameters is properly set up
         assert hasattr(self.metapulsar, "_fitparameters")
-        assert len(self.metapulsar._fitparameters) == 8
+        assert len(self.metapulsar._fitparameters) == 9
 
         # Check that each parameter has mappings for both PTAs
         for param in self.metapulsar.fitpars:

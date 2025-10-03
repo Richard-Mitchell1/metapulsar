@@ -56,31 +56,6 @@ class MetaPulsarFactory:
         self.logger = logger
         self.parfile_manager = ParFileManager(registry=self.registry)
 
-        # Check dependencies
-        self._check_dependencies()
-
-    def _check_dependencies(self) -> None:
-        """Check that required dependencies are available.
-
-        TODO : the dependencies are imported at the top of the file, so this is not needed. Remove
-        """
-        missing_deps = []
-
-        if PintPulsar is None or Tempo2Pulsar is None:
-            missing_deps.append("enterprise")
-
-        if get_model_and_toas is None:
-            missing_deps.append("pint")
-
-        if t2 is None:
-            missing_deps.append("libstempo")
-
-        if missing_deps:
-            self.logger.warning(
-                f"Missing dependencies: {missing_deps}. "
-                "Some functionality may not work."
-            )
-
     def create_metapulsar(
         self,
         pulsar_name: str,
@@ -125,18 +100,14 @@ class MetaPulsarFactory:
                 f"Invalid reference PTA: {reference_pta}. Available PTAs: {list(self.registry.configs.keys())}"
             )
 
-        if combination_strategy == "consistent":
-            return self._create_consistent_metapulsar(
-                pulsar_name,
-                pta_names,
-                reference_pta,
-                combine_components,
-                add_dm_derivatives,
-            )
-        elif combination_strategy == "composite":
-            return self._create_composite_metapulsar(pulsar_name, pta_names)
-        else:
-            raise ValueError(f"Unknown combination strategy: {combination_strategy}")
+        return self._create_metapulsar_with_strategy(
+            pulsar_name,
+            pta_names,
+            combination_strategy,
+            reference_pta,
+            combine_components,
+            add_dm_derivatives,
+        )
 
     def list_available_pulsars(self, pta_names: List[str] = None) -> List[str]:
         """List all available pulsars across specified PTAs.
@@ -149,94 +120,80 @@ class MetaPulsarFactory:
         """
         return self.discover_available_pulsars(pta_names)
 
-    def _create_consistent_metapulsar(
+    def _create_metapulsar_with_strategy(
         self,
         pulsar_name: str,
         pta_names: List[str],
-        reference_pta: str,
-        combine_components: List[str],
-        add_dm_derivatives: bool,
+        combination_strategy: str = "composite",
+        reference_pta: str = None,
+        combine_components: List[str] = None,
+        add_dm_derivatives: bool = True,
     ) -> MetaPulsar:
-        """Create MetaPulsar with astrophysically consistent parameters."""
-        # 1. Discover original files
-        pta_configs = self.registry.get_pta_subset(pta_names)
-        original_files = self.discover_files(pulsar_name, pta_configs)
+        """Create MetaPulsar using specified combination strategy.
 
-        # 2. Make par files consistent
-        consistent_files = self.parfile_manager.write_consistent_parfiles(
-            pulsar_name,
-            pta_names,
-            reference_pta,
-            combine_components,
-            add_dm_derivatives,
+        Args:
+            pulsar_name: Name of the pulsar
+            pta_names: List of PTA names to include
+            combination_strategy: "composite" or "consistent"
+            reference_pta: PTA to use as reference (for consistent strategy)
+            combine_components: List of components to make consistent (for consistent strategy)
+            add_dm_derivatives: Whether to ensure DM1, DM2 are present (for consistent strategy)
+        """
+        # 1. Discover matched par+tim files (ONLY discovery call)
+        pta_configs = (
+            self.registry.get_pta_subset(pta_names)
+            if pta_names
+            else self.registry.configs
         )
+        file_pairs = self.discover_files(pulsar_name, pta_configs)
 
-        # 3. Create file pairs: (consistent_par, original_tim)
-        file_pairs = {}
-        for pta_name in pta_names:
-            if pta_name in original_files and pta_name in consistent_files:
-                original_par, original_tim = original_files[pta_name]
-                consistent_par = consistent_files[pta_name]
-                file_pairs[pta_name] = (consistent_par, original_tim)
+        if not file_pairs:
+            raise FileNotFoundError(
+                f"No data found for pulsar '{pulsar_name}' in PTAs: {pta_names}"
+            )
 
-        # 4. Create Enterprise Pulsars
-        enterprise_pulsars = self._create_enterprise_pulsars(file_pairs, pta_configs)
+        # 2. Prepare par files for processing
+        parfiles_for_dicts = {
+            pta: parfile for pta, (parfile, timfile) in file_pairs.items()
+        }
 
-        # 5. Create parfile dictionaries from consistent files
-        parfile_dicts = self._create_parfile_dicts_from_files(consistent_files)
+        # 3. Process par files if consistent strategy
+        if combination_strategy == "consistent":
+            # Make par files consistent (creates NEW par files)
+            consistent_parfiles = self.parfile_manager.write_consistent_parfiles(
+                pulsar_name,
+                pta_names,
+                reference_pta,
+                combine_components,
+                add_dm_derivatives,
+            )
+
+            # Update file_pairs with consistent par files
+            file_pairs = {
+                pta: (consistent_parfiles[pta], file_pairs[pta][1])
+                for pta in pta_names
+                if pta in consistent_parfiles and pta in file_pairs
+            }
+
+            # Update parfiles_for_dicts with consistent par files
+            parfiles_for_dicts = consistent_parfiles
+
+        # 4. Create parfile dictionaries
+        parfile_dicts = self._create_parfile_dicts_from_files(parfiles_for_dicts)
+
+        # 5. Create PINT/Tempo2 objects from file pairs
+        pulsars = self._create_raw_pulsars(file_pairs, pta_configs)
 
         # 6. Get canonical name
         canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
 
         # 7. Create MetaPulsar
         return MetaPulsar(
-            pulsars=enterprise_pulsars,
-            parfile_dicts=parfile_dicts,  # NEW: Pass parfile dicts directly
-            combination_strategy="consistent",
+            pulsars=pulsars,
+            parfile_dicts=parfile_dicts,
+            combination_strategy=combination_strategy,
             canonical_name=canonical_name,
         )
-
-    def _create_composite_metapulsar(
-        self, pulsar_name: str, pta_names: List[str]
-    ) -> MetaPulsar:
-        """Create MetaPulsar with composite approach (preserves original parameters, Borg/FrankenStat methods)."""
-        # 1. Discover raw par files using coordinate-based discovery
-        raw_parfiles = self._discover_parfiles(pulsar_name, pta_names)
-
-        # 2. Check if any par files were found
-        if not raw_parfiles:
-            raise FileNotFoundError(
-                f"No data found for pulsar '{pulsar_name}' in PTAs: {pta_names}. "
-                f"Please verify the pulsar name and PTA configurations."
-            )
-
-        # 3. Create raw PINT/Tempo2 objects from files
-        raw_pulsars = self._create_raw_pulsars_from_files(raw_parfiles)
-
-        # 4. Create parfile dictionaries from raw files
-        parfile_dicts = self._create_parfile_dicts_from_files(raw_parfiles)
-
-        # 5. Get canonical name
-        pta_configs = (
-            self.registry.get_pta_subset(pta_names)
-            if pta_names is not None
-            else self.registry.configs
-        )
-        canonical_name = self._get_canonical_name_for_pulsar(pulsar_name, pta_configs)
-
-        # 6. Create MetaPulsar with BOTH
-        return MetaPulsar(
-            pulsars=raw_pulsars,
-            parfile_dicts=parfile_dicts,  # NEW: Pass parfile dicts directly
-            combination_strategy="composite",
-            canonical_name=canonical_name,
-        )
-
-    def _discover_parfiles(
-        self, pulsar_name: str, pta_names: List[str] = None
-    ) -> Dict[str, Path]:
-        """Discover par files using PTARegistry."""
-        return self.parfile_manager._discover_parfiles(pulsar_name, pta_names)
 
     def _create_parfile_dicts_from_files(
         self, parfile_files: Dict[str, Path]
@@ -284,31 +241,6 @@ class MetaPulsarFactory:
                 return timfile_path
 
         return None
-
-    def _create_raw_pulsars_from_files(
-        self, file_paths: Dict[str, Path]
-    ) -> Dict[str, Any]:
-        """Create raw PINT/Tempo2 objects from file paths."""
-        # Use discovery to find corresponding tim files for each par file
-        file_pairs = {}
-        for pta_name, parfile in file_paths.items():
-            # Use discovery to find the corresponding tim file
-            pta_configs = {pta_name: self.registry.configs[pta_name]}
-            # Extract pulsar name from par file path for discovery
-            pulsar_name = self._extract_pulsar_name_from_pint_model(parfile)
-            discovered_files = self.discover_files(pulsar_name, pta_configs)
-
-            if pta_name in discovered_files:
-                original_par, timfile = discovered_files[pta_name]
-                file_pairs[pta_name] = (
-                    parfile,
-                    timfile,
-                )  # Use the provided par file, discovered tim file
-            else:
-                raise FileNotFoundError(f"Could not find tim file for {parfile}")
-
-        # Create raw PINT/Tempo2 objects
-        return self._create_raw_pulsars(file_pairs, self.registry.configs)
 
     def _create_raw_pulsars(
         self, file_pairs: Dict[str, Tuple[Path, Path]], pta_configs: Dict[str, Dict]
@@ -551,61 +483,6 @@ class MetaPulsarFactory:
             )
 
         return matching_pulsar["files"]
-
-    def _create_enterprise_pulsars(
-        self, file_pairs: Dict[str, Tuple[Path, Path]], pta_configs: Dict[str, Dict]
-    ) -> Dict[str, Union[PintPulsar, Tempo2Pulsar]]:
-        """Create Enterprise Pulsars from file pairs.
-
-        Args:
-            file_pairs: Dictionary mapping PTA names to (parfile, timfile) tuples
-            pta_configs: Dictionary of PTA configurations
-
-        Returns:
-            Dictionary mapping PTA names to Enterprise Pulsar objects
-
-        Raises:
-            RuntimeError: If Enterprise Pulsar creation fails
-        """
-        enterprise_pulsars = {}
-
-        for pta_name, (parfile, timfile) in file_pairs.items():
-            config = pta_configs[pta_name]
-
-            try:
-                if config["timing_package"] == "pint":
-                    # Create PintPulsar
-                    if get_model_and_toas is None:
-                        raise RuntimeError("PINT not available for PintPulsar creation")
-
-                    model, toas = get_model_and_toas(
-                        str(parfile), str(timfile), planets=True
-                    )
-                    enterprise_pulsars[pta_name] = PintPulsar(toas, model, planets=True)
-
-                else:  # tempo2
-                    # Create Tempo2Pulsar
-                    if t2 is None:
-                        raise RuntimeError(
-                            "libstempo not available for Tempo2Pulsar creation"
-                        )
-
-                    t2_psr = t2.tempopulsar(str(parfile), str(timfile))
-                    enterprise_pulsars[pta_name] = Tempo2Pulsar(t2_psr, planets=True)
-
-                self.logger.debug(
-                    f"Created {config['timing_package']} Enterprise Pulsar for {pta_name}"
-                )
-
-            except Exception as e:
-                self.logger.error(
-                    f"Failed to create Enterprise Pulsar for {pta_name}: {e}"
-                )
-                raise RuntimeError(
-                    f"Failed to create Enterprise Pulsar for {pta_name}: {e}"
-                )
-
-        return enterprise_pulsars
 
     def _resolve_canonical_name(
         self, enterprise_pulsars: Dict[str, Union[PintPulsar, Tempo2Pulsar]]

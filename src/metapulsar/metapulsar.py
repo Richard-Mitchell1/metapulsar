@@ -12,7 +12,6 @@ from pint.models import TimingModel
 from pint.toa import TOAs
 
 # Import libstempo
-import libstempo as t2
 
 # Import our supporting infrastructure
 from .metapulsar_parameter_manager import MetaPulsarParameterManager
@@ -144,10 +143,10 @@ class MetaPulsar(ep.BasePulsar):
         # Extract pulsar names from Enterprise Pulsars
         pulsar_names = []
         for pta, psr in self._epulsars.items():
-            if hasattr(psr, "name"):
+            if hasattr(psr, "name") and psr.name and psr.name != "None":
                 pulsar_names.append(psr.name)
             else:
-                logger.warning(f"PTA {pta} pulsar has no name attribute")
+                logger.warning(f"PTA {pta} pulsar has no valid name attribute")
 
         if not pulsar_names:
             raise ValueError("No pulsar names found")
@@ -161,11 +160,6 @@ class MetaPulsar(ep.BasePulsar):
         """Create Enterprise Pulsar objects from input data."""
         self._epulsars = {}
         pint_models, pint_toas, lt_pulsars = self._unpack_pulsar_data()
-
-        # Handle already-created Enterprise Pulsars (including MockPulsar)
-        for pta, psritem in self._pulsars.items():
-            if hasattr(psritem, "_toas") and hasattr(psritem, "_residuals"):
-                self._epulsars[pta] = psritem
 
         # Create new Enterprise Pulsars from raw data
         if pint_models or lt_pulsars:
@@ -203,12 +197,8 @@ class MetaPulsar(ep.BasePulsar):
         pint_toas = {}
 
         for pta, psritem in self._pulsars.items():
-            # Check if it's already an Enterprise Pulsar (including MockPulsar)
-            if hasattr(psritem, "_toas") and hasattr(psritem, "_residuals"):
-                # Skip unpacking - already an Enterprise Pulsar
-                continue
             # Check if it's a PINT tuple (model, toas)
-            elif isinstance(psritem, tuple) and len(psritem) == 2:
+            if isinstance(psritem, tuple) and len(psritem) == 2:
                 pmodel, ptoas = psritem
                 if isinstance(pmodel, TimingModel) and isinstance(ptoas, TOAs):
                     pint_models[pta] = pmodel
@@ -217,13 +207,9 @@ class MetaPulsar(ep.BasePulsar):
                     raise TypeError(
                         f"Invalid PINT objects for {pta}: {type(pmodel)}, {type(ptoas)}"
                     )
-            # Check if it's a libstempo pulsar
-            elif isinstance(psritem, t2.tempopulsar):
-                lt_pulsars[pta] = psritem
             else:
-                raise TypeError(
-                    f"Unsupported pulsar object type for {pta}: {type(psritem)}"
-                )
+                # Duck typing: anything else is treated as libstempo-like
+                lt_pulsars[pta] = psritem
 
         return pint_models, pint_toas, lt_pulsars
 
@@ -273,7 +259,6 @@ class MetaPulsar(ep.BasePulsar):
             self._setup_parameters_from_enterprise_pulsars()
             return
 
-        # NEW: Pass parfile_dicts to MetaPulsarParameterManager
         manager = MetaPulsarParameterManager(pint_models, self._parfile_dicts)
         mapping = manager.build_parameter_mappings(
             combine_components=[]  # Empty list for composite (no merging)
@@ -305,7 +290,6 @@ class MetaPulsar(ep.BasePulsar):
         if self._merge_dispersion:
             combine_components.append("dispersion")
 
-        # NEW: Pass parfile_dicts to MetaPulsarParameterManager
         manager = MetaPulsarParameterManager(pint_models, self._parfile_dicts)
         mapping = manager.build_parameter_mappings(
             combine_components=combine_components  # Pass the list directly

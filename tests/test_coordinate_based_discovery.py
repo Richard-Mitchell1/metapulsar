@@ -291,10 +291,15 @@ class TestCoordinateBasedDiscovery:
             toas2, residuals2, errors2, freqs2, flags2, "test_pta2", "J1857+0943"
         )
 
-        # Create MetaPulsar directly with MockPulsar objects
-        pulsars = {"test_pta1": mock_psr1, "test_pta2": mock_psr2}
+        # Create MetaPulsar with adapted MockPulsar objects
+        from metapulsar.mockpulsar import create_libstempo_adapter
+
+        adapted_pulsars = {
+            "test_pta1": create_libstempo_adapter(mock_psr1),
+            "test_pta2": create_libstempo_adapter(mock_psr2),
+        }
         metapulsar = MetaPulsar(
-            pulsars=pulsars,
+            pulsars=adapted_pulsars,
             combination_strategy="composite",
             canonical_name="J1857+0943",
         )

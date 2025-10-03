@@ -100,9 +100,17 @@ class MockPulsar(BasePulsar):
         self._decj = 0.0  # Default Dec in radians
         self._sort = True  # Enable sorting by default
 
+        # Enterprise compatibility attributes
+        self._stoas = self._toas  # Enterprise expects _stoas
+        self._isort = np.arange(len(self._toas))  # Default sort order
+
         # Set up parameters based on requested components
         self.fitpars = []
         self.setpars = []
+
+        # Add Offset parameter (Enterprise standard - always first)
+        self.fitpars.append("Offset")
+        self.setpars.append("Offset")
 
         if spin:
             self._setup_spin_parameters()
@@ -146,9 +154,9 @@ class MockPulsar(BasePulsar):
         self.fitpars.extend(["RAJ", "DECJ", "PMRA", "PMDEC", "PX"])
         self.setpars.extend(["RAJ", "DECJ", "PMRA", "PMDEC", "PX"])
 
-        # Set default astrometry values
-        self._raj = np.random.uniform(0, 2 * np.pi)
-        self._decj = np.random.uniform(-np.pi / 2, np.pi / 2)
+        # Set default astrometry values (fixed coordinates)
+        self._raj = np.pi / 4  # 45 degrees in radians
+        self._decj = np.pi / 4  # 45 degrees in radians
         self._pmra = 0.0  # rad/yr
         self._pmdec = 0.0  # rad/yr
         self._px = 0.0  # arcsec
@@ -164,9 +172,12 @@ class MockPulsar(BasePulsar):
         # Create design matrix with some realistic structure
         self._designmatrix = np.zeros((n_toas, n_params))
 
-        # Add time-dependent terms for spin parameters
+        # Add time-dependent terms for parameters
         for i, param in enumerate(self.fitpars):
-            if param == "F0":
+            if param == "Offset":
+                # Offset contributes to all residuals equally (all 1s)
+                self._designmatrix[:, i] = 1.0
+            elif param == "F0":
                 # F0 contributes to all residuals equally
                 self._designmatrix[:, i] = 1.0
             elif param == "F1":
@@ -213,6 +224,11 @@ class MockPulsar(BasePulsar):
     def _get_pdist(self):
         """Get pulsar distance (mock implementation)."""
         return 1.0  # 1 kpc default
+
+    @property
+    def toas(self):
+        """Return TOAs in MJD (Enterprise compatibility)."""
+        return self._toas
 
     def _get_pos(self):
         """Get pulsar position vector (mock implementation)."""
@@ -306,7 +322,11 @@ class LibstempoMockPulsarAdapter:
         return toaerrs_us
 
     def designmatrix(self):
-        """Return design matrix for parameter fitting."""
+        """Return design matrix for parameter fitting (libstempo includes Offset column)."""
+        # MockPulsar now has Offset as first column, but libstempo quirk:
+        # - designmatrix() includes Offset column (first column)
+        # - pars() does NOT include Offset in parameter list
+        # So we need to return the design matrix as-is (with Offset column)
         return self._mock._designmatrix
 
     def ssbfreqs(self):
@@ -321,11 +341,12 @@ class LibstempoMockPulsarAdapter:
 
     # Parameter management (libstempo interface)
     def pars(self, which="fit"):
-        """Return parameter names as libstempo would."""
+        """Return parameter names as libstempo would (libstempo does NOT include Offset)."""
         if which == "fit":
-            return tuple(self._mock.fitpars)
+            # libstempo pars() does NOT include Offset, so exclude it
+            return tuple([p for p in self._mock.fitpars if p != "Offset"])
         else:  # set
-            return tuple(self._mock.setpars)
+            return tuple([p for p in self._mock.setpars if p != "Offset"])
 
     def __getitem__(self, param_name):
         """Get parameter value (dict-like access).
@@ -382,7 +403,7 @@ class LibstempoMockPulsarAdapter:
     @property
     def name(self):
         """Return pulsar name."""
-        return self._mock.name
+        return getattr(self._mock, "name", None)
 
     # Planetary data (mock implementations)
     def formbats(self):

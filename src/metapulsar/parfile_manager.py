@@ -82,7 +82,16 @@ class ParFileManager:
         self.logger.info(f"Making par files consistent for pulsar {pulsar_name}")
 
         # 1. Discover par files using existing PTARegistry functionality
-        parfile_paths = self._discover_parfiles(pulsar_name, pta_names)
+        from .metapulsar_factory import MetaPulsarFactory
+
+        factory = MetaPulsarFactory(self.registry)
+        pta_configs = (
+            self.registry.get_pta_subset(pta_names)
+            if pta_names
+            else self.registry.configs
+        )
+        file_pairs = factory.discover_files(pulsar_name, pta_configs)
+        parfile_paths = {pta: parfile for pta, (parfile, timfile) in file_pairs.items()}
         if not parfile_paths:
             raise FileNotFoundError(f"No par files found for pulsar {pulsar_name}")
 
@@ -115,32 +124,6 @@ class ParFileManager:
             f"Successfully created {len(output_files)} consistent par files"
         )
         return output_files
-
-    def _discover_parfiles(
-        self, pulsar_name: str, pta_names: List[str] = None
-    ) -> Dict[str, Path]:
-        """Discover par files using coordinate-based discovery.
-
-        Uses coordinate-based discovery to find par files for a pulsar across PTAs.
-        This ensures consistency with the project's coordinate-based pulsar matching approach.
-        """
-        if pta_names is None:
-            pta_configs = self.registry.configs
-        else:
-            pta_configs = self.registry.get_pta_subset(pta_names)
-
-        # Use coordinate-based discovery to find files
-        from .metapulsar_factory import MetaPulsarFactory
-
-        factory = MetaPulsarFactory(self.registry)
-        file_pairs = factory.discover_files(pulsar_name, pta_configs)
-
-        # Extract just the par files from the file pairs
-        parfiles = {}
-        for pta_name, (parfile, timfile) in file_pairs.items():
-            parfiles[pta_name] = parfile
-
-        return parfiles
 
     def _find_file(
         self, pulsar_name: str, base_dir: str, pattern: str

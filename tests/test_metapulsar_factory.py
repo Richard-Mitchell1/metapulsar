@@ -80,7 +80,7 @@ class TestMetaPulsarFactory:
         }
         self.registry.add_pta("test_pta", test_config)
 
-        with patch.object(self.factory, "_discover_parfiles") as mock_discover:
+        with patch.object(self.factory, "discover_files") as mock_discover:
             mock_discover.return_value = {}
 
             # TODO: MetaPulsar factory functionality not yet implemented
@@ -122,7 +122,7 @@ class TestMetaPulsarFactory:
 
         # Mock file discovery and pulsar discovery
         with patch.object(
-            self.factory, "_discover_parfiles"
+            self.factory, "discover_files"
         ) as mock_discover, patch.object(
             self.factory, "_discover_pulsars_in_pta"
         ) as mock_discover_psrs:

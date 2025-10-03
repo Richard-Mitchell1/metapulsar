@@ -101,12 +101,16 @@ class TestLibstempoMockPulsarAdapter:
     def test_pars_fit(self):
         """Test pars method for fitted parameters."""
         fit_pars = self.adapter.pars("fit")
-        assert fit_pars == self.mock_psr.fitpars
+        # Adapter excludes Offset parameter (libstempo quirk)
+        expected_pars = [p for p in self.mock_psr.fitpars if p != "Offset"]
+        assert fit_pars == tuple(expected_pars)
 
     def test_pars_set(self):
         """Test pars method for set parameters."""
         set_pars = self.adapter.pars("set")
-        assert set_pars == self.mock_psr.setpars
+        # Adapter excludes Offset parameter (libstempo quirk)
+        expected_pars = [p for p in self.mock_psr.setpars if p != "Offset"]
+        assert set_pars == tuple(expected_pars)
 
     def test_parameter_access(self):
         """Test parameter access via __getitem__."""

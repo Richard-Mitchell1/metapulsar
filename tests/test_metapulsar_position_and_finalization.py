@@ -111,9 +111,14 @@ class TestMetaPulsarPositionAndFinalization:
             toas2, residuals2, errors2, freqs2, flags2, "test_pta2", "J1900+0000"
         )
 
-        inconsistent_mp = MetaPulsar(
-            {"pta1": mock_psr1, "pta2": mock_psr2}, combination_strategy="composite"
-        )
+        # Use adapters for MetaPulsar creation
+        from metapulsar.mockpulsar import create_libstempo_adapter
+
+        adapted_pulsars = {
+            "pta1": create_libstempo_adapter(mock_psr1),
+            "pta2": create_libstempo_adapter(mock_psr2),
+        }
+        inconsistent_mp = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
         with pytest.raises(ValueError, match="Not all the same pulsar"):
             inconsistent_mp.validate_consistency()
@@ -244,7 +249,11 @@ class TestMetaPulsarPositionAndFinalization:
         # Remove name attribute (MockPulsar uses self.name, not a separate name attribute)
         delattr(mock_psr, "name")
 
-        mp = MetaPulsar({"test_pta": mock_psr}, combination_strategy="composite")
+        # Use adapter for MetaPulsar creation
+        from metapulsar.mockpulsar import create_libstempo_adapter
+
+        adapted_pulsar = create_libstempo_adapter(mock_psr)
+        mp = MetaPulsar({"test_pta": adapted_pulsar}, combination_strategy="composite")
 
         with pytest.raises(ValueError, match="No pulsar names found"):
             mp.validate_consistency()
