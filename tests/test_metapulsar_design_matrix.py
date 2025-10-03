@@ -95,13 +95,15 @@ class TestMetaPulsarDesignMatrix:
 
     def test_unit_conversion_coordinate_parameters(self):
         """Test unit conversion for coordinate parameters."""
+        import astropy.units as u
+
         # Test RAJ conversion
         raj_col = np.ones(10)
         converted_raj = self.metapulsar._convert_design_matrix_units(
             raj_col, "RAJ", "tempo2"
         )
-        # Should convert from radians to hours
-        expected_factor = np.pi / 180.0  # Based on our conversion
+        # Should convert from radians to hours using astropy conversion
+        expected_factor = (1.0 * u.second / u.radian).to(u.second / u.hourangle).value
         assert np.allclose(converted_raj, raj_col * expected_factor)
 
         # Test DECJ conversion
@@ -109,7 +111,9 @@ class TestMetaPulsarDesignMatrix:
         converted_decj = self.metapulsar._convert_design_matrix_units(
             decj_col, "DECJ", "tempo2"
         )
-        assert np.allclose(converted_decj, decj_col * expected_factor)
+        # Should convert from radians to degrees using astropy conversion
+        expected_factor_deg = (1.0 * u.second / u.radian).to(u.second / u.deg).value
+        assert np.allclose(converted_decj, decj_col * expected_factor_deg)
 
     def test_unit_conversion_non_coordinate_parameters(self):
         """Test that non-coordinate parameters are not converted."""

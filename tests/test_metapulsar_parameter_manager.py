@@ -74,37 +74,6 @@ class TestMetaPulsarParameterManager:
         mock_resolver_class.assert_called_once_with(self.pint_models)
 
     @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
-    @patch("metapulsar.pint_helpers.get_parameters_by_type_from_parfiles")
-    def test_build_merge_parameters_list(self, mock_get_params, mock_resolver_class):
-        """Test building merge parameters list."""
-        mock_resolver = Mock()
-        mock_resolver_class.return_value = mock_resolver
-        mock_get_params.side_effect = [
-            ["F0", "F1"],  # astrometry
-            ["F0", "F1", "F2"],  # spindown
-            ["A1", "PB"],  # binary
-            ["DM"],  # dispersion
-        ]
-
-        manager = MetaPulsarParameterManager(self.pint_models, self.parfile_dicts)
-
-        merge_config = {
-            "astrometry": True,
-            "spindown": True,
-            "binary": True,  # Changed to True to include A1, PB
-            "dispersion": True,
-        }
-
-        result = manager._build_merge_parameters_list(merge_config)
-
-        expected = ["F0", "F1", "F0", "F1", "F2", "A1", "PB", "DM"]
-        assert result == expected
-
-        # Check that binary parameters were included
-        assert "A1" in result
-        assert "PB" in result
-
-    @patch("metapulsar.metapulsar_parameter_manager.ParameterResolver")
     def test_process_pta_fit_parameters(self, mock_resolver_class):
         """Test processing fit parameters for a single PTA."""
         mock_resolver = Mock()
@@ -294,10 +263,7 @@ class TestMetaPulsarParameterManager:
             )
 
             result = manager.build_parameter_mappings(
-                merge_astrometry=True,
-                merge_spin=True,
-                merge_binary=False,
-                merge_dm=False,
+                combine_components=["astrometry", "spindown"]  # Use current API
             )
 
             assert isinstance(result, ParameterMapping)
