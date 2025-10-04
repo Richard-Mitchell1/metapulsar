@@ -20,6 +20,7 @@ class TestErrorHandling:
                 reference_pta="nonexistent_config",
             )
 
+    @pytest.mark.slow
     def test_missing_par_files(self, available_data_sets):
         """Test handling of missing par files."""
         if not available_data_sets:

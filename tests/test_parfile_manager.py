@@ -242,6 +242,7 @@ class TestParFileManager:
             assert "UNITS TDB" in result["epta_dr2"]
             assert "UNITS TDB" in result["ppta_dr2"]
 
+    @pytest.mark.slow
     def test_make_parameters_consistent_spindown(self):
         """Test making spindown parameters consistent."""
         parfile_data = {
@@ -260,6 +261,7 @@ class TestParFileManager:
         assert "F0                                123.456 1" in result["ppta_dr2"]
         assert "F1                              -1.23e-15 1" in result["ppta_dr2"]
 
+    @pytest.mark.slow
     def test_make_parameters_consistent_dm_with_derivatives(self):
         """Test making DM parameters consistent with derivatives."""
         parfile_data = {
@@ -285,6 +287,7 @@ class TestParFileManager:
         # DMX parameters should be removed from non-reference PTA
         assert "DMX_001" not in result["ppta_dr2"]
 
+    @pytest.mark.slow
     def test_make_parameters_consistent_dm_without_derivatives(self):
         """Test making DM parameters consistent without adding derivatives."""
         parfile_data = {
@@ -313,6 +316,7 @@ class TestParFileManager:
         assert "0.1" in result["ppta_dr2"]  # Non-reference PTA gets reference value
         assert "0.2" not in result["ppta_dr2"]  # Original value should be gone
 
+    @pytest.mark.slow
     def test_make_parameters_consistent_astrometry(self):
         """Test making astrometry parameters consistent."""
         parfile_data = {

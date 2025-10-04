@@ -113,8 +113,16 @@ addopts = [
     "--strict-config",
     "--verbose",
     "--tb=short",
+    "--ignore=ref-packages",
+    "--ignore=research",
+    "--ignore=legacy",
+    "--ignore=data/ipta-dr2",
+    "--ignore=examples",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "legacy_comparison: marks tests that compare legacy vs new implementation",
+    "real_data: marks tests that require real data files",
     "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
 ]
