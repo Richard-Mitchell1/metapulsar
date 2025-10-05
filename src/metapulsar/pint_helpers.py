@@ -265,11 +265,3 @@ def create_pint_model(parfile_data) -> TimingModel:
     except Exception as e:
         logger.error(f"Unexpected error creating PINT model: {e}")
         raise PINTDiscoveryError(f"Unexpected error creating PINT model: {e}")
-
-
-def _is_detector_specific_parameter(param_name: str) -> bool:
-    """Check if parameter is detector-specific and should remain PTA-specific."""
-    detector_params = ["Offset", "JUMP", "DMJUMP", "EFAC", "EQUAD", "ECORR"]
-    return any(
-        param_name.startswith(detector_prefix) for detector_prefix in detector_params
-    )

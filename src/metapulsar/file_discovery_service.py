@@ -192,19 +192,9 @@ class FileDiscoveryService:
                 self.logger.error(f"PTA '{pta_name}' not found in configurations")
                 raise KeyError(f"PTA '{pta_name}' not found in configurations")
 
-            config = self.pta_configs[pta_name]
-            file_list = self._discover_all_file_pairs_in_config(config)
-
-            # Enrich each file pair with timing package and priority info
-            enriched_files = []
-            for file_dict in file_list:
-                enriched_file = file_dict.copy()
-                enriched_file["timing_package"] = config["timing_package"]
-                enriched_file["priority"] = config.get(
-                    "priority", 0
-                )  # Optional key, default to 0
-                enriched_files.append(enriched_file)
-            result[pta_name] = enriched_files
+            result[pta_name] = self._discover_all_file_pairs_in_config(
+                self.pta_configs[pta_name]
+            )
 
         return result
 
@@ -353,6 +343,9 @@ class FileDiscoveryService:
                         "timing_package": config["timing_package"],
                         "priority": config.get("priority", 0),
                         "timespan_days": timespan,
+                        "par_content": par_files_by_pulsar[pulsar_name].read_text(
+                            encoding="utf-8"
+                        ),
                     }
                 )
 

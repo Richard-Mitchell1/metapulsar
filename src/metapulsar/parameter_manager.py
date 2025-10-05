@@ -666,9 +666,7 @@ class ParameterManager:
 
     def _get_parfile_content(self, pta_name: str) -> str:
         """Get parfile content for a specific PTA from file data."""
-        parfile_path = self.file_data[pta_name]["par"]
-        with open(parfile_path, "r") as f:
-            return f.read()
+        return self.file_data[pta_name]["par_content"]
 
     def _get_timing_package(self, pta_name: str) -> str:
         """Get timing package for a specific PTA from file data."""
@@ -720,23 +718,24 @@ class ParameterManager:
                     Path(input_file.name).unlink(missing_ok=True)
                     Path(output_file.name).unlink(missing_ok=True)
 
-    def _extract_pulsar_name_from_pint_model(self, parfile_path: Path) -> str:
+    def _extract_pulsar_name_from_pint_model(self, parfile_content: str) -> str:
         """Extract pulsar name from PINT model (PSR parameter)."""
         from pint.models.model_builder import ModelBuilder
 
         try:
-            # Read par file with PINT
-            with open(parfile_path, "r") as f:
-                par_content = f.read()
-
             builder = ModelBuilder()
-            model = builder(StringIO(par_content), allow_tcb=True, allow_T2=True)
+            model = builder(StringIO(parfile_content), allow_tcb=True, allow_T2=True)
 
             # Extract pulsar name from PINT model
             return model.PSR.value
 
         except Exception as e:
-            raise ValueError(f"Cannot extract pulsar name from {parfile_path}: {e}")
+            raise ValueError(f"Cannot extract pulsar name from parfile content: {e}")
+
+    def _extract_pulsar_name_from_pta(self, pta_name: str) -> str:
+        """Extract pulsar name from PTA using par_content field."""
+        parfile_content = self._get_parfile_content(pta_name)
+        return self._extract_pulsar_name_from_pint_model(parfile_content)
 
     def _is_parameter_for_component(
         self, param_name: str, component_params: List[str]

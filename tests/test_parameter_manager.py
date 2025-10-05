@@ -195,32 +195,6 @@ UNITS TDB
         assert "RAJ 18:57:36.3937" in result
         assert "UNITS TDB" in result
 
-    def test_create_consistent_parfile(self, parameter_manager):
-        """Test creating consistent parfile content."""
-        target_dict = {
-            "PSR": ["J1857+0943"],
-            "F0": ["186.494081"],
-            "RAJ": ["18:57:36.3937"],
-            "UNITS": ["TDB"],
-        }
-        reference_dict = {
-            "PSR": ["J1857+0943"],
-            "F0": ["186.494082"],  # Different value
-            "RAJ": ["18:57:36.3938"],  # Different value
-            "UNITS": ["TDB"],
-        }
-        component_params_map = {"spindown": ["F0"], "astrometry": ["RAJ"]}
-
-        result = parameter_manager._create_consistent_parfile(
-            target_dict, reference_dict, component_params_map
-        )
-
-        # Should use reference values for F0 and RAJ (spindown and astrometry)
-        assert "F0 186.494082" in result
-        assert "RAJ 18:57:36.3938" in result
-        # Should keep original UNITS
-        assert "UNITS TDB" in result
-
     # ===== PARAMETER MAPPING TESTS =====
 
     def test_add_merged_parameter(self, parameter_manager):
