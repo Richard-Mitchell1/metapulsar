@@ -498,7 +498,7 @@ class MetaPulsarFactory:
             return "UNKNOWN"
 
     def _get_canonical_name_for_pulsar(
-        self, file_data: Dict[str, Dict[str, Any]]
+        self, pulsar_name: str, pta_configs: Dict[str, Dict[str, Any]]
     ) -> str:
         """Get the canonical name (with suffix) for a pulsar."""
         # This functions will need to call a different _discover_pulsars_by_coordinates function
