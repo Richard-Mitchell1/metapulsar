@@ -33,12 +33,12 @@ def legacy_module():
 @pytest.fixture(scope="session")
 def new_module():
     """Import and return the new module."""
-    from metapulsar import MetaPulsar, MetaPulsarFactory, PTARegistry
+    from metapulsar import MetaPulsar, MetaPulsarFactory, FileDiscoveryService
 
     return {
         "MetaPulsar": MetaPulsar,
         "MetaPulsarFactory": MetaPulsarFactory,
-        "PTARegistry": PTARegistry,
+        "FileDiscoveryService": FileDiscoveryService,
     }
 
 

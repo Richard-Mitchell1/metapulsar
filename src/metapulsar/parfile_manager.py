@@ -2,9 +2,10 @@
 
 This module provides functionality for managing par files across multiple PTAs,
 including making astrophysical parameters consistent and handling unit conversions.
+File discovery should be handled separately using FileDiscoveryService.
 """
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Tuple, Union
 from pathlib import Path
 import tempfile
 import subprocess
@@ -26,25 +27,23 @@ except ImportError as e:
     logger.error("libstempo is required but not available. Please install libstempo.")
     raise ImportError("libstempo is required for tempo2 operations") from e
 
-from .pta_registry import PTARegistry
+# PTARegistry removed - file discovery handled by FileDiscoveryService
 
 
 class ParFileManager:
     """Manages par file operations for multi-PTA pulsar data combination."""
 
-    def __init__(self, registry: PTARegistry = None):
+    def __init__(self):
         """Initialize ParFile Manager.
 
-        Args:
-            registry: PTARegistry instance to use. If None, creates a new one.
+        Note: File discovery should be handled separately using FileDiscoveryService.
+        This manager only processes provided parfile data.
         """
-        self.registry = registry or PTARegistry()
         self.logger = logger
 
     def write_consistent_parfiles(
         self,
-        pulsar_name: str,
-        pta_names: List[str] = None,
+        parfile_data: Dict[str, Dict[str, str]],  # NEW: Accept parfile data directly
         reference_pta: str = None,
         combine_components: List[str] = [
             "astrometry",
@@ -55,11 +54,11 @@ class ParFileManager:
         add_dm_derivatives: bool = True,
         output_dir: Path = None,
     ) -> Dict[str, Path]:
-        """Make par files consistent by aligning astrophysical parameters
+        """Make par files consistent by aligning astrophysical parameters.
 
         Args:
-            pulsar_name: Name of the pulsar
-            pta_names: List of PTA names to include. If None, uses all available.
+            parfile_data: Dictionary mapping PTA names to parfile content dictionaries
+                         Format: {pta_name: {pulsar_name: parfile_content_string}}
             reference_pta: PTA to use as reference. If None, auto-selects.
             combine_components: List of components to make consistent:
                 ['spindown', 'astrometry', 'binary', 'dispersion']. Defaults to all components.
@@ -124,43 +123,6 @@ class ParFileManager:
             f"Successfully created {len(output_files)} consistent par files"
         )
         return output_files
-
-    def _find_file(
-        self, pulsar_name: str, base_dir: str, pattern: str
-    ) -> Optional[Path]:
-        """Find a file matching the pattern in the base directory.
-
-        Uses exact regex matching like the legacy implementation.
-
-        Args:
-            pulsar_name: Name of the pulsar to search for
-            base_dir: Base directory to search in
-            pattern: Regex pattern to match against (includes directory structure)
-
-        Returns:
-            Path to the matching file, or None if not found
-        """
-        import re
-        import glob
-        import os
-
-        base_path = Path(base_dir)
-        if not base_path.exists():
-            return None
-
-        # Use recursive glob to find all files, then match with exact regex
-        # This matches the legacy implementation approach
-        files = glob.glob(f"{base_dir}/**/*", recursive=True)
-        regex = re.compile(pattern)
-
-        for file_path in files:
-            if os.path.isfile(file_path) and regex.search(file_path):
-                # Check if this file matches the pulsar name
-                pulsar_name_match = re.search(pattern, file_path)
-                if pulsar_name_match and pulsar_name_match.group(1) == pulsar_name:
-                    return Path(file_path)
-
-        return None
 
     def _select_reference_pta(self, parfile_paths: Dict[str, Path]) -> str:
         """Select reference PTA based on dataset length (longest time span).

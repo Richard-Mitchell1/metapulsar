@@ -8,7 +8,7 @@ objects for gravitational wave detection.
 from .metapulsar import MetaPulsar
 
 # New factory architecture imports
-from .pta_registry import PTARegistry
+from .file_discovery_service import FileDiscoveryService
 from .metapulsar_factory import MetaPulsarFactory
 from .parfile_manager import ParFileManager
 
@@ -22,7 +22,7 @@ from .selection_utils import create_staggered_selection
 # Export both legacy and new classes for backward compatibility
 __all__ = [
     "MetaPulsar",
-    "PTARegistry",
+    "FileDiscoveryService",
     "MetaPulsarFactory",
     "ParFileManager",
     "create_staggered_selection",

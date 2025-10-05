@@ -2,7 +2,7 @@
 
 import pytest
 import numpy as np
-from metapulsar import PTARegistry
+from metapulsar import FileDiscoveryService
 
 
 @pytest.mark.integration
@@ -13,7 +13,7 @@ class TestLegacyComparison:
         self, pulsar_name, pta_configs, available_data_sets
     ):
         """Prepare input files for legacy implementation using the same discovery as new system."""
-        registry = PTARegistry()
+        discovery_service = FileDiscoveryService()
 
         # Use coordinate-based discovery (the correct approach)
         from metapulsar.metapulsar_factory import MetaPulsarFactory

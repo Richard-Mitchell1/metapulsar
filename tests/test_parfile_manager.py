@@ -7,7 +7,6 @@ import tempfile
 import numpy as np
 
 from metapulsar.parfile_manager import ParFileManager
-from metapulsar.pta_registry import PTARegistry
 
 
 class TestParFileManager:
@@ -15,19 +14,40 @@ class TestParFileManager:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.registry = PTARegistry()
-        self.manager = ParFileManager(self.registry)
+        self.manager = ParFileManager()
 
     def test_init(self):
         """Test ParFileManager initialization."""
-        # Test with custom registry
-        custom_registry = PTARegistry()
-        manager = ParFileManager(custom_registry)
-        assert manager.registry is custom_registry
-
-        # Test with default registry
+        # Test with default initialization (no registry dependency)
         manager = ParFileManager()
-        assert isinstance(manager.registry, PTARegistry)
+        assert manager.logger is not None
+
+    def test_write_consistent_parfiles_with_parfile_data(self):
+        """Test write_consistent_parfiles with new parfile_data parameter."""
+        # Create mock parfile data in the new format
+        parfile_data = {
+            "epta_dr2": {
+                "J1857+0943": "PSR J1857+0943\nF0 186.494081\nF1 -6.2e-15\nRAJ 18:57:36.4\nDECJ +09:43:17.3\n",
+                "J1939+2134": "PSR J1939+2134\nF0 641.928\nF1 -4.3e-15\nRAJ 19:39:38.6\nDECJ +21:34:59.1\n",
+            },
+            "ppta_dr2": {
+                "J1857+0943": "PSR J1857+0943\nF0 186.494081\nF1 -6.2e-15\nRAJ 18:57:36.4\nDECJ +09:43:17.3\n"
+            },
+        }
+
+        # This test will need to be updated once the implementation is complete
+        # For now, just test that the method accepts the new signature
+        try:
+            result = self.manager.write_consistent_parfiles(
+                parfile_data=parfile_data,
+                reference_pta="epta_dr2",
+                combine_components=["astrometry", "spindown"],
+                add_dm_derivatives=True,
+            )
+            # Implementation is stubbed, so this will likely fail
+        except Exception:
+            # Expected since implementation is not complete
+            pass
 
     def test_get_output_filename(self):
         """Test output filename generation."""

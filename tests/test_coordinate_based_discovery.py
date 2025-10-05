@@ -31,7 +31,7 @@ from astropy.coordinates import Angle
 from pint.models.model_builder import ModelBuilder
 
 from metapulsar.metapulsar_factory import MetaPulsarFactory
-from metapulsar.pta_registry import PTARegistry
+from metapulsar.file_discovery_service import FileDiscoveryService
 from metapulsar.position_helpers import bj_name_from_pulsar
 from metapulsar.metapulsar import MetaPulsar
 
@@ -40,10 +40,10 @@ from metapulsar.metapulsar import MetaPulsar
 
 
 @pytest.fixture
-def mock_pta_registry():
-    """Mock PTA registry with test configurations."""
-    registry = PTARegistry({})  # Start with empty config
-    registry.add_pta(
+def mock_file_discovery_service():
+    """Mock FileDiscoveryService with test configurations."""
+    service = FileDiscoveryService({})  # Start with empty config
+    service.add_pta(
         "test_pta1",
         {
             "base_dir": "/test/data1",
@@ -52,7 +52,7 @@ def mock_pta_registry():
             "timing_package": "pint",
         },
     )
-    registry.add_pta(
+    service.add_pta(
         "test_pta2",
         {
             "base_dir": "/test/data2",
@@ -61,7 +61,7 @@ def mock_pta_registry():
             "timing_package": "pint",
         },
     )
-    return registry
+    return service
 
 
 @pytest.fixture
@@ -183,7 +183,7 @@ class TestCoordinateBasedDiscovery:
         self,
         mock_model_builder_class,
         mock_parse_parfile,
-        mock_pta_registry,
+        mock_file_discovery_service,
         mock_file_system,
     ):
         """Test coordinate-based pulsar discovery."""
@@ -227,9 +227,9 @@ class TestCoordinateBasedDiscovery:
     # Note: _extract_suffix_from_filename and _find_file methods were removed in refactor
     # These tests are no longer applicable as the functionality was replaced with PINT-based approach
 
-    def test_get_canonical_name_for_pulsar(self, mock_pta_registry):
+    def test_get_canonical_name_for_pulsar(self, mock_file_discovery_service):
         """Test canonical name resolution."""
-        factory = MetaPulsarFactory(mock_pta_registry)
+        factory = MetaPulsarFactory()
 
         # Mock coordinate discovery
         with patch.object(factory, "_discover_pulsars_by_coordinates") as mock_discover:
@@ -251,9 +251,9 @@ class TestCoordinateBasedDiscovery:
             )
             assert canonical_name == "B1855+09A"
 
-    def test_get_canonical_name_fallback(self, mock_pta_registry):
+    def test_get_canonical_name_fallback(self, mock_file_discovery_service):
         """Test canonical name fallback when pulsar not found."""
-        factory = MetaPulsarFactory(mock_pta_registry)
+        factory = MetaPulsarFactory()
 
         with patch.object(factory, "_discover_pulsars_by_coordinates") as mock_discover:
             mock_discover.return_value = {}
@@ -268,7 +268,7 @@ class TestCoordinateBasedDiscovery:
 
     @patch("pint.models.model_builder.parse_parfile")
     def test_create_metapulsar_with_canonical_name(
-        self, mock_parse_parfile, mock_pta_registry, mock_file_system
+        self, mock_parse_parfile, mock_file_discovery_service, mock_file_system
     ):
         """Test MetaPulsar creation includes canonical name."""
         # Create MockPulsar objects directly instead of going through factory
@@ -310,9 +310,9 @@ class TestCoordinateBasedDiscovery:
         assert hasattr(metapulsar, "pulsars")
         assert len(metapulsar.pulsars) == 2
 
-    def test_discover_files_coordinate_matching(self, mock_pta_registry):
+    def test_discover_files_coordinate_matching(self, mock_file_discovery_service):
         """Test file discovery uses coordinate matching."""
-        factory = MetaPulsarFactory(mock_pta_registry)
+        factory = MetaPulsarFactory()
 
         # Mock coordinate discovery
         with patch.object(factory, "_discover_pulsars_by_coordinates") as mock_discover:
@@ -337,9 +337,9 @@ class TestCoordinateBasedDiscovery:
             assert "test_pta1" in files
             assert "test_pta2" in files
 
-    def test_discover_files_pulsar_not_found(self, mock_pta_registry):
+    def test_discover_files_pulsar_not_found(self, mock_file_discovery_service):
         """Test file discovery when pulsar not found."""
-        factory = MetaPulsarFactory(mock_pta_registry)
+        factory = MetaPulsarFactory()
 
         with patch.object(factory, "_discover_pulsars_by_coordinates") as mock_discover:
             mock_discover.return_value = {}
@@ -393,7 +393,7 @@ class TestEdgeCases:
     """Test edge cases and error conditions."""
 
     def test_coordinate_discovery_with_malformed_parfile(
-        self, mock_pta_registry, mock_file_system
+        self, mock_file_discovery_service, mock_file_system
     ):
         """Test coordinate discovery handles malformed parfiles gracefully."""
         # Create malformed parfile

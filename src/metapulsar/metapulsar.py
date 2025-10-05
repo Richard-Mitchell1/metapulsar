@@ -81,56 +81,6 @@ class MetaPulsar(ep.BasePulsar):
         # BasePulsar handles sorting automatically
         self.sort_data()
 
-    @classmethod
-    def from_files(
-        cls,
-        file_configs,
-        *,
-        combination_strategy="consistent",
-        merge_astrometry=True,
-        merge_spin=True,
-        merge_binary=True,
-        merge_dispersion=True,
-        sort=True,
-        **kwargs,
-    ):
-        """Create MetaPulsar from par/tim file configurations.
-
-        Args:
-            file_configs: List of file configuration dicts
-            combination_strategy: Strategy for combining PTAs ("consistent" or "composite")
-            merge_astrometry: Whether to make astrometry parameters consistent
-            merge_spin: Whether to make spin parameters consistent
-            merge_binary: Whether to make binary parameters consistent
-            merge_dispersion: Whether to make dispersion parameters consistent
-            sort: Whether to sort data by time
-            **kwargs: Additional arguments passed to MetaPulsarFactory
-
-        Returns:
-            MetaPulsar: New MetaPulsar instance
-        """
-        # Convert individual merge flags to combine_components list
-        combine_components = []
-        if merge_astrometry:
-            combine_components.append("astrometry")
-        if merge_spin:
-            combine_components.append("spindown")
-        if merge_binary:
-            combine_components.append("binary")
-        if merge_dispersion:
-            combine_components.append("dispersion")
-
-        # Use MetaPulsarFactory to create the MetaPulsar
-        from .metapulsar_factory import MetaPulsarFactory
-
-        factory = MetaPulsarFactory()
-        return factory.create_metapulsar(
-            file_configs=file_configs,
-            combination_strategy=combination_strategy,
-            combine_components=combine_components,
-            **kwargs,
-        )
-
     def validate_consistency(self):
         """Validate that all PTAs contain the same pulsar.
 
