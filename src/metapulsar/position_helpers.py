@@ -14,7 +14,7 @@ Functions:
     _format_b_name_from_icrs: Format ICRS coordinates into B-name string
 """
 
-from typing import Any
+from typing import Any, Dict, Optional, Tuple, List
 import numpy as np
 from astropy.coordinates import (
     SkyCoord,
@@ -26,6 +26,11 @@ from astropy.coordinates import (
 )
 from astropy.time import Time
 import astropy.units as u
+from loguru import logger
+from io import StringIO
+
+# Import PINT utilities for robust parfile parsing
+from pint.models.model_builder import parse_parfile
 
 
 def _format_j_name_from_icrs(c: SkyCoord) -> str:
@@ -259,3 +264,293 @@ def bj_name_from_pulsar(psr_obj: Any, name_type: str = "J") -> str:
         return _format_b_name_from_icrs(c_fk4)
     else:
         return _format_j_name_from_icrs(c_icrs)
+
+
+# ============================================================================
+# OPTIMIZED COORDINATE EXTRACTION FUNCTIONS
+# ============================================================================
+
+
+def _parse_parfile_optimized(parfile_content: str) -> Dict[str, str]:
+    """Parse parfile content using PINT's robust parser."""
+    parfile_dict = parse_parfile(StringIO(parfile_content))
+    # Convert defaultdict(list) to dict with first values for compatibility
+    return {k: v[0] if v else "" for k, v in parfile_dict.items()}
+
+
+def _parse_ra_string_optimized(ra_str: str) -> Optional[float]:
+    """Parse RA string using Astropy's Angle parsing."""
+    try:
+        angle = Angle(ra_str, unit=u.hourangle)
+        return angle.to(u.hourangle).value
+    except Exception:
+        return None
+
+
+def _parse_dec_string_optimized(dec_str: str) -> Optional[float]:
+    """Parse DEC string using Astropy's Angle parsing."""
+    try:
+        angle = Angle(dec_str, unit=u.deg)
+        return angle.to(u.deg).value
+    except Exception:
+        return None
+
+
+def _parse_angle_string_optimized(angle_str: str) -> Optional[float]:
+    """Parse angle string using Astropy's Angle parsing."""
+    try:
+        angle = Angle(angle_str, unit=u.deg)
+        return angle.to(u.deg).value
+    except Exception:
+        return None
+
+
+def _extract_equatorial_coordinates_optimized(
+    parfile_dict: Dict[str, str]
+) -> Tuple[Optional[float], Optional[float]]:
+    """Extract RAJ/DECJ coordinates (optimized version)."""
+    try:
+        # Try RAJ/DECJ first, then RA/DEC aliases
+        raj = parfile_dict.get("RAJ") or parfile_dict.get("RA")
+        decj = parfile_dict.get("DECJ") or parfile_dict.get("DEC")
+
+        if not raj or not decj:
+            return None, None
+
+        # Parse RA (format: HH:MM:SS.SSSS or HH:MM:SS)
+        ra_hours = _parse_ra_string_optimized(raj)
+        if ra_hours is None:
+            return None, None
+
+        # Parse DEC (format: ±DD:MM:SS.SSSS or ±DD:MM:SS)
+        dec_deg = _parse_dec_string_optimized(decj)
+        if dec_deg is None:
+            return None, None
+
+        return ra_hours, dec_deg
+
+    except Exception:
+        return None, None
+
+
+def _extract_ecliptic_coordinates_optimized(
+    parfile_dict: Dict[str, str]
+) -> Tuple[Optional[float], Optional[float]]:
+    """Extract ecliptic coordinates and convert to equatorial (optimized version)."""
+    try:
+        # Try LAMBDA/BETA first, then ELONG/ELAT aliases
+        lam = parfile_dict.get("LAMBDA") or parfile_dict.get("ELONG")
+        bet = parfile_dict.get("BETA") or parfile_dict.get("ELAT")
+
+        if not lam or not bet:
+            return None, None
+
+        # Parse ecliptic coordinates
+        lam_deg = _parse_angle_string_optimized(lam)
+        bet_deg = _parse_angle_string_optimized(bet)
+
+        if lam_deg is None or bet_deg is None:
+            return None, None
+
+        # Convert ecliptic to equatorial
+        c_ecl = SkyCoord(
+            lon=lam_deg * u.deg,
+            lat=bet_deg * u.deg,
+            distance=1 * u.pc,
+            frame=BarycentricTrueEcliptic(equinox=Time("J2000")),
+        )
+        c_icrs = c_ecl.transform_to(ICRS())
+
+        return c_icrs.ra.to(u.hourangle).value, c_icrs.dec.to(u.deg).value
+
+    except Exception:
+        return None, None
+
+
+def _extract_fk4_coordinates_optimized(
+    parfile_dict: Dict[str, str]
+) -> Tuple[Optional[float], Optional[float]]:
+    """Extract FK4/B1950 coordinates and convert to equatorial (optimized version)."""
+    try:
+        ra = parfile_dict.get("RA")
+        dec = parfile_dict.get("DEC")
+
+        if not ra or not dec:
+            return None, None
+
+        # Parse coordinates
+        ra_hours = _parse_ra_string_optimized(ra)
+        dec_deg = _parse_dec_string_optimized(dec)
+
+        if ra_hours is None or dec_deg is None:
+            return None, None
+
+        # Convert FK4 to ICRS
+        c_fk4 = SkyCoord(
+            ra=ra_hours * u.hourangle,
+            dec=dec_deg * u.deg,
+            frame=FK4(equinox=Time("B1950")),
+        )
+        c_icrs = c_fk4.transform_to(ICRS())
+
+        return c_icrs.ra.to(u.hourangle).value, c_icrs.dec.to(u.deg).value
+
+    except Exception:
+        return None, None
+
+
+def extract_coordinates_from_parfile_optimized(
+    parfile_content: str,
+) -> Optional[Tuple[float, float]]:
+    """
+    Extract RA/DEC coordinates directly from parfile content (optimized version).
+
+    This function bypasses PINT model creation and extracts coordinates using
+    lightweight parsing for significant performance improvements.
+
+    Args:
+        parfile_content: Raw parfile content as string
+
+    Returns:
+        Tuple of (RA_hours, DEC_degrees) or None if extraction fails
+    """
+    try:
+        # Parse parfile into simple dictionary
+        parfile_dict = _parse_parfile_optimized(parfile_content)
+
+        # Try direct equatorial coordinates first (most common)
+        ra_hours, dec_deg = _extract_equatorial_coordinates_optimized(parfile_dict)
+        if ra_hours is not None and dec_deg is not None:
+            return ra_hours, dec_deg
+
+        # Try ecliptic coordinates as fallback
+        ra_hours, dec_deg = _extract_ecliptic_coordinates_optimized(parfile_dict)
+        if ra_hours is not None and dec_deg is not None:
+            return ra_hours, dec_deg
+
+        # Try FK4/B1950 coordinates as last resort
+        ra_hours, dec_deg = _extract_fk4_coordinates_optimized(parfile_dict)
+        if ra_hours is not None and dec_deg is not None:
+            return ra_hours, dec_deg
+
+        return None
+
+    except Exception as e:
+        logger.debug(f"Failed to extract coordinates: {e}")
+        return None
+
+
+def bj_name_from_coordinates_optimized(
+    ra_hours: float, dec_deg: float, name_type: str = "J"
+) -> str:
+    """
+    Generate B-name or J-name from coordinates without PINT model creation (optimized version).
+
+    Args:
+        ra_hours: Right ascension in hours
+        dec_deg: Declination in degrees
+        name_type: "J" for J-name (JHHMM±DDMM) or "B" for B-name (BHHMM±DD)
+
+    Returns:
+        Canonical name string (e.g., "J1857+0943" or "B1857+09")
+    """
+    # Create SkyCoord for coordinate transformations
+    c_icrs = SkyCoord(ra=ra_hours * u.hourangle, dec=dec_deg * u.deg, frame=ICRS())
+
+    if name_type.upper() == "B":
+        # B-names should be based on FK4 B1950 coordinates
+        c_fk4 = c_icrs.transform_to(FK4(equinox=Time("B1950")))
+        return _format_b_name_from_coordinates_optimized(
+            c_fk4.ra.to(u.hourangle).value, c_fk4.dec.to(u.deg).value
+        )
+    else:
+        return _format_j_name_from_coordinates_optimized(ra_hours, dec_deg)
+
+
+def _format_j_name_from_coordinates_optimized(ra_hours: float, dec_deg: float) -> str:
+    """Format ICRS coordinates into a JHHMM±DDMM label using TRUNCATION (optimized version)."""
+    # RA
+    hh = int(np.floor(ra_hours)) % 24
+    mm = int((ra_hours - hh) * 60.0)  # truncate minutes
+
+    # Dec
+    sign = "-" if dec_deg < 0 else "+"
+    a = abs(dec_deg)
+    DD = int(np.floor(a))
+    MM = int((a - DD) * 60.0)  # truncate arcminutes
+
+    return f"J{hh:02d}{mm:02d}{sign}{DD:02d}{MM:02d}"
+
+
+def _format_b_name_from_coordinates_optimized(ra_hours: float, dec_deg: float) -> str:
+    """Format FK4 coordinates into a B1234±56 label using TRUNCATION (optimized version)."""
+    # RA
+    hh = int(np.floor(ra_hours)) % 24
+    mm = int((ra_hours - hh) * 60.0)  # truncate minutes
+
+    # Dec
+    sign = "-" if dec_deg < 0 else "+"
+    a = abs(dec_deg)
+    DD = int(np.floor(a))
+
+    return f"B{hh:02d}{mm:02d}{sign}{DD:02d}"
+
+
+def discover_pulsars_by_coordinates_optimized(
+    file_data: Dict[str, List[Dict[str, Any]]]
+) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+    """
+    Discover pulsars by extracting coordinates directly from parfiles (optimized version).
+
+    This optimized version bypasses PINT model creation and extracts
+    coordinates using lightweight parsing for significant performance improvements.
+
+    Args:
+        file_data: Dictionary mapping PTA names to file lists
+
+    Returns:
+        Dictionary mapping J-names to PTA file data
+    """
+    coordinate_map = {}
+
+    for pta_name, file_list in file_data.items():
+        logger.debug(f"Processing {len(file_list)} files for PTA {pta_name}")
+
+        for file_dict in file_list:
+            try:
+                # Extract coordinates directly from parfile content
+                coords = extract_coordinates_from_parfile_optimized(
+                    file_dict["par_content"]
+                )
+
+                if coords is None:
+                    logger.warning(
+                        f"Could not extract coordinates from {file_dict.get('par', 'unknown')}"
+                    )
+                    continue
+
+                ra_hours, dec_deg = coords
+
+                # Generate J-name directly from coordinates
+                j_name = bj_name_from_coordinates_optimized(ra_hours, dec_deg, "J")
+
+                # Add to coordinate map
+                if j_name not in coordinate_map:
+                    coordinate_map[j_name] = {}
+                if pta_name not in coordinate_map[j_name]:
+                    coordinate_map[j_name][pta_name] = []
+
+                coordinate_map[j_name][pta_name].append(file_dict)
+
+                logger.debug(
+                    f"Found pulsar {j_name} at RA={ra_hours:.4f}h, DEC={dec_deg:.4f}°"
+                )
+
+            except Exception as e:
+                logger.warning(
+                    f"Failed to process {file_dict.get('par', 'unknown')}: {e}"
+                )
+                continue
+
+    logger.info(f"Discovered {len(coordinate_map)} unique pulsars across all PTAs")
+    return coordinate_map
