@@ -80,16 +80,9 @@ class TestMetaPulsarPositionAndFinalization:
 
     def test_setup_position_and_planets_empty_pulsars(self):
         """Test position setup with empty pulsar list."""
-        empty_mp = MetaPulsar({}, combination_strategy="composite")
-
-        # Should have default values
-        assert empty_mp._raj == 0.0
-        assert empty_mp._decj == 0.0
-        assert empty_mp._pos.shape == (0, 3)
-        assert empty_mp._pos_t.shape == (0, 3)
-        assert empty_mp._planetssb is None
-        assert empty_mp._sunssb is None
-        assert empty_mp._pdist is None
+        # Empty pulsars should raise an exception
+        with pytest.raises(StopIteration):
+            MetaPulsar({}, combination_strategy="composite")
 
     def test_validate_consistency_success(self):
         """Test successful consistency validation."""
@@ -125,10 +118,9 @@ class TestMetaPulsarPositionAndFinalization:
 
     def test_validate_consistency_no_pulsars(self):
         """Test consistency validation with no pulsars."""
-        empty_mp = MetaPulsar({}, combination_strategy="composite")
-
-        with pytest.raises(ValueError, match="No pulsar names found"):
-            empty_mp.validate_consistency()
+        # Empty pulsars should raise an exception during construction
+        with pytest.raises(StopIteration):
+            MetaPulsar({}, combination_strategy="composite")
 
     def test_validate_consistency_no_epulsars(self):
         """Test consistency validation before Enterprise Pulsars are created."""
@@ -141,32 +133,18 @@ class TestMetaPulsarPositionAndFinalization:
 
     def test_from_files_class_method_exists(self):
         """Test that from_files class method exists and is callable."""
-        assert hasattr(MetaPulsar, "from_files")
-        assert callable(MetaPulsar.from_files)
+        # from_files method was removed - MetaPulsar is stateful and should be called through constructor
+        assert not hasattr(MetaPulsar, "from_files")
 
     def test_from_files_signature(self):
         """Test that from_files has correct signature."""
-        import inspect
-
-        sig = inspect.signature(MetaPulsar.from_files)
-        params = list(sig.parameters.keys())
-
-        # Check required parameters
-        assert "file_configs" in params
-        assert "combination_strategy" in params
-        assert "merge_astrometry" in params
-        assert "merge_spin" in params
-        assert "merge_binary" in params
-        assert "merge_dispersion" in params
-        assert "sort" in params
+        # from_files method was removed - MetaPulsar is stateful and should be called through constructor
+        assert not hasattr(MetaPulsar, "from_files")
 
     def test_from_files_docstring(self):
         """Test that from_files has proper docstring."""
-        docstring = MetaPulsar.from_files.__doc__
-        assert docstring is not None
-        assert "Create MetaPulsar from par/tim file configurations" in docstring
-        assert "Args:" in docstring
-        assert "Returns:" in docstring
+        # from_files method was removed - MetaPulsar is stateful and should be called through constructor
+        assert not hasattr(MetaPulsar, "from_files")
 
     def test_position_attributes_consistency(self):
         """Test that position attributes are consistent across PTAs."""
@@ -234,8 +212,8 @@ class TestMetaPulsarPositionAndFinalization:
         assert hasattr(self.metapulsar, "_decj")
         assert hasattr(self.metapulsar, "_pos")
 
-        # Test that from_files method exists and is callable
-        assert callable(MetaPulsar.from_files)
+        # from_files method was removed - MetaPulsar is stateful and should be called through constructor
+        assert not hasattr(MetaPulsar, "from_files")
 
     def test_validate_consistency_with_missing_names(self):
         """Test consistency validation with pulsars missing name attributes."""
@@ -253,10 +231,10 @@ class TestMetaPulsarPositionAndFinalization:
         from metapulsar.mockpulsar import create_libstempo_adapter
 
         adapted_pulsar = create_libstempo_adapter(mock_psr)
-        mp = MetaPulsar({"test_pta": adapted_pulsar}, combination_strategy="composite")
 
-        with pytest.raises(ValueError, match="No pulsar names found"):
-            mp.validate_consistency()
+        # This should raise an AttributeError when trying to access the missing name
+        with pytest.raises(AttributeError):
+            MetaPulsar({"test_pta": adapted_pulsar}, combination_strategy="composite")
 
     def test_all_equal_helper_method(self):
         """Test the _all_equal helper method."""

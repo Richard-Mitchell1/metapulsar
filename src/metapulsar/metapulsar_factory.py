@@ -459,42 +459,6 @@ class MetaPulsarFactory:
         # Find tim file using simple string matching
         return self._find_timfile_by_name(pulsar_name, config)
 
-    def discover_files(
-        self, pulsar_name: str, pta_configs: Dict[str, Dict]
-    ) -> Dict[str, Tuple[Path, Path]]:
-        """Discover par/tim files for a pulsar across PTAs using coordinate matching.
-
-        Args:
-            pulsar_name: Name of the pulsar (can be J-name, B-name, or preferred name)
-            pta_configs: Dictionary of PTA configurations to search
-
-        Returns:
-            Dictionary mapping PTA names to (parfile, timfile) tuples
-        """
-        # First, discover all pulsars by coordinates
-        coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
-
-        # Find the matching pulsar by any of its names
-        matching_pulsar = None
-        for j_name, pulsar_info in coordinate_map.items():
-            if (
-                pulsar_name == j_name
-                or pulsar_name == pulsar_info["preferred_name"]
-                or pulsar_name == pulsar_info["b_name"]
-            ):
-                matching_pulsar = pulsar_info
-                break
-
-        if not matching_pulsar:
-            available_names = [
-                info["preferred_name"] for info in coordinate_map.values()
-            ]
-            raise ValueError(
-                f"Pulsar '{pulsar_name}' not found. Available: {available_names}"
-            )
-
-        return matching_pulsar["files"]
-
     def _build_metadata(
         self, file_pairs: Dict[str, Tuple[Path, Path]], pta_configs: Dict[str, Dict]
     ) -> Dict[str, Any]:

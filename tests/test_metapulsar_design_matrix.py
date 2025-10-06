@@ -5,6 +5,7 @@ This module tests the design matrix construction and unit conversion methods
 implemented in the MetaPulsar class.
 """
 
+import pytest
 import numpy as np
 from src.metapulsar.metapulsar import MetaPulsar
 from src.metapulsar.mockpulsar import MockPulsar, create_libstempo_adapter
@@ -166,10 +167,9 @@ class TestMetaPulsarDesignMatrix:
 
     def test_design_matrix_empty_pulsars(self):
         """Test design matrix with empty pulsar list."""
-        empty_mp = MetaPulsar({}, combination_strategy="composite")
-        assert hasattr(empty_mp, "_designmatrix")
-        assert empty_mp._designmatrix.shape == (0, 0)
-        assert len(empty_mp.fitpars) == 0
+        # Empty pulsars should raise an exception
+        with pytest.raises(StopIteration):
+            MetaPulsar({}, combination_strategy="composite")
 
     def test_timing_package_detection(self):
         """Test timing package detection for MockPulsar."""

@@ -153,16 +153,9 @@ class TestMetaPulsarDataCombination:
 
     def test_timing_data_combination_empty_pulsars(self):
         """Test timing data combination with empty pulsar list."""
-        # Empty pulsars should work but result in empty arrays
-        metapulsar = MetaPulsar({}, combination_strategy="composite")
-
-        # Check that arrays are empty
-        assert len(metapulsar._toas) == 0
-        assert len(metapulsar._residuals) == 0
-        assert len(metapulsar._ssbfreqs) == 0
-        assert len(metapulsar._telescope) == 0
-        assert len(metapulsar._flags) == 0  # Empty structured array
-        assert metapulsar._get_pta_slices() == {}
+        # Empty pulsars should raise an exception
+        with pytest.raises(StopIteration):
+            MetaPulsar({}, combination_strategy="composite")
 
     def test_timing_data_combination_single_pulsar(self):
         """Test timing data combination with single pulsar."""

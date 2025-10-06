@@ -4,6 +4,7 @@ import pytest
 import tempfile
 from pathlib import Path
 from metapulsar import MetaPulsarFactory, FileDiscoveryService
+from metapulsar.file_discovery_service import PTA_CONFIGS
 
 
 @pytest.mark.integration
@@ -12,10 +13,8 @@ class TestErrorHandling:
 
     def test_missing_data_directory(self):
         """Test handling of missing data directories."""
-        # Test with non-existent directory using FileDiscoveryService
-        discovery_service = FileDiscoveryService()
-
         # Test with non-existent PTA
+        discovery_service = FileDiscoveryService()
         with pytest.raises(KeyError):
             discovery_service.discover_all_files_in_ptas(["nonexistent_config"])
 
@@ -25,18 +24,17 @@ class TestErrorHandling:
         if not available_data_sets:
             pytest.skip("No data available for testing")
 
-        # Test with non-existent pulsar using FileDiscoveryService
-        discovery_service = FileDiscoveryService()
-
         # This test will need to be updated once the implementation is complete
         # For now, just test that the service can be used
+        discovery_service = FileDiscoveryService()
         try:
-            result = discovery_service.discover_all_files_in_ptas(["epta_dr1_v2_2"])
+            discovery_service.discover_all_files_in_ptas(["epta_dr1_v2_2"])
             # Implementation is stubbed, so this will likely fail
         except Exception:
             # Expected since implementation is not complete
             pass
 
+    @pytest.mark.slow
     def test_malformed_par_file(self, available_data_sets):
         """Test handling of malformed par files."""
         if not available_data_sets:
@@ -47,29 +45,37 @@ class TestErrorHandling:
             temp_par = Path(temp_dir) / "J0030+0451.par"
 
             # Write malformed par file
-            with open(temp_par, "w") as f:
-                f.write(
-                    """# Malformed par file
+            malformed_parfile_content = """# Malformed par file
 F0 123.456 1 0.001
 # Missing required parameters
 # RAJ and DECJ are missing
 """
-                )
+            with open(temp_par, "w") as f:
+                f.write(malformed_parfile_content)
 
                 # Create a temporary PTA config pointing to malformed file
-                discovery_service = FileDiscoveryService()
-                config = registry.get_pta("epta_dr1_v2_2")
+                config = PTA_CONFIGS["epta_dr1_v2_2"].copy()
                 config["base_dir"] = str(temp_dir)
                 config["par_pattern"] = "J0030+0451.par"
 
                 # This should raise ValueError because the parfile is malformed (missing coordinates)
                 with pytest.raises(ValueError):
-                    MetaPulsarFactory().create_metapulsar(
-                        pulsar_name="J0030+0451",
-                        pta_names=["epta_dr1_v2_2"],
-                        reference_pta="epta_dr1_v2_2",
-                    )
+                    # Create file_data format for the test (list format)
+                    file_data = {
+                        "epta_dr1_v2_2": [
+                            {
+                                "par": Path(temp_dir) / "J0030+0451.par",
+                                "tim": Path(temp_dir) / "J0030+0451.tim",
+                                "par_content": malformed_parfile_content,
+                                "timing_package": "tempo2",
+                                "timespan_days": 1000.0,
+                                "priority": 1,
+                            }
+                        ]
+                    }
+                    MetaPulsarFactory().create_metapulsar(file_data)
 
+    @pytest.mark.slow
     def test_malformed_tim_file(self, available_data_sets):
         """Test handling of malformed tim files."""
         if not available_data_sets:
@@ -89,35 +95,54 @@ C 12345.67890 0.0001
                 )
 
                 # Create a temporary PTA config pointing to malformed file
-                discovery_service = FileDiscoveryService()
-                config = registry.get_pta("epta_dr1_v2_2")
+                config = PTA_CONFIGS["epta_dr1_v2_2"].copy()
                 config["base_dir"] = str(temp_dir)
                 config["tim_pattern"] = "J0030+0451.tim"
 
                 # This should raise ValueError because the tim file is malformed
                 with pytest.raises(ValueError):
-                    MetaPulsarFactory().create_metapulsar(
-                        pulsar_name="J0030+0451",
-                        pta_names=["epta_dr1_v2_2"],
-                        reference_pta="epta_dr1_v2_2",
-                    )
+                    # Create file_data format for the test (list format)
+                    file_data = {
+                        "epta_dr1_v2_2": [
+                            {
+                                "par": Path(temp_dir) / "J0030+0451.par",
+                                "tim": temp_tim,
+                                "par_content": "PSR J0030+0451\nRAJ 00:30:27.4\nDECJ 04:51:39.7\n",
+                                "timing_package": "tempo2",
+                                "timespan_days": 1000.0,
+                                "priority": 1,
+                            }
+                        ]
+                    }
+                    MetaPulsarFactory().create_metapulsar(file_data)
 
+    @pytest.mark.slow
     def test_invalid_pta_config(self):
         """Test handling of invalid PTA configurations."""
-        discovery_service = FileDiscoveryService()
-
         # Test with invalid PTA config name
         with pytest.raises(KeyError):
-            registry.get_pta("invalid_config")
+            PTA_CONFIGS["invalid_config"]
 
         # Test with invalid primary/reference PTA - this should raise KeyError
         with pytest.raises(KeyError):
+            # Create file_data format for the test (list format)
+            file_data = {
+                "epta_dr1_v2_2": [
+                    {
+                        "par": Path("/nonexistent/J0030+0451.par"),
+                        "tim": Path("/nonexistent/J0030+0451.tim"),
+                        "par_content": "PSR J0030+0451\nRAJ 00:30:27.4\nDECJ 04:51:39.7\n",
+                        "timing_package": "tempo2",
+                        "timespan_days": 1000.0,
+                        "priority": 1,
+                    }
+                ]
+            }
             MetaPulsarFactory().create_metapulsar(
-                pulsar_name="J0030+0451",
-                pta_names=["epta_dr1_v2_2"],
-                reference_pta="invalid_pta",
+                file_data, reference_pta="invalid_pta"
             )
 
+    @pytest.mark.slow
     def test_empty_par_files(self, available_data_sets):
         """Test handling of empty par files."""
         if not available_data_sets:
@@ -129,19 +154,28 @@ C 12345.67890 0.0001
             temp_par.touch()  # Create empty file
 
             # Create a temporary PTA config pointing to empty file
-            discovery_service = FileDiscoveryService()
-            config = registry.get_pta("epta_dr1_v2_2")
+            config = PTA_CONFIGS["epta_dr1_v2_2"].copy()
             config["base_dir"] = str(temp_dir)
             config["par_pattern"] = "J0030+0451.par"
 
             # This should raise ValueError because the par file is empty
             with pytest.raises(ValueError):
-                MetaPulsarFactory().create_metapulsar(
-                    pulsar_name="J0030+0451",
-                    pta_names=["epta_dr1_v2_2"],
-                    reference_pta="epta_dr1_v2_2",
-                )
+                # Create file_data format for the test (list format)
+                file_data = {
+                    "epta_dr1_v2_2": [
+                        {
+                            "par": temp_par,
+                            "tim": Path(temp_dir) / "J0030+0451.tim",
+                            "par_content": "",  # Empty content
+                            "timing_package": "tempo2",
+                            "timespan_days": 1000.0,
+                            "priority": 1,
+                        }
+                    ]
+                }
+                MetaPulsarFactory().create_metapulsar(file_data)
 
+    @pytest.mark.slow
     def test_corrupted_binary_files(self, available_data_sets):
         """Test handling of corrupted binary files."""
         if not available_data_sets:
@@ -156,18 +190,26 @@ C 12345.67890 0.0001
                 f.write(b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09")
 
             # Create a temporary PTA config pointing to corrupted file
-            discovery_service = FileDiscoveryService()
-            config = registry.get_pta("epta_dr1_v2_2")
+            config = PTA_CONFIGS["epta_dr1_v2_2"].copy()
             config["base_dir"] = str(temp_dir)
             config["par_pattern"] = "J0030+0451.par"
 
             # This should raise ValueError because the par file is corrupted
             with pytest.raises(ValueError):
-                MetaPulsarFactory().create_metapulsar(
-                    pulsar_name="J0030+0451",
-                    pta_names=["epta_dr1_v2_2"],
-                    reference_pta="epta_dr1_v2_2",
-                )
+                # Create file_data format for the test (list format)
+                file_data = {
+                    "epta_dr1_v2_2": [
+                        {
+                            "par": temp_par,
+                            "tim": Path(temp_dir) / "J0030+0451.tim",
+                            "par_content": b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09",  # Binary content
+                            "timing_package": "tempo2",
+                            "timespan_days": 1000.0,
+                            "priority": 1,
+                        }
+                    ]
+                }
+                MetaPulsarFactory().create_metapulsar(file_data)
 
     def test_memory_limit_handling(self, available_data_sets):
         """Test handling of memory limits with large datasets."""

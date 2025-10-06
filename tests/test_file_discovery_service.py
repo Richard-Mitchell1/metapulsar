@@ -72,6 +72,10 @@ class TestFileDiscoveryService:
                 {
                     "par": Path("/test/J1857+0943.par"),
                     "tim": Path("/test/J1857+0943.tim"),
+                    "timing_package": "tempo2",
+                    "priority": 1,
+                    "timespan_days": 1000.0,
+                    "par_content": "PSR J1857+0943\nRAJ 18:57:36.4\nDECJ 09:43:17.1\n",
                 }
             ]
 
@@ -241,7 +245,13 @@ class TestFileDiscoveryService:
 
     @patch("pathlib.Path.exists")
     @patch("pathlib.Path.rglob")
-    def test_discover_all_file_pairs_in_config_success(self, mock_rglob, mock_exists):
+    @patch(
+        "metapulsar.file_discovery_service.FileDiscoveryService._calculate_timespan_from_tim_file"
+    )
+    @patch("pathlib.Path.read_text")
+    def test_discover_all_file_pairs_in_config_success(
+        self, mock_read_text, mock_timespan, mock_rglob, mock_exists
+    ):
         """Test discovering all file pairs in a configuration."""
         service = FileDiscoveryService()
 
@@ -250,11 +260,17 @@ class TestFileDiscoveryService:
             Path("/test/J1857+0943.par"),
             Path("/test/J1857+0943.tim"),
         ]
+        mock_read_text.return_value = (
+            "PSR J1857+0943\nRAJ 18:57:36.4\nDECJ 09:43:17.1\n"
+        )
+        mock_timespan.return_value = 1000.0
 
         config = {
             "base_dir": "/test",
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
+            "timing_package": "tempo2",
+            "priority": 1,
         }
 
         result = service._discover_all_file_pairs_in_config(config)
