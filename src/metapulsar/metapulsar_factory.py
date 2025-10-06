@@ -56,7 +56,9 @@ class MetaPulsarFactory:
 
     def create_metapulsar(
         self,
-        file_data: Dict[str, Dict[str, Any]],
+        file_data: Dict[
+            str, List[Dict[str, Any]]
+        ],  # Should contain data for single pulsar only
         combination_strategy: str = "consistent",
         reference_pta: str = None,
         combine_components: List[str] = [
@@ -70,7 +72,7 @@ class MetaPulsarFactory:
         """Create MetaPulsar using specified combination strategy.
 
         Args:
-            pta_names: List of PTA names to include. If None, uses all available.
+            file_data: File data from FileDiscoveryService (should contain data for single pulsar only)
             combination_strategy: Strategy for combining PTAs:
                 - "consistent": Astrophysical consistency (modifies par files for consistency, the default)
                 - "composite": Multi-PTA composition (preserves original parameters, Borg/FrankenStat methods)
@@ -83,10 +85,13 @@ class MetaPulsarFactory:
             MetaPulsar object
 
         Raises:
-            ValueError: If no files found for the pulsar or invalid parameters
+            ValueError: If no files found, multiple pulsars detected, or invalid parameters
             RuntimeError: If Enterprise Pulsar creation fails
         """
         self.logger.info(f"Creating MetaPulsar using {combination_strategy} strategy")
+
+        # VALIDATION: Check that all files belong to the same pulsar
+        self._validate_single_pulsar_data(file_data)
 
         return self.create_metapulsar_from_file_data(
             file_data,
@@ -95,6 +100,78 @@ class MetaPulsarFactory:
             combine_components,
             add_dm_derivatives,
         )
+
+    def _validate_single_pulsar_data(
+        self, file_data: Dict[str, List[Dict[str, Any]]]
+    ) -> None:
+        """Validate that file_data contains files for only one pulsar.
+
+        Args:
+            file_data: File data to validate
+
+        Raises:
+            ValueError: If multiple pulsars detected or no valid files found
+        """
+        # Group files by pulsar using coordinate-based identification
+        pulsar_groups = self._discover_pulsars_by_coordinates(file_data)
+
+        if not pulsar_groups:
+            raise ValueError("No valid pulsar files found in file_data")
+
+        if len(pulsar_groups) > 1:
+            pulsar_names = list(pulsar_groups.keys())
+            raise ValueError(
+                f"Multiple pulsars detected in file_data: {pulsar_names}. "
+                f"create_metapulsar() expects data for a single pulsar. "
+                f"Use create_all_metapulsars() for multiple pulsars or "
+                f"group_files_by_pulsar() to separate the data first."
+            )
+
+        # Log the single pulsar being processed
+        pulsar_name = list(pulsar_groups.keys())[0]
+        self.logger.info(f"Validated single pulsar data for: {pulsar_name}")
+
+    def group_files_by_pulsar(
+        self, file_data: Dict[str, List[Dict[str, Any]]]
+    ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+        """Group file data by pulsar using coordinate-based identification.
+
+        This utility function takes multi-pulsar file data and groups it by pulsar,
+        making it suitable for creating individual MetaPulsars.
+
+        Args:
+            file_data: File data from FileDiscoveryService containing multiple pulsars
+
+        Returns:
+            Dictionary mapping pulsar names to their respective file data:
+            {
+                "J1857+0943": {
+                    "epta_dr2": [file_dict1, file_dict2, ...],
+                    "ppta_dr2": [file_dict3, file_dict4, ...]
+                },
+                "J1909-3744": {
+                    "epta_dr2": [file_dict5, ...],
+                    "ppta_dr2": [file_dict6, ...]
+                }
+            }
+
+        Raises:
+            ValueError: If no valid pulsar files found
+        """
+        self.logger.info(
+            "Grouping files by pulsar using coordinate-based identification"
+        )
+
+        pulsar_groups = self._discover_pulsars_by_coordinates(file_data)
+
+        if not pulsar_groups:
+            raise ValueError("No valid pulsar files found in file_data")
+
+        self.logger.info(
+            f"Found {len(pulsar_groups)} pulsars: {list(pulsar_groups.keys())}"
+        )
+
+        return pulsar_groups
 
     def list_available_pulsars(self, pta_names: List[str] = None) -> List[str]:
         """List all available pulsars across specified PTAs.

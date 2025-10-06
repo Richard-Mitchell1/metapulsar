@@ -41,16 +41,31 @@ def main():
 
     print(f"Using PTAs with files: {list(file_data_with_files.keys())}")
 
-    # Step 3: Create MetaPulsar
-    print("Step 3: Creating MetaPulsar...")
+    # Step 3: Group files by pulsar and create MetaPulsars
+    print("Step 3: Grouping files by pulsar and creating MetaPulsars...")
     factory = MetaPulsarFactory()
+
+    # Group files by pulsar
+    pulsar_groups = factory.group_files_by_pulsar(file_data_with_files)
+
+    print(f"Found {len(pulsar_groups)} pulsars: {list(pulsar_groups.keys())}")
+
     # Use the first PTA with files as reference
     reference_pta = list(file_data_with_files.keys())[0]
-    factory.create_metapulsar(
-        file_data_with_files,
-        combination_strategy="consistent",
-        reference_pta=reference_pta,
-    )
+
+    # Create MetaPulsars for each pulsar
+    metapulsars = {}
+    for pulsar_name, pulsar_file_data in pulsar_groups.items():
+        print(f"Creating MetaPulsar for {pulsar_name}...")
+        metapulsar = factory.create_metapulsar(
+            pulsar_file_data,
+            combination_strategy="consistent",
+            reference_pta=reference_pta,
+        )
+        metapulsars[pulsar_name] = metapulsar
+        print(f"  Created MetaPulsar: {metapulsar.name}")
+
+    print(f"Successfully created {len(metapulsars)} MetaPulsars")
 
     # Step 4: Create staggered selection for Enterprise
     print("Step 4: Creating staggered selection for Enterprise...")
@@ -75,6 +90,7 @@ def main():
     print("1. Use the MetaPulsar data with Enterprise models")
     print("2. Apply the staggered selection to your analysis")
     print("3. Run gravitational wave searches")
+    print(f"4. Process {len(metapulsars)} MetaPulsars: {list(metapulsars.keys())}")
 
     print("\n=== Enterprise Integration Complete ===")
     print("This example demonstrates how to integrate MetaPulsar with Enterprise.")
