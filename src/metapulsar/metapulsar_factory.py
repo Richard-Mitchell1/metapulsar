@@ -4,7 +4,7 @@ This module provides a factory class that creates MetaPulsars by discovering fil
 creating Enterprise Pulsars, and wrapping them with metadata.
 """
 
-from typing import Dict, List, Tuple, Union, Optional, Any
+from typing import Dict, List, Tuple, Optional, Any
 from pathlib import Path
 import re
 from datetime import datetime
@@ -17,9 +17,9 @@ except ImportError:
     PintPulsar = None
     Tempo2Pulsar = None
 
-# Import MetaPulsar and ParFileManager
+# Import MetaPulsar and ParameterManager
 from .metapulsar import MetaPulsar
-from .parfile_manager import ParFileManager
+from .parameter_manager import ParameterManager
 
 # Import PINT for model creation
 try:
@@ -52,7 +52,7 @@ class MetaPulsarFactory:
         This factory only handles object creation from provided file paths.
         """
         self.logger = logger
-        self.parfile_manager = ParFileManager()
+        # ParameterManager will be instantiated as needed in methods
 
     def create_metapulsar(
         self,
@@ -109,7 +109,7 @@ class MetaPulsarFactory:
 
     def create_metapulsar_from_file_data(
         self,
-        file_data: Dict[str, List[Dict[str, Any]]],  # Enriched format
+        file_data: Dict[str, List[Dict[str, Any]]],  # File data format
         combination_strategy: str = "consistent",
         reference_pta: str = None,
         combine_components: List[str] = [
@@ -123,66 +123,160 @@ class MetaPulsarFactory:
         """Create MetaPulsar using specified combination strategy.
 
         Args:
-            pta_names: List of PTA names to include
+            file_data: File data from FileDiscoveryService
             combination_strategy: "composite" or "consistent"
             reference_pta: PTA to use as reference (for consistent strategy)
             combine_components: List of components to make consistent (for consistent strategy)
+                          Defaults to all components
             add_dm_derivatives: Whether to ensure DM1, DM2 are present (for consistent strategy)
         """
+        # Convert file data to single file per PTA format
+        single_file_data = {}
+        for pta_name, file_list in file_data.items():
+            if not file_list:
+                raise ValueError(f"No files found for PTA {pta_name}")
+            single_file_data[pta_name] = file_list[0]  # Take first file
 
-        # Use coordinate-based discovery to find all pulsars
-        # coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
-
-        # 2. Prepare par files for processing
-        parfiles_for_dicts = {
-            pta: file_list[0]["par"] for pta, file_list in file_data.items()
-        }
-
-        # Create file_pairs from the enriched file data
+        # Create file_pairs from the file data
         file_pairs = {
             pta: (file_dict["par"], file_dict["tim"])
-            for pta, file_list in file_data.items()
-            for file_dict in file_list
+            for pta, file_dict in single_file_data.items()
         }
 
-        # 3. Process par files if consistent strategy
+        # Process par files if consistent strategy
         if combination_strategy == "consistent":
-            # This function is broken now on purpose
-            consistent_parfiles = self.parfile_manager.write_consistent_parfiles(
-                file_data,
-                reference_pta,
-                combine_components,
-                add_dm_derivatives,
+            # Create ParameterManager for parfile consistency
+            parameter_manager = ParameterManager(
+                file_data=single_file_data,
+                reference_pta=reference_pta,
+                combine_components=combine_components,
+                add_dm_derivatives=add_dm_derivatives,
             )
 
-            # This function is also broken now on purpose
+            # Make par files consistent
+            consistent_parfiles = parameter_manager.make_parfiles_consistent()
+
+            # Update file_pairs with consistent par files
             file_pairs = {
-                pta: (consistent_parfiles[pta], file_list[0]["tim"])
-                for pta, file_list in file_data.items()
-                if pta in consistent_parfiles and pta in file_data
+                pta: (consistent_parfiles[pta], single_file_data[pta]["tim"])
+                for pta in single_file_data.keys()
+                if pta in consistent_parfiles
             }
 
-            # Update parfiles_for_dicts with consistent par files
-            parfiles_for_dicts = consistent_parfiles
+        # Create PINT/Tempo2 objects from file pairs using file data
+        pulsars = self._create_pulsar_objects(file_pairs, single_file_data)
 
-        # 4. Create parfile dictionaries
-        parfile_dicts = self._create_parfile_dicts_from_files(parfiles_for_dicts)
-
-        # This function is also broken now on purpose
-        # 5. Create PINT/Tempo2 objects from file pairs
-        pulsars = self._create_raw_pulsars(file_pairs)
-
-        # 6. Get canonical name
-        # This is also broken now on purpose
-        canonical_name = self._get_canonical_name_for_pulsar(file_pairs)
-
-        # 7. Create MetaPulsar
+        # Create MetaPulsar with new constructor pattern
+        # Canonical name is automatically calculated from pulsar data
         return MetaPulsar(
             pulsars=pulsars,
-            parfile_dicts=parfile_dicts,
             combination_strategy=combination_strategy,
-            canonical_name=canonical_name,
+            reference_pta=reference_pta,
+            combine_components=combine_components,
+            add_dm_derivatives=add_dm_derivatives,
         )
+
+    def create_all_metapulsars(
+        self,
+        file_data: Dict[str, List[Dict[str, Any]]],
+        combination_strategy: str = "consistent",
+        reference_pta: str = None,
+        combine_components: List[str] = [
+            "astrometry",
+            "spindown",
+            "binary",
+            "dispersion",
+        ],
+        add_dm_derivatives: bool = True,
+    ) -> Dict[str, MetaPulsar]:
+        """Create MetaPulsars for all available pulsars using file data.
+
+        Args:
+            file_data: File data from FileDiscoveryService
+            combination_strategy: Strategy for combining PTAs
+            reference_pta: PTA to use as reference (for consistent strategy)
+            combine_components: List of components to make consistent
+            add_dm_derivatives: Whether to ensure DM1, DM2 are present
+
+        Returns:
+            Dictionary mapping pulsar names to MetaPulsar objects
+        """
+        # Group files by pulsar using coordinate-based identification
+        pulsar_groups = self._discover_pulsars_by_coordinates(file_data)
+
+        metapulsars = {}
+
+        self.logger.info(f"Creating MetaPulsars for {len(pulsar_groups)} pulsars")
+
+        for pulsar_name, pulsar_file_data in pulsar_groups.items():
+            try:
+                # Create MetaPulsar for this pulsar
+                metapulsar = self.create_metapulsar_from_file_data(
+                    file_data=pulsar_file_data,
+                    combination_strategy=combination_strategy,
+                    reference_pta=reference_pta,
+                    combine_components=combine_components,
+                    add_dm_derivatives=add_dm_derivatives,
+                )
+
+                # Canonical name is automatically calculated from pulsar data
+                metapulsars[pulsar_name] = metapulsar
+
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to create MetaPulsar for {pulsar_name}: {e}"
+                )
+
+        self.logger.info(f"Successfully created {len(metapulsars)} MetaPulsars")
+        return metapulsars
+
+    def _create_pulsar_objects(
+        self,
+        file_pairs: Dict[str, Tuple[Path, Path]],
+        file_data: Dict[str, Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """Create PINT/Tempo2 objects from file pairs using file data.
+
+        Args:
+            file_pairs: Dictionary mapping PTA names to (parfile, timfile) tuples
+            file_data: Dictionary mapping PTA names to file dictionaries
+                      Contains timing_package info from FileDiscoveryService
+
+        Returns:
+            Dictionary mapping PTA names to PINT/Tempo2 objects
+        """
+        pulsar_objects = {}
+
+        for pta_name, (parfile, timfile) in file_pairs.items():
+            # Get timing package info from file data
+            timing_package = file_data[pta_name]["timing_package"]
+
+            try:
+                if timing_package == "pint":
+                    # Create PINT objects
+                    if get_model_and_toas is None:
+                        raise RuntimeError("PINT not available for PINT creation")
+
+                    model, toas = get_model_and_toas(str(parfile), str(timfile))
+                    pulsar_objects[pta_name] = (model, toas)
+
+                else:  # tempo2
+                    # Create Tempo2 object
+                    if t2 is None:
+                        raise RuntimeError(
+                            "libstempo not available for Tempo2 creation"
+                        )
+
+                    t2_psr = t2.tempopulsar(str(parfile), str(timfile))
+                    pulsar_objects[pta_name] = t2_psr
+
+                self.logger.debug(f"Created {timing_package} object for {pta_name}")
+
+            except Exception as e:
+                self.logger.error(f"Failed to create pulsar for {pta_name}: {e}")
+                raise RuntimeError(f"Failed to create pulsar for {pta_name}: {e}")
+
+        return pulsar_objects
 
     def _create_parfile_dicts_from_files(
         self, parfile_files: Dict[str, Path]
@@ -280,78 +374,23 @@ class MetaPulsarFactory:
 
         return raw_pulsars
 
-    def create_all_metapulsars(
-        self, pta_names: List[str] = None
-    ) -> Dict[str, MetaPulsar]:
-        """Create MetaPulsars for all available pulsars.
-
-        Args:
-            pta_names: List of PTA names to include. If None, uses all available PTAs.
-
-        Returns:
-            Dictionary mapping pulsar names to MetaPulsar objects
-        """
-        available_pulsars = self.discover_available_pulsars(pta_names)
-        metapulsars = {}
-
-        self.logger.info(f"Creating MetaPulsars for {len(available_pulsars)} pulsars")
-
-        for pulsar_name in available_pulsars:
-            try:
-                metapulsars[pulsar_name] = self.create_metapulsar(
-                    pulsar_name, pta_names
-                )
-            except Exception as e:
-                self.logger.warning(
-                    f"Failed to create MetaPulsar for {pulsar_name}: {e}"
-                )
-
-        self.logger.info(f"Successfully created {len(metapulsars)} MetaPulsars")
-        return metapulsars
-
-    def discover_available_pulsars(self, pta_names: List[str] = None) -> List[str]:
-        """Discover all available pulsars using coordinate-based matching.
-
-        Args:
-            pta_names: List of PTA names to search. If None, searches all PTAs.
-
-        Returns:
-            List of canonical pulsar names (B-names preferred, J-names as fallback)
-        """
-        pta_configs = (
-            self.registry.get_pta_subset(pta_names)
-            if pta_names
-            else self.registry.configs
-        )
-
-        # Use coordinate-based discovery instead of filename-based
-        coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
-
-        # Return preferred names (B-names when available, J-names otherwise)
-        pulsar_list = sorted(
-            [info["preferred_name"] for info in coordinate_map.values()]
-        )
-        self.logger.info(
-            f"Discovered {len(pulsar_list)} unique pulsars across {len(pta_configs)} PTAs"
-        )
-        return pulsar_list
-
     def _discover_pulsars_by_coordinates(
-        self, pta_configs: Dict[str, Dict]
-    ) -> Dict[str, Dict]:
-        """Discover pulsars by reading par files and extracting coordinates."""
+        self, file_data: Dict[str, List[Dict[str, Any]]]
+    ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+        """Discover pulsars by reading par files and extracting coordinates from file data."""
         from pint.models.model_builder import ModelBuilder
         from io import StringIO
 
         coordinate_map = {}
         builder = ModelBuilder()
 
-        for pta_name, config in pta_configs.items():
-            for parfile_path in self._discover_parfiles_in_pta(config):
+        for pta_name, file_list in file_data.items():
+            for file_dict in file_list:
                 try:
-                    # Create minimal parfile to avoid noise parameter validation
+                    # Use pre-read parfile content from file data
+                    parfile_content = file_dict["par_content"]
                     minimal_par_content = self._create_minimal_parfile_for_coordinates(
-                        parfile_path
+                        parfile_content
                     )
 
                     # Use minimal parfile for coordinate extraction
@@ -359,59 +398,42 @@ class MetaPulsarFactory:
                         StringIO(minimal_par_content), allow_tcb=True, allow_T2=True
                     )
 
-                    # Extract pulsar name from PINT model
-                    pulsar_name = model.PSR.value
-
                     # Extract coordinates using PINT's full capabilities
                     j_name = bj_name_from_pulsar(model, "J")
-                    b_name = bj_name_from_pulsar(model, "B")
 
                     if j_name not in coordinate_map:
-                        coordinate_map[j_name] = {
-                            "ptas": [],
-                            "files": {},
-                            "preferred_name": j_name,
-                            "suffix": "",
-                            "b_name": b_name,
-                        }
+                        coordinate_map[j_name] = {}
 
-                    coordinate_map[j_name]["ptas"].append(pta_name)
+                    if pta_name not in coordinate_map[j_name]:
+                        coordinate_map[j_name][pta_name] = []
 
-                    # Find corresponding tim file using simple string matching
-                    timfile = self._find_timfile_by_name(pulsar_name, config)
-
-                    coordinate_map[j_name]["files"][pta_name] = (parfile_path, timfile)
-
-                    # Prefer B-name if available
-                    if b_name and not coordinate_map[j_name][
-                        "preferred_name"
-                    ].startswith("B"):
-                        coordinate_map[j_name]["preferred_name"] = b_name
+                    coordinate_map[j_name][pta_name].append(file_dict)
 
                 except ValueError as e:
                     # Re-raise ValueError from bj_name_from_pulsar (malformed parfiles)
                     raise e
                 except Exception as e:
                     # Log other exceptions (file I/O, etc.) as warnings
-                    self.logger.warning(f"Failed to process {parfile_path}: {e}")
+                    self.logger.warning(f"Failed to process {file_dict['par']}: {e}")
 
         return coordinate_map
 
-    def _create_minimal_parfile_for_coordinates(self, parfile_path: Path) -> str:
-        """Create minimal parfile for coordinate discovery using ParFileManager."""
-
-        # Read and parse the parfile
-        with open(parfile_path, "r") as f:
-            parfile_content = f.read()
-
+    def _create_minimal_parfile_for_coordinates(self, parfile_content: str) -> str:
+        """Create minimal parfile for coordinate discovery using ParameterManager."""
         # Parse into dictionary using PINT
         from pint.models.model_builder import parse_parfile
         from io import StringIO
 
         parfile_dict = parse_parfile(StringIO(parfile_content))
 
-        # Use ParFileManager's generalized method
-        return self.parfile_manager._create_minimal_parfile_for_component(
+        # Create ParameterManager with pre-read content (no temp files needed!)
+        temp_file_data = {
+            "temp": {"par_content": parfile_content, "timespan_days": 1000.0}
+        }
+        temp_manager = ParameterManager(temp_file_data)
+
+        # Use ParameterManager's component extraction method
+        return temp_manager._create_minimal_parfile_for_component(
             parfile_dict, "astrometry"
         )
 
@@ -472,54 +494,6 @@ class MetaPulsarFactory:
             )
 
         return matching_pulsar["files"]
-
-    def _resolve_canonical_name(
-        self, enterprise_pulsars: Dict[str, Union[PintPulsar, Tempo2Pulsar]]
-    ) -> str:
-        """Resolve canonical name using position helpers.
-
-        Args:
-            enterprise_pulsars: Dictionary of Enterprise Pulsars
-
-        Returns:
-            Canonical J-name for the pulsar (used as internal identifier)
-        """
-        # Use the first Enterprise Pulsar to get coordinates
-        first_pulsar = next(iter(enterprise_pulsars.values()))
-
-        # Use existing position helpers for robust name resolution
-        try:
-            return bj_name_from_pulsar(
-                first_pulsar, "J"
-            )  # Use J for internal identification
-        except Exception as e:
-            self.logger.warning(f"Failed to resolve canonical name: {e}")
-            # Fallback to a generic name
-            return "UNKNOWN"
-
-    def _get_canonical_name_for_pulsar(
-        self, pulsar_name: str, pta_configs: Dict[str, Dict[str, Any]]
-    ) -> str:
-        """Get the canonical name (with suffix) for a pulsar."""
-        # This functions will need to call a different _discover_pulsars_by_coordinates function
-        if hasattr(self, "_cached_coordinate_map"):
-            coordinate_map = self._cached_coordinate_map
-        else:
-            coordinate_map = self._discover_pulsars_by_coordinates(pta_configs)
-            self._cached_coordinate_map = coordinate_map
-
-        for j_name, pulsar_info in coordinate_map.items():
-            if (
-                pulsar_name == j_name
-                or pulsar_name == pulsar_info["preferred_name"]
-                or pulsar_name == pulsar_info["b_name"]
-            ):
-                canonical_name = pulsar_info["preferred_name"]
-                if pulsar_info["suffix"]:
-                    canonical_name += pulsar_info["suffix"]
-                return canonical_name
-
-        return pulsar_name
 
     def _build_metadata(
         self, file_pairs: Dict[str, Tuple[Path, Path]], pta_configs: Dict[str, Dict]

@@ -1,6 +1,7 @@
 """Tests for Meta-Pulsar Factory."""
 
 from pathlib import Path
+from unittest.mock import Mock, patch
 from metapulsar.metapulsar_factory import MetaPulsarFactory
 from metapulsar.file_discovery_service import FileDiscoveryService
 
@@ -14,10 +15,11 @@ class TestMetaPulsarFactory:
         self.discovery_service = FileDiscoveryService()
 
     def test_initialization(self):
-        """Test factory initialization."""
+        """Test factory initialization without ParFileManager."""
         factory = MetaPulsarFactory()
         assert factory.logger is not None
-        assert factory.parfile_manager is not None
+        # Should not have parfile_manager attribute anymore
+        assert not hasattr(factory, "parfile_manager")
 
     def test_create_metapulsar_with_file_data(self):
         """Test create_metapulsar with enriched file data."""
@@ -34,7 +36,7 @@ class TestMetaPulsarFactory:
         # This test will need to be updated once the implementation is complete
         # For now, just test that the method accepts the new signature
         try:
-            result = self.factory.create_metapulsar(file_data)
+            self.factory.create_metapulsar(file_data)
             # Implementation is stubbed, so this will likely fail
         except Exception:
             # Expected since implementation is not complete
@@ -71,14 +73,17 @@ class TestMetaPulsarFactory:
         # This test will need to be updated once the implementation is complete
         # For now, just test that the method accepts the new signature
         try:
-            result = self.factory.create_metapulsars_from_file_data(file_data)
+            self.factory.create_metapulsars_from_file_data(file_data)
             # Implementation is stubbed, so this will likely fail
         except Exception:
             # Expected since implementation is not complete
             pass
 
-    def test_create_metapulsar_success(self):
+    @patch("metapulsar.position_helpers.bj_name_from_pulsar")
+    def test_create_metapulsar_success(self, mock_bj_name):
         """Test successful MetaPulsar creation using MockPulsar directly."""
+        # Mock position helper
+        mock_bj_name.return_value = "J1857+0943"
         # Create MockPulsar objects directly instead of going through factory
         from metapulsar.mockpulsar import MockPulsar
         from metapulsar.mock_utils import (
@@ -107,16 +112,12 @@ class TestMetaPulsarFactory:
 
         adapted_pulsar = create_libstempo_adapter(mock_psr)
         pulsars = {"test_pta": adapted_pulsar}
-        metapulsar = MetaPulsar(
-            pulsars=pulsars,
-            combination_strategy="composite",
-            canonical_name="J1857+0943",
-        )
+        metapulsar = MetaPulsar(pulsars=pulsars, combination_strategy="composite")
 
         assert metapulsar is not None
         assert hasattr(metapulsar, "pulsars")
         assert len(metapulsar.pulsars) == 1
-        assert metapulsar.canonical_name == "J1857+0943"
+        assert metapulsar.name == "J1857+0943"
 
     def test_create_metapulsar_invalid_file_data(self):
         """Test MetaPulsar creation with invalid file data."""
@@ -125,7 +126,7 @@ class TestMetaPulsarFactory:
 
         # This test will need to be updated once the implementation is complete
         try:
-            result = self.factory.create_metapulsar(empty_file_data)
+            self.factory.create_metapulsar(empty_file_data)
         except Exception:
             # Expected since implementation is not complete
             pass
@@ -143,7 +144,7 @@ class TestMetaPulsarFactory:
             file_data = self.discovery_service.discover_all_files_in_ptas(["epta_dr2"])
 
             # Create MetaPulsars from discovered files
-            result = self.factory.create_metapulsars_from_file_data(file_data)
+            self.factory.create_metapulsars_from_file_data(file_data)
 
             # This test will need to be updated once the implementation is complete
         except Exception:
@@ -195,3 +196,171 @@ class TestMetaPulsarFactory:
         assert "creation_timestamp" in metadata
         assert metadata["timing_packages"]["epta_dr2"] == "tempo2"
         assert metadata["timing_packages"]["ppta_dr3"] == "tempo2"
+
+    @patch("metapulsar.metapulsar_factory.ParameterManager")
+    def test_create_metapulsar_with_consistent_strategy(self, mock_param_manager):
+        """Test create_metapulsar with consistent strategy using ParameterManager."""
+        # Mock ParameterManager
+        mock_manager_instance = Mock()
+        mock_manager_instance.make_parfiles_consistent.return_value = {
+            "epta_dr2": Path("/tmp/consistent_epta_dr2.par")
+        }
+        mock_param_manager.return_value = mock_manager_instance
+
+        # Create mock file data
+        file_data = {
+            "epta_dr2": [
+                {
+                    "par": Path("/data/epta/J1857+0943.par"),
+                    "tim": Path("/data/epta/J1857+0943.tim"),
+                    "timing_package": "pint",
+                    "timespan_days": 1000.0,
+                    "priority": 1,
+                }
+            ]
+        }
+
+        # Mock the pulsar creation and MetaPulsar creation to avoid complex setup
+        with patch.object(
+            self.factory, "_create_pulsar_objects"
+        ) as mock_create_pulsars:
+            with patch(
+                "metapulsar.metapulsar_factory.MetaPulsar"
+            ) as mock_metapulsar_class:
+                mock_metapulsar = Mock()
+                mock_metapulsar_class.return_value = mock_metapulsar
+                mock_create_pulsars.return_value = {"epta_dr2": Mock()}
+
+                # Test the ParameterManager integration
+                result = self.factory.create_metapulsar(
+                    file_data,
+                    combination_strategy="consistent",
+                    combine_components=["astrometry", "spindown"],
+                )
+
+                # Verify ParameterManager was called with correct parameters
+                mock_param_manager.assert_called_once()
+                call_args = mock_param_manager.call_args
+                assert call_args[1]["combine_components"] == ["astrometry", "spindown"]
+
+                # Verify the result
+                assert result == mock_metapulsar
+
+    def test_create_pulsar_objects_pint(self):
+        """Test _create_pulsar_objects with PINT timing package."""
+        file_pairs = {
+            "epta_dr2": (
+                Path("/data/epta/J1857+0943.par"),
+                Path("/data/epta/J1857+0943.tim"),
+            )
+        }
+        file_data = {
+            "epta_dr2": {
+                "par": Path("/data/epta/J1857+0943.par"),
+                "tim": Path("/data/epta/J1857+0943.tim"),
+                "timing_package": "pint",
+                "timespan_days": 1000.0,
+                "priority": 1,
+            }
+        }
+
+        with patch(
+            "metapulsar.metapulsar_factory.get_model_and_toas"
+        ) as mock_get_model:
+            mock_model = Mock()
+            mock_toas = Mock()
+            mock_get_model.return_value = (mock_model, mock_toas)
+
+            result = self.factory._create_pulsar_objects(file_pairs, file_data)
+
+            assert "epta_dr2" in result
+            assert result["epta_dr2"] == (mock_model, mock_toas)
+            mock_get_model.assert_called_once_with(
+                str(file_pairs["epta_dr2"][0]), str(file_pairs["epta_dr2"][1])
+            )
+
+    def test_create_pulsar_objects_tempo2(self):
+        """Test _create_pulsar_objects with Tempo2 timing package."""
+        file_pairs = {
+            "epta_dr2": (
+                Path("/data/epta/J1857+0943.par"),
+                Path("/data/epta/J1857+0943.tim"),
+            )
+        }
+        file_data = {
+            "epta_dr2": {
+                "par": Path("/data/epta/J1857+0943.par"),
+                "tim": Path("/data/epta/J1857+0943.tim"),
+                "timing_package": "tempo2",
+                "timespan_days": 1000.0,
+                "priority": 1,
+            }
+        }
+
+        with patch("metapulsar.metapulsar_factory.t2") as mock_t2:
+            mock_psr = Mock()
+            mock_t2.tempopulsar.return_value = mock_psr
+
+            result = self.factory._create_pulsar_objects(file_pairs, file_data)
+
+            assert "epta_dr2" in result
+            assert result["epta_dr2"] == mock_psr
+            mock_t2.tempopulsar.assert_called_once_with(
+                str(file_pairs["epta_dr2"][0]), str(file_pairs["epta_dr2"][1])
+            )
+
+    def test_discover_pulsars_by_coordinates(self):
+        """Test _discover_pulsars_by_coordinates method with proper mocking."""
+        file_data = {
+            "epta_dr2": [
+                {
+                    "par": Path("/data/epta/J1857+0943.par"),
+                    "tim": Path("/data/epta/J1857+0943.tim"),
+                    "par_content": "PSR J1857+0943\nRAJ 18:57:36.4\nDECJ 09:43:17.1\n",
+                    "timing_package": "pint",
+                    "timespan_days": 1000.0,
+                    "priority": 1,
+                }
+            ]
+        }
+
+        # Mock the entire _create_minimal_parfile_for_coordinates method to avoid complex dependencies
+        with patch.object(
+            self.factory, "_create_minimal_parfile_for_coordinates"
+        ) as mock_create_minimal:
+            mock_create_minimal.return_value = (
+                "PSR J1857+0943\nRAJ 18:57:36.4\nDECJ 09:43:17.1\n"
+            )
+
+            with patch("pint.models.model_builder.ModelBuilder") as mock_builder:
+                # Create a proper mock model with astropy Quantity objects
+                from astropy import units as u
+                from astropy.coordinates import Angle
+
+                mock_model = Mock()
+                mock_model.PSR.value = "J1857+0943"
+
+                # Create proper astropy Quantity objects for RAJ and DECJ
+                # For J1857+0943: RAJ = 18:57:36.4 = 18.9601 hours, DECJ = 09:43:17.1 = 9.7214 degrees
+                mock_raj = Mock()
+                mock_raj.quantity = Angle(18.9601, unit=u.hourangle)  # RA in hours
+                mock_model.RAJ = mock_raj
+
+                mock_decj = Mock()
+                mock_decj.quantity = Angle(9.7214, unit=u.deg)  # Dec in degrees
+                mock_model.DECJ = mock_decj
+
+                mock_builder_instance = Mock()
+                mock_builder_instance.return_value = mock_model
+                mock_builder.return_value = mock_builder_instance
+
+                with patch(
+                    "metapulsar.position_helpers.bj_name_from_pulsar"
+                ) as mock_bj_name:
+                    mock_bj_name.return_value = "J1857+0943"
+
+                    result = self.factory._discover_pulsars_by_coordinates(file_data)
+
+                    assert "J1857+0943" in result
+                    assert "epta_dr2" in result["J1857+0943"]
+                    assert len(result["J1857+0943"]["epta_dr2"]) == 1

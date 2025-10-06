@@ -203,7 +203,7 @@ class TestCoordinateBasedDiscovery:
         mock_model_builder_class.return_value = mock_model_builder
 
         # Update registry with real paths
-        registry = mock_pta_registry
+        registry = mock_file_discovery_service
         registry.configs["test_pta1"]["base_dir"] = str(mock_file_system / "data1")
         registry.configs["test_pta2"]["base_dir"] = str(mock_file_system / "data2")
 
@@ -226,42 +226,6 @@ class TestCoordinateBasedDiscovery:
 
     # Note: _extract_suffix_from_filename and _find_file methods were removed in refactor
     # These tests are no longer applicable as the functionality was replaced with PINT-based approach
-
-    def test_get_canonical_name_for_pulsar(self, mock_file_discovery_service):
-        """Test canonical name resolution."""
-        factory = MetaPulsarFactory()
-
-        # Mock coordinate discovery
-        with patch.object(factory, "_discover_pulsars_by_coordinates") as mock_discover:
-            mock_discover.return_value = {
-                "J1857+0943": {
-                    "preferred_name": "B1855+09",
-                    "suffix": "A",
-                    "b_name": "B1855+09",
-                }
-            }
-
-            canonical_name = factory._get_canonical_name_for_pulsar(
-                "J1857+0943", mock_pta_registry.configs
-            )
-            assert canonical_name == "B1855+09A"
-
-            canonical_name = factory._get_canonical_name_for_pulsar(
-                "B1855+09", mock_pta_registry.configs
-            )
-            assert canonical_name == "B1855+09A"
-
-    def test_get_canonical_name_fallback(self, mock_file_discovery_service):
-        """Test canonical name fallback when pulsar not found."""
-        factory = MetaPulsarFactory()
-
-        with patch.object(factory, "_discover_pulsars_by_coordinates") as mock_discover:
-            mock_discover.return_value = {}
-
-            canonical_name = factory._get_canonical_name_for_pulsar(
-                "UNKNOWN", mock_pta_registry.configs
-            )
-            assert canonical_name == "UNKNOWN"
 
     # Note: Over-mocked tests removed - they tested mock behavior rather than actual functionality
     # Real coordinate-based discovery is tested in integration tests with actual data
@@ -301,12 +265,11 @@ class TestCoordinateBasedDiscovery:
         metapulsar = MetaPulsar(
             pulsars=adapted_pulsars,
             combination_strategy="composite",
-            canonical_name="J1857+0943",
         )
 
         assert isinstance(metapulsar, MetaPulsar)
-        assert hasattr(metapulsar, "canonical_name")
-        assert metapulsar.canonical_name == "J1857+0943"
+        assert hasattr(metapulsar, "name")
+        # The name will be determined from the pulsar data, not from a parameter
         assert hasattr(metapulsar, "pulsars")
         assert len(metapulsar.pulsars) == 2
 
@@ -328,12 +291,16 @@ class TestCoordinateBasedDiscovery:
             }
 
             # Test with J-name
-            files = factory.discover_files("J1857+0943", mock_pta_registry.configs)
+            files = factory.discover_files(
+                "J1857+0943", mock_file_discovery_service.configs
+            )
             assert "test_pta1" in files
             assert "test_pta2" in files
 
             # Test with B-name
-            files = factory.discover_files("B1855+09", mock_pta_registry.configs)
+            files = factory.discover_files(
+                "B1855+09", mock_file_discovery_service.configs
+            )
             assert "test_pta1" in files
             assert "test_pta2" in files
 
@@ -345,48 +312,7 @@ class TestCoordinateBasedDiscovery:
             mock_discover.return_value = {}
 
             with pytest.raises(ValueError, match="Pulsar 'UNKNOWN' not found"):
-                factory.discover_files("UNKNOWN", mock_pta_registry.configs)
-
-
-class TestMetaPulsarCanonicalName:
-    """Test MetaPulsar canonical_name parameter."""
-
-    def test_metapulsar_canonical_name_parameter(self):
-        """Test MetaPulsar accepts canonical_name parameter."""
-        # Create a simple test that just checks the canonical_name parameter
-        # without triggering complex initialization
-        from src.metapulsar.metapulsar import MetaPulsar
-
-        # Test that the parameter is accepted in the constructor
-        # We'll use a minimal approach that doesn't trigger full initialization
-        class MinimalMetaPulsar(MetaPulsar):
-            def __init__(
-                self,
-                pulsars,
-                *,
-                combination_strategy="composite",
-                canonical_name=None,
-                **kwargs,
-            ):
-                # Just test the parameter assignment without full initialization
-                self.canonical_name = canonical_name
-
-        # Test with canonical name
-        metapulsar = MinimalMetaPulsar(pulsars={}, canonical_name="B1857+09A")
-        assert metapulsar.canonical_name == "B1857+09A"
-
-        # Test without canonical name
-        metapulsar = MinimalMetaPulsar(pulsars={})
-        assert metapulsar.canonical_name is None
-
-    def test_metapulsar_canonical_name_docstring(self):
-        """Test MetaPulsar docstring includes canonical_name parameter."""
-        import inspect
-        from metapulsar.metapulsar import MetaPulsar
-
-        docstring = inspect.getdoc(MetaPulsar.__init__)
-        assert "canonical_name" in docstring
-        assert "B1857+09A" in docstring
+                factory.discover_files("UNKNOWN", mock_file_discovery_service.configs)
 
 
 class TestEdgeCases:
@@ -400,7 +326,7 @@ class TestEdgeCases:
         malformed_par = mock_file_system / "data1" / "malformed.par"
         malformed_par.write_text("This is not a valid parfile")
 
-        registry = mock_pta_registry
+        registry = mock_file_discovery_service
         registry.configs["test_pta1"]["base_dir"] = str(mock_file_system / "data1")
 
         factory = MetaPulsarFactory(registry)

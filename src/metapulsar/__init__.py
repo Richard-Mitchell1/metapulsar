@@ -10,7 +10,6 @@ from .metapulsar import MetaPulsar
 # New factory architecture imports
 from .file_discovery_service import FileDiscoveryService
 from .metapulsar_factory import MetaPulsarFactory
-from .parfile_manager import ParFileManager
 
 __version__ = "0.1.0"
 __author__ = "Rutger van Haasteren, Wangwei Yu"
@@ -24,6 +23,5 @@ __all__ = [
     "MetaPulsar",
     "FileDiscoveryService",
     "MetaPulsarFactory",
-    "ParFileManager",
     "create_staggered_selection",
 ]

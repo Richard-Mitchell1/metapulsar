@@ -1,6 +1,7 @@
 """Main MetaPulsar class for combining multi-PTA pulsar timing data."""
 
 from itertools import groupby
+from typing import List
 import numpy as np
 from loguru import logger
 
@@ -14,7 +15,7 @@ from pint.toa import TOAs
 # Import libstempo
 
 # Import our supporting infrastructure
-from .metapulsar_parameter_manager import MetaPulsarParameterManager
+from .parameter_manager import ParameterManager
 from .position_helpers import bj_name_from_pulsar
 
 
@@ -33,14 +34,16 @@ class MetaPulsar(ep.BasePulsar):
     def __init__(
         self,
         pulsars,
-        parfile_dicts=None,
-        *,
+        *,  # Remove parfile_dicts parameter
         combination_strategy="consistent",
-        canonical_name=None,
-        merge_astrometry=True,
-        merge_spin=True,
-        merge_binary=True,
-        merge_dispersion=True,
+        reference_pta: str = None,
+        combine_components: List[str] = [
+            "astrometry",
+            "spindown",
+            "binary",
+            "dispersion",
+        ],
+        add_dm_derivatives: bool = True,
         sort=True,
     ):
         """Create MetaPulsar from multiple PTA pulsars.
@@ -49,26 +52,27 @@ class MetaPulsar(ep.BasePulsar):
             pulsars: Dict mapping PTA names to pulsar data:
                 - PINT: {pta: (pint_model, pint_toas)}
                 - Tempo2: {pta: tempo2_psr}
-            parfile_dicts: Dict mapping PTA names to parfile dictionaries (optional)
             combination_strategy: Strategy for combining PTAs:
                 - "consistent": Astrophysical consistency (modifies par files for consistency)
                 - "composite": Multi-PTA composition (preserves original parameters)
-            canonical_name: Canonical name for the pulsar (e.g., "B1857+09A"). Default is None.
-            merge_astrometry: Whether to make astrometry parameters consistent (consistent strategy only)
-            merge_spin: Whether to make spin parameters consistent (consistent strategy only)
-            merge_binary: Whether to make binary parameters consistent (consistent strategy only)
-            merge_dispersion: Whether to make dispersion parameters consistent (consistent strategy only)
+            reference_pta: PTA to use as reference for consistent strategy (auto-selected if None)
+            combine_components: List of components to make consistent (consistent strategy only):
+                - "astrometry": Position and proper motion parameters
+                - "spindown": Spin frequency and derivatives
+                - "binary": Binary orbital parameters
+                - "dispersion": Dispersion measure parameters
+                Defaults to all components
+            add_dm_derivatives: Whether to ensure DM1, DM2 are present (consistent strategy only)
             sort: Whether to sort data by time
         """
         self._pulsars = pulsars
         self.pulsars = pulsars  # Public attribute for compatibility
-        self._parfile_dicts = parfile_dicts  # NEW: Store parfile dictionaries
+        # Extract parfile data from objects (unified approach)
+        self._parfile_dicts = self._get_parfile_data(pulsars)
         self.combination_strategy = combination_strategy
-        self.canonical_name = canonical_name
-        self._merge_astrometry = merge_astrometry
-        self._merge_spin = merge_spin
-        self._merge_binary = merge_binary
-        self._merge_dispersion = merge_dispersion
+        self.reference_pta = reference_pta
+        self.combine_components = combine_components
+        self.add_dm_derivatives = add_dm_derivatives
         self._sort = sort  # BasePulsar handles sorting
 
         # Elegant initialization flow
@@ -80,6 +84,9 @@ class MetaPulsar(ep.BasePulsar):
 
         # BasePulsar handles sorting automatically
         self.sort_data()
+
+        # Calculate canonical name from pulsar data using B-name preference logic
+        self.name = self._get_pulsar_name(pulsars)
 
     def validate_consistency(self):
         """Validate that all PTAs contain the same pulsar.
@@ -120,7 +127,9 @@ class MetaPulsar(ep.BasePulsar):
                 pint_models.keys(), zip(pint_models.values(), pint_toas.values())
             ):
                 try:
-                    self._epulsars[pta] = ep.PintPulsar(ptoas, pmodel, planets=False)
+                    self._epulsars[pta] = ep.PintPulsar(
+                        ptoas, pmodel
+                    )  # Use default planets=True
                 except Exception as e:
                     logger.error(f"Failed to create PintPulsar for PTA {pta}: {e}")
                     raise
@@ -196,7 +205,7 @@ class MetaPulsar(ep.BasePulsar):
             # For composite strategy, preserve original parameters from each PTA
             self._setup_composite_parameters()
         elif self.combination_strategy == "consistent":
-            # For consistent strategy, use consistent parameters (already handled by ParFileManager)
+            # For consistent strategy, use consistent parameters (already handled by ParameterManager)
             self._setup_consistent_parameters()
 
     def _setup_composite_parameters(self):
@@ -209,10 +218,22 @@ class MetaPulsar(ep.BasePulsar):
             self._setup_parameters_from_enterprise_pulsars()
             return
 
-        manager = MetaPulsarParameterManager(pint_models, self._parfile_dicts)
-        mapping = manager.build_parameter_mappings(
-            combine_components=[]  # Empty list for composite (no merging)
+        # Create file data for ParameterManager
+        file_data = {}
+        for pta_name, model in pint_models.items():
+            # Create minimal file data structure for ParameterManager
+            file_data[pta_name] = {
+                "par": None,  # Not needed for parameter mapping
+                "par_content": model.as_parfile(),
+            }
+
+        # Create ParameterManager for parameter mapping
+        parameter_manager = ParameterManager(
+            file_data=file_data,
+            combine_components=[],  # Empty list for composite (no merging)
         )
+
+        mapping = parameter_manager.build_parameter_mappings()
 
         self._fitparameters = mapping.fitparameters
         self._setparameters = mapping.setparameters
@@ -230,20 +251,27 @@ class MetaPulsar(ep.BasePulsar):
             return
 
         # Convert individual merge flags to combine_components list
-        combine_components = []
-        if self._merge_astrometry:
-            combine_components.append("astrometry")
-        if self._merge_spin:
-            combine_components.append("spindown")
-        if self._merge_binary:
-            combine_components.append("binary")
-        if self._merge_dispersion:
-            combine_components.append("dispersion")
+        # Use combine_components from constructor
+        combine_components = self.combine_components
 
-        manager = MetaPulsarParameterManager(pint_models, self._parfile_dicts)
-        mapping = manager.build_parameter_mappings(
-            combine_components=combine_components  # Pass the list directly
+        # Create file data for ParameterManager
+        file_data = {}
+        for pta_name, model in pint_models.items():
+            # Create minimal file data structure for ParameterManager
+            file_data[pta_name] = {
+                "par": None,  # Not needed for parameter mapping
+                "par_content": model.as_parfile(),
+            }
+
+        # Create ParameterManager for parameter mapping
+        parameter_manager = ParameterManager(
+            file_data=file_data,
+            reference_pta=self.reference_pta,
+            combine_components=combine_components,
+            add_dm_derivatives=self.add_dm_derivatives,
         )
+
+        mapping = parameter_manager.build_parameter_mappings()
 
         self._fitparameters = mapping.fitparameters
         self._setparameters = mapping.setparameters
@@ -511,6 +539,71 @@ class MetaPulsar(ep.BasePulsar):
         self._planetssb = ref_psr._planetssb
         self._sunssb = ref_psr._sunssb
         self._pdist = ref_psr._pdist
+
+    def _get_parfile_data(self, pulsars):
+        """Extract parfile data from pulsar objects."""
+        parfile_dicts = {}
+        for pta_name, pulsar in pulsars.items():
+            try:
+                if isinstance(pulsar, tuple) and len(pulsar) == 2:
+                    # PINT tuple (model, toas) - extract from model
+                    model, toas = pulsar
+                    parfile_dicts[pta_name] = model.get_params_dict()
+                else:
+                    # Libstempo object - extract from parfile
+                    parfile_dicts[pta_name] = pulsar.parfile
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to extract parfile data from {pta_name}: {e}"
+                )
+                parfile_dicts[pta_name] = {}
+        return parfile_dicts
+
+    def _get_pulsar_name(self, pulsars):
+        """Get canonical pulsar name with B-name preference logic.
+
+        Returns B-name if any PTA uses B-names internally, otherwise J-name.
+        Matching is always done on J-name for coordinate-based identification.
+        """
+        from .position_helpers import bj_name_from_pulsar
+
+        # Extract all pulsar names to check for B-name usage
+        pulsar_names = self._extract_pulsar_names(pulsars)
+
+        # Use first pulsar for coordinate-based name generation
+        first_pulsar = next(iter(pulsars.values()))
+
+        # Check if any PTA uses B-names and return appropriate name
+        if any(name.startswith("B") and len(name) >= 6 for name in pulsar_names):
+            return bj_name_from_pulsar(first_pulsar, "B")
+        else:
+            return bj_name_from_pulsar(first_pulsar, "J")
+
+    def _extract_pulsar_names(self, pulsars):
+        """Extract all pulsar names from PTA objects.
+
+        Args:
+            pulsars: Dictionary mapping PTA names to pulsar objects
+
+        Returns:
+            List of pulsar names from all PTAs
+        """
+        pulsar_names = []
+
+        for pta_name, pulsar in pulsars.items():
+            try:
+                if isinstance(pulsar, tuple) and len(pulsar) == 2:
+                    # PINT tuple (model, toas) - access PSR.value
+                    model, toas = pulsar
+                    pulsar_names.append(model.PSR.value)
+                else:
+                    # Libstempo object - access name property
+                    pulsar_names.append(pulsar.name)
+            except Exception as e:
+                self.logger.error(f"Failed to extract pulsar name {pta_name}: {e}")
+                raise e
+
+        return pulsar_names
 
 
 # Note: Sorting is handled by BasePulsar.sort_data() method

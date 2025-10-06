@@ -53,7 +53,7 @@ classDiagram
         +_check_dependencies()
         +_discover_files(pulsar_name, pta_configs) Dict[str, Tuple[Path, Path]]
         +_create_enterprise_pulsars(file_pairs, pta_configs) Dict[str, Union[PintPulsar, Tempo2Pulsar]]
-        +_resolve_canonical_name(enterprise_pulsars) str
+        +_get_pulsar_name(pulsars) str
         +_build_metadata(file_pairs, pta_configs) Dict[str, Any]
         +_find_file(pulsar_name, base_dir, pattern) Optional[Path]
         +_discover_pulsars_in_pta(config) List[str]

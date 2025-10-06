@@ -97,6 +97,11 @@ class MockPulsar(BasePulsar):
         # Set basic attributes
         self.name = name
         self._raj = 0.0  # Default RA in radians
+        self.parfile = {
+            "F0": "123.456",
+            "RAJ": "18:57:36.4",
+            "DECJ": "09:43:17.1",
+        }  # Mock parfile data
         self._decj = 0.0  # Default Dec in radians
         self._sort = True  # Enable sorting by default
 
@@ -404,6 +409,11 @@ class LibstempoMockPulsarAdapter:
     def name(self):
         """Return pulsar name."""
         return getattr(self._mock, "name", None)
+
+    @property
+    def parfile(self):
+        """Return parfile data as dictionary."""
+        return getattr(self._mock, "parfile", {})
 
     # Planetary data (mock implementations)
     def formbats(self):

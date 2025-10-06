@@ -44,7 +44,7 @@
       * Test file discovery and Enterprise Pulsar creation
       * Test error handling for missing files
 
-    - test_get_canonical_name_for_pulsar_real()
+    - test_pulsar_name_resolution_real()
       * Test canonical name resolution with real coordinate data
       * Verify B-name preference logic works correctly
       * Test suffix extraction from real filenames
