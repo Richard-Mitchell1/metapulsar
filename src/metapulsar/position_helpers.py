@@ -275,7 +275,16 @@ def _parse_parfile_optimized(parfile_content: str) -> Dict[str, str]:
     """Parse parfile content using PINT's robust parser."""
     parfile_dict = parse_parfile(StringIO(parfile_content))
     # Convert defaultdict(list) to dict with first values for compatibility
-    return {k: v[0] if v else "" for k, v in parfile_dict.items()}
+    # Also split on whitespace to get only the first value (before uncertainty columns)
+    result = {}
+    for k, v in parfile_dict.items():
+        if v:
+            # Take first value and split to get only the parameter value (not uncertainty)
+            first_value = v[0].split()[0] if v[0].split() else ""
+            result[k] = first_value
+        else:
+            result[k] = ""
+    return result
 
 
 def _parse_ra_string_optimized(ra_str: str) -> Optional[float]:
