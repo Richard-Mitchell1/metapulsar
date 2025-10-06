@@ -20,6 +20,7 @@ except ImportError:
 # Import MetaPulsar and ParameterManager
 from .metapulsar import MetaPulsar
 from .parameter_manager import ParameterManager
+from .position_helpers import discover_pulsars_by_coordinates_optimized
 
 # Import PINT for model creation
 try:
@@ -112,7 +113,7 @@ class MetaPulsarFactory:
             ValueError: If multiple pulsars detected or no valid files found
         """
         # Group files by pulsar using coordinate-based identification
-        pulsar_groups = self._discover_pulsars_by_coordinates(file_data)
+        pulsar_groups = discover_pulsars_by_coordinates_optimized(file_data)
 
         if not pulsar_groups:
             raise ValueError("No valid pulsar files found in file_data")
@@ -161,7 +162,7 @@ class MetaPulsarFactory:
             "Grouping files by pulsar using coordinate-based identification"
         )
 
-        pulsar_groups = self._discover_pulsars_by_coordinates(file_data)
+        pulsar_groups = discover_pulsars_by_coordinates_optimized(file_data)
 
         if not pulsar_groups:
             raise ValueError("No valid pulsar files found in file_data")
@@ -247,7 +248,6 @@ class MetaPulsarFactory:
         return MetaPulsar(
             pulsars=pulsars,
             combination_strategy=combination_strategy,
-            reference_pta=reference_pta,
             combine_components=combine_components,
             add_dm_derivatives=add_dm_derivatives,
         )
@@ -278,7 +278,7 @@ class MetaPulsarFactory:
             Dictionary mapping pulsar names to MetaPulsar objects
         """
         # Group files by pulsar using coordinate-based identification
-        pulsar_groups = self._discover_pulsars_by_coordinates(file_data)
+        pulsar_groups = discover_pulsars_by_coordinates_optimized(file_data)
 
         metapulsars = {}
 
@@ -453,19 +453,6 @@ class MetaPulsarFactory:
                 raise RuntimeError(f"Failed to create raw pulsar for {pta_name}: {e}")
 
         return raw_pulsars
-
-    def _discover_pulsars_by_coordinates(
-        self, file_data: Dict[str, List[Dict[str, Any]]]
-    ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
-        """Discover pulsars by reading par files and extracting coordinates from file data.
-
-        This method now uses the optimized coordinate extraction system that bypasses
-        heavy PINT model creation for significant performance improvements.
-        """
-        from .position_helpers import discover_pulsars_by_coordinates_optimized
-
-        # Use optimized coordinate discovery for 10-50x performance improvement
-        return discover_pulsars_by_coordinates_optimized(file_data)
 
     def _create_minimal_parfile_for_coordinates(self, parfile_content: str) -> str:
         """Create minimal parfile for coordinate discovery using ParameterManager."""

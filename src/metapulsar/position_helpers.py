@@ -227,6 +227,7 @@ def bj_name_from_pulsar(psr_obj: Any, name_type: str = "J") -> str:
 
     Supports multiple pulsar object types:
     - PINT TimingModel
+    - PINT tuple (model, toas) - uses the model
     - libstempo tempopulsar
     - Enterprise Pulsar (PintPulsar or Tempo2Pulsar)
 
@@ -243,6 +244,10 @@ def bj_name_from_pulsar(psr_obj: Any, name_type: str = "J") -> str:
     # Validate name_type
     if name_type.upper() not in ["J", "B"]:
         raise ValueError(f"Invalid name_type '{name_type}'. Must be 'J' or 'B'")
+
+    # Handle PINT tuple (model, toas) - extract the model
+    if isinstance(psr_obj, tuple) and len(psr_obj) == 2:
+        psr_obj = psr_obj[0]  # Use the model from the tuple
 
     # Try enterprise first (common in your MetaPulsar flow)
     try:

@@ -36,7 +36,6 @@ class MetaPulsar(ep.BasePulsar):
         pulsars,
         *,  # Remove parfile_dicts parameter
         combination_strategy="consistent",
-        reference_pta: str = None,
         combine_components: List[str] = [
             "astrometry",
             "spindown",
@@ -55,7 +54,6 @@ class MetaPulsar(ep.BasePulsar):
             combination_strategy: Strategy for combining PTAs:
                 - "consistent": Astrophysical consistency (modifies par files for consistency)
                 - "composite": Multi-PTA composition (preserves original parameters)
-            reference_pta: PTA to use as reference for consistent strategy (auto-selected if None)
             combine_components: List of components to make consistent (consistent strategy only):
                 - "astrometry": Position and proper motion parameters
                 - "spindown": Spin frequency and derivatives
@@ -70,7 +68,6 @@ class MetaPulsar(ep.BasePulsar):
         # Extract parfile data from objects (unified approach)
         self._parfile_dicts = self._get_parfile_data(pulsars)
         self.combination_strategy = combination_strategy
-        self.reference_pta = reference_pta
         self.combine_components = combine_components
         self.add_dm_derivatives = add_dm_derivatives
         self._sort = sort  # BasePulsar handles sorting
@@ -266,7 +263,7 @@ class MetaPulsar(ep.BasePulsar):
         # Create ParameterManager for parameter mapping
         parameter_manager = ParameterManager(
             file_data=file_data,
-            reference_pta=self.reference_pta,
+            reference_pta="unknown",  # Dummy string - not used in build_parameter_mappings
             combine_components=combine_components,
             add_dm_derivatives=self.add_dm_derivatives,
         )

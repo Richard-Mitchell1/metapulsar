@@ -29,9 +29,11 @@ import astropy.units as u
 from astropy.coordinates import Angle
 from pint.models.model_builder import ModelBuilder
 
-from metapulsar.metapulsar_factory import MetaPulsarFactory
 from metapulsar.file_discovery_service import FileDiscoveryService
-from metapulsar.position_helpers import bj_name_from_pulsar
+from metapulsar.position_helpers import (
+    bj_name_from_pulsar,
+    discover_pulsars_by_coordinates_optimized,
+)
 from metapulsar.metapulsar import MetaPulsar
 
 
@@ -176,7 +178,6 @@ class TestCoordinateBasedDiscovery:
 
         return mock_model
 
-    @pytest.mark.slow
     @patch("pint.models.model_builder.parse_parfile")
     @patch("pint.models.model_builder.ModelBuilder")
     def test_discover_pulsars_by_coordinates(
@@ -210,10 +211,10 @@ class TestCoordinateBasedDiscovery:
             mock_file_system / "data2"
         )
 
-        factory = MetaPulsarFactory()
+        # factory = MetaPulsarFactory()
 
         # Mock the coordinate extraction
-        with patch("metapulsar.metapulsar_factory.bj_name_from_pulsar") as mock_bj_name:
+        with patch("metapulsar.position_helpers.bj_name_from_pulsar") as mock_bj_name:
             mock_bj_name.side_effect = lambda model, name_type: (
                 "J1857+0943" if name_type == "J" else "B1855+09"
             )
@@ -239,7 +240,7 @@ class TestCoordinateBasedDiscovery:
                     }
                 ],
             }
-            coordinate_map = factory._discover_pulsars_by_coordinates(file_data)
+            coordinate_map = discover_pulsars_by_coordinates_optimized(file_data)
 
             # Should find both PTAs have the same pulsar
             assert "J1857+0943" in coordinate_map
@@ -333,7 +334,7 @@ class TestEdgeCases:
             mock_file_system / "data1"
         )
 
-        factory = MetaPulsarFactory()
+        # factory = MetaPulsarFactory()
 
         with patch("pint.models.model_builder.parse_parfile") as mock_parse:
             mock_parse.side_effect = Exception("Parse error")
@@ -352,7 +353,7 @@ class TestEdgeCases:
             }
 
             # Should not raise exception, just log warning
-            coordinate_map = factory._discover_pulsars_by_coordinates(file_data)
+            coordinate_map = discover_pulsars_by_coordinates_optimized(file_data)
             assert coordinate_map == {}
 
     # Note: _extract_suffix_from_filename method was removed in refactor

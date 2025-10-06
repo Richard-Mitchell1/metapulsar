@@ -5,6 +5,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 from metapulsar.metapulsar_factory import MetaPulsarFactory
 from metapulsar.file_discovery_service import FileDiscoveryService
+from metapulsar.position_helpers import discover_pulsars_by_coordinates_optimized
 
 
 class TestMetaPulsarFactory:
@@ -135,8 +136,9 @@ class TestMetaPulsarFactory:
         """Test validation with empty file data."""
         empty_file_data = {}
 
-        with patch.object(
-            self.factory, "_discover_pulsars_by_coordinates", return_value={}
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized",
+            return_value={},
         ):
             with pytest.raises(ValueError, match="No valid pulsar files found"):
                 self.factory._validate_single_pulsar_data(empty_file_data)
@@ -165,9 +167,8 @@ class TestMetaPulsarFactory:
             "J1909-3744": {"ppta_dr2": [file_data["ppta_dr2"][0]]},
         }
 
-        with patch.object(
-            self.factory,
-            "_discover_pulsars_by_coordinates",
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized",
             return_value=mock_pulsar_groups,
         ):
             with pytest.raises(ValueError, match="Multiple pulsars detected"):
@@ -199,9 +200,8 @@ class TestMetaPulsarFactory:
             }
         }
 
-        with patch.object(
-            self.factory,
-            "_discover_pulsars_by_coordinates",
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized",
             return_value=mock_pulsar_groups,
         ):
             # Should not raise an exception
@@ -211,8 +211,9 @@ class TestMetaPulsarFactory:
         """Test grouping with empty file data."""
         empty_file_data = {}
 
-        with patch.object(
-            self.factory, "_discover_pulsars_by_coordinates", return_value={}
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized",
+            return_value={},
         ):
             with pytest.raises(ValueError, match="No valid pulsar files found"):
                 self.factory.group_files_by_pulsar(empty_file_data)
@@ -255,9 +256,8 @@ class TestMetaPulsarFactory:
             },
         }
 
-        with patch.object(
-            self.factory,
-            "_discover_pulsars_by_coordinates",
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized",
             return_value=expected_groups,
         ):
             result = self.factory.group_files_by_pulsar(file_data)
@@ -295,9 +295,8 @@ class TestMetaPulsarFactory:
             }
         }
 
-        with patch.object(
-            self.factory,
-            "_discover_pulsars_by_coordinates",
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized",
             return_value=mock_pulsar_groups,
         ):
             with patch.object(
@@ -341,9 +340,8 @@ class TestMetaPulsarFactory:
             "J1909-3744": {"ppta_dr2": [file_data["ppta_dr2"][0]]},
         }
 
-        with patch.object(
-            self.factory,
-            "_discover_pulsars_by_coordinates",
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized",
             return_value=mock_pulsar_groups,
         ):
             with pytest.raises(ValueError, match="Multiple pulsars detected"):
@@ -431,6 +429,7 @@ class TestMetaPulsarFactory:
                     "tim": Path("/data/epta/J1857+0943.tim"),
                     "timing_package": "pint",
                     "timespan_days": 1000.0,
+                    "par_content": "PSR J1857+0943\nF0 123.456\nRAJ 18:57:36.4\nDECJ 9:43:17.2\n",
                 }
             ]
         }
@@ -491,7 +490,9 @@ class TestMetaPulsarFactory:
             assert "epta_dr2" in result
             assert result["epta_dr2"] == (mock_model, mock_toas)
             mock_get_model.assert_called_once_with(
-                str(file_pairs["epta_dr2"][0]), str(file_pairs["epta_dr2"][1])
+                str(file_pairs["epta_dr2"][0]),
+                str(file_pairs["epta_dr2"][1]),
+                planets=True,
             )
 
     def test_create_pulsar_objects_tempo2(self):
@@ -573,7 +574,7 @@ class TestMetaPulsarFactory:
                 ) as mock_bj_name:
                     mock_bj_name.return_value = "J1857+0943"
 
-                    result = self.factory._discover_pulsars_by_coordinates(file_data)
+                    result = discover_pulsars_by_coordinates_optimized(file_data)
 
                     assert "J1857+0943" in result
                     assert "epta_dr2" in result["J1857+0943"]
