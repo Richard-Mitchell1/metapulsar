@@ -1,0 +1,74 @@
+Welcome to MetaPulsar's documentation!
+=====================================
+
+MetaPulsar is a multi-PTA pulsar timing data combination framework for gravitational wave detection. It provides tools for combining pulsar timing data from multiple PTA collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar" objects.
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   installation.md
+   user_guide.md
+   api_reference.md
+   developer_guide.md
+   troubleshooting.md
+   faq.md
+   performance.md
+   architecture-overview.md
+   selection_utils_api.md
+   enterprise_integration_guide.md
+
+Quick Start
+-----------
+
+.. code-block:: python
+
+   from metapulsar import MetaPulsarFactory, FileDiscoveryService
+   
+   # Discover files
+   discovery = FileDiscoveryService()
+   file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
+   
+   # Create MetaPulsar
+   factory = MetaPulsarFactory()
+   metapulsar = factory.create_metapulsar(
+       file_data,
+       combination_strategy="composite"
+   )
+
+Features
+--------
+
+* **Multi-PTA Support**: Combine data from EPTA, PPTA, NANOGrav, MPTA, and more
+* **Flexible Strategies**: Choose between composite and consistent combination strategies
+* **Enterprise Integration**: Seamless integration with the Enterprise framework
+* **Parameter Management**: Handle parameter consistency across different PTAs
+* **Custom PTAs**: Add your own PTA configurations easily
+
+Examples
+--------
+
+Check out the `examples/` directory for comprehensive tutorials and usage examples:
+
+* `basic_workflow.py` - Complete workflow from file discovery to MetaPulsar creation
+* `parameter_management.py` - ParameterManager usage and strategies
+* `custom_pta_configuration.py` - Adding custom PTA configurations
+* `enterprise_integration.py` - Integration with Enterprise framework
+
+Interactive Tutorials
+--------------------
+
+Interactive Jupyter notebooks are available in `examples/notebooks/`:
+
+* `01_basic_usage.ipynb` - Basic workflow tutorial
+* `02_parameter_management.ipynb` - Parameter management tutorial
+* `03_custom_pta_configuration.ipynb` - Custom PTA configuration tutorial
+* `04_enterprise_integration.ipynb` - Enterprise integration tutorial
+* `04_advanced_workflows.ipynb` - Advanced workflows and best practices
+
+Indices and tables
+==================
+
+* :ref:`genindex`
+* :ref:`modindex`
+* :ref:`search`

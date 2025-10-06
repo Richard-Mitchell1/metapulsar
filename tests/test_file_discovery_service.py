@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 from unittest.mock import patch
-from metapulsar.file_discovery_service import FileDiscoveryService, PTA_CONFIGS
+from metapulsar.file_discovery_service import FileDiscoveryService, PTA_DATA_RELEASES
 
 
 class TestFileDiscoveryService:
@@ -12,27 +12,28 @@ class TestFileDiscoveryService:
     def test_init_default_configs(self):
         """Test initialization with default configurations."""
         service = FileDiscoveryService()
-        assert service.pta_configs == PTA_CONFIGS
+        assert service.pta_data_releases == PTA_DATA_RELEASES
 
     def test_init_custom_configs(self):
         """Test initialization with custom configurations."""
-        custom_configs = {
+        custom_data_releases = {
             "test_pta": {
                 "base_dir": "/test/path",
                 "par_pattern": r"test_(\w+)\.par",
                 "tim_pattern": r"test_(\w+)\.tim",
                 "timing_package": "pint",
-                "priority": 1,
             }
         }
-        service = FileDiscoveryService(custom_configs)
-        assert service.pta_configs == custom_configs
+        service = FileDiscoveryService(custom_data_releases)
+        assert service.pta_data_releases == custom_data_releases
 
     def test_discover_patterns_in_pta_success(self):
         """Test discovering patterns in a single PTA."""
         service = FileDiscoveryService()
 
-        with patch.object(service, "_discover_patterns_in_config") as mock_discover:
+        with patch.object(
+            service, "_discover_patterns_in_data_release"
+        ) as mock_discover:
             mock_discover.return_value = ["J1857+0943", "B1855+09"]
 
             result = service.discover_patterns_in_pta("epta_dr2")
@@ -66,14 +67,13 @@ class TestFileDiscoveryService:
         service = FileDiscoveryService()
 
         with patch.object(
-            service, "_discover_all_file_pairs_in_config"
+            service, "_discover_all_file_pairs_in_data_release"
         ) as mock_discover:
             mock_discover.return_value = [
                 {
                     "par": Path("/test/J1857+0943.par"),
                     "tim": Path("/test/J1857+0943.tim"),
                     "timing_package": "tempo2",
-                    "priority": 1,
                     "timespan_days": 1000.0,
                     "par_content": "PSR J1857+0943\nRAJ 18:57:36.4\nDECJ 09:43:17.1\n",
                 }
@@ -86,7 +86,7 @@ class TestFileDiscoveryService:
             assert result["epta_dr2"][0]["par"] == Path("/test/J1857+0943.par")
             assert result["epta_dr2"][0]["tim"] == Path("/test/J1857+0943.tim")
             assert result["epta_dr2"][0]["timing_package"] == "tempo2"
-            assert result["epta_dr2"][0]["priority"] == 1
+            # Priority field removed - no longer included in results
 
     def test_discover_all_files_in_ptas_all_ptas(self):
         """Test discovering files in all PTAs when no specific PTAs provided."""
@@ -96,7 +96,7 @@ class TestFileDiscoveryService:
             mock_list.return_value = ["epta_dr2", "ppta_dr2"]
 
             with patch.object(
-                service, "_discover_all_file_pairs_in_config"
+                service, "_discover_all_file_pairs_in_data_release"
             ) as mock_discover:
                 mock_discover.return_value = []
 
@@ -105,13 +105,13 @@ class TestFileDiscoveryService:
                 assert "epta_dr2" in result
                 assert "ppta_dr2" in result
 
-    def test_list_ptas_sorted_by_priority(self):
-        """Test listing PTAs sorted by priority."""
+    def test_list_ptas_alphabetical(self):
+        """Test listing PTAs sorted alphabetically."""
         service = FileDiscoveryService()
 
         result = service.list_ptas()
 
-        # Should be sorted by priority (descending) then name
+        # Should be sorted alphabetically
         assert isinstance(result, list)
         assert len(result) > 0
 
@@ -129,8 +129,8 @@ class TestFileDiscoveryService:
 
         service.add_pta("test_pta", new_config)
 
-        assert "test_pta" in service.pta_configs
-        assert service.pta_configs["test_pta"] == new_config
+        assert "test_pta" in service.pta_data_releases
+        assert service.pta_data_releases["test_pta"] == new_config
 
     def test_add_pta_duplicate(self):
         """Test adding duplicate PTA configuration."""
@@ -164,7 +164,7 @@ class TestFileDiscoveryService:
         }
 
         # Should not raise any exception
-        service._validate_config(valid_config)
+        service._validate_data_release(valid_config)
 
     def test_validate_config_missing_keys(self):
         """Test validating configuration with missing keys."""
@@ -176,7 +176,7 @@ class TestFileDiscoveryService:
         }
 
         with pytest.raises(ValueError, match="Missing required keys"):
-            service._validate_config(invalid_config)
+            service._validate_data_release(invalid_config)
 
     def test_validate_config_invalid_timing_package(self):
         """Test validating configuration with invalid timing package."""
@@ -191,7 +191,7 @@ class TestFileDiscoveryService:
         }
 
         with pytest.raises(ValueError, match="Invalid timing_package"):
-            service._validate_config(invalid_config)
+            service._validate_data_release(invalid_config)
 
     def test_validate_config_invalid_regex(self):
         """Test validating configuration with invalid regex patterns."""
@@ -206,7 +206,7 @@ class TestFileDiscoveryService:
         }
 
         with pytest.raises(ValueError, match="Invalid regex pattern"):
-            service._validate_config(invalid_config)
+            service._validate_data_release(invalid_config)
 
     @patch("pathlib.Path.exists")
     @patch("pathlib.Path.rglob")
@@ -222,7 +222,7 @@ class TestFileDiscoveryService:
 
         config = {"base_dir": "/test", "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par"}
 
-        result = service._discover_patterns_in_config(config)
+        result = service._discover_patterns_in_data_release(config)
 
         assert "J1857+0943" in result
         assert "B1855+09" in result
@@ -239,7 +239,7 @@ class TestFileDiscoveryService:
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
         }
 
-        result = service._discover_patterns_in_config(config)
+        result = service._discover_patterns_in_data_release(config)
 
         assert result == []
 
@@ -273,7 +273,7 @@ class TestFileDiscoveryService:
             "priority": 1,
         }
 
-        result = service._discover_all_file_pairs_in_config(config)
+        result = service._discover_all_file_pairs_in_data_release(config)
 
         assert len(result) == 1
         assert result[0]["par"] == Path("/test/J1857+0943.par")
@@ -292,6 +292,6 @@ class TestFileDiscoveryService:
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
         }
 
-        result = service._discover_all_file_pairs_in_config(config)
+        result = service._discover_all_file_pairs_in_data_release(config)
 
         assert result == []

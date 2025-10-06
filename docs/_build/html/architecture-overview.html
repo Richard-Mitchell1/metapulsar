@@ -1,0 +1,518 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MetaPulsar - Architecture Overview &mdash; MetaPulsar 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Selection Utilities API Documentation" href="selection_utils_api.html" />
+    <link rel="prev" title="MetaPulsar Performance Guide" href="performance.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MetaPulsar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">MetaPulsar Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">MetaPulsar User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">MetaPulsar API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide.html">MetaPulsar Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">MetaPulsar Troubleshooting Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">MetaPulsar Performance Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">MetaPulsar - Architecture Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#project-description">Project Description</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#uml-class-diagram">UML Class Diagram</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#class-descriptions">Class Descriptions</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#core-classes">Core Classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#metapulsar"><code class="docutils literal notranslate"><span class="pre">MetaPulsar</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#ptaregistry"><code class="docutils literal notranslate"><span class="pre">PTARegistry</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#metapulsarfactory"><code class="docutils literal notranslate"><span class="pre">MetaPulsarFactory</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#parameter-management-classes">Parameter Management Classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#metapulsarparametermanager"><code class="docutils literal notranslate"><span class="pre">MetaPulsarParameterManager</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#parameterresolver"><code class="docutils literal notranslate"><span class="pre">ParameterResolver</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#parametermapping"><code class="docutils literal notranslate"><span class="pre">ParameterMapping</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#usage-examples">Usage Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#basic-metapulsar-creation">Basic MetaPulsar Creation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-pta-configuration">Custom PTA Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#batch-processing">Batch Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parameter-management">Parameter Management</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pta-registry-operations">PTA Registry Operations</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#error-handling">Error Handling</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#architecture-benefits">Architecture Benefits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dependencies">Dependencies</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#external-dependencies">External Dependencies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#internal-dependencies">Internal Dependencies</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="selection_utils_api.html">Selection Utilities API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="enterprise_integration_guide.html">Enterprise Integration Guide for Staggered Selection Utilities</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MetaPulsar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">MetaPulsar - Architecture Overview</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/architecture-overview.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="metapulsar-architecture-overview">
+<h1>MetaPulsar - Architecture Overview<a class="headerlink" href="#metapulsar-architecture-overview" title="Link to this heading"></a></h1>
+<section id="project-description">
+<h2>Project Description<a class="headerlink" href="#project-description" title="Link to this heading"></a></h2>
+<p><strong>MetaPulsar</strong> is a Python package for combining pulsar timing data from multiple PTA (Pulsar Timing Array) collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified “metapulsar” objects for gravitational wave detection.</p>
+</section>
+<section id="uml-class-diagram">
+<h2>UML Class Diagram<a class="headerlink" href="#uml-class-diagram" title="Link to this heading"></a></h2>
+<div class="highlight-mermaid notranslate"><div class="highlight"><pre><span></span>classDiagram
+    %% Core Classes
+    class MetaPulsar {
+        +Dict[str, Union[Tuple, object]] pulsars
+        +bool sort
+        +bool planets
+        +bool drop_t2pulsar
+        +bool drop_pintpsr
+        +bool _merge_astrometry
+        +bool _merge_spin
+        +bool _merge_binary
+        +bool _merge_dm
+        +Dict _pint_models
+        +Dict _pint_toas
+        +Dict _fitparameters
+        +Dict _setparameters
+        +List fitpars
+        +List setpars
+        +__init__(pulsars, sort, planets, drop_t2pulsar, drop_pintpsr, merge_astrometry, merge_spin, merge_binary, merge_dm)
+        +_process_pulsars()
+        +drop_pulsars(drop_t2pulsar, drop_pintpsr)
+    }
+
+    class PTARegistry {
+        +Dict configs
+        +__init__(configs)
+        +get_pta(name) Dict
+        +list_ptas() List[str]
+        +get_pta_subset(pta_names) Dict[str, Dict]
+        +add_pta(name, config)
+        +update_pta(name, config)
+        +remove_pta(name)
+        +get_ptas_by_timing_package(timing_package) List[str]
+        +_validate_config(config)
+    }
+
+    class MetaPulsarFactory {
+        +PTARegistry registry
+        +Logger logger
+        +__init__(registry)
+        +create_metapulsar(pulsar_name, pta_names) MetaPulsar
+        +create_all_metapulsars(pta_names) Dict[str, MetaPulsar]
+        +discover_available_pulsars(pta_names) List[str]
+        +_check_dependencies()
+        +_discover_files(pulsar_name, pta_configs) Dict[str, Tuple[Path, Path]]
+        +_create_enterprise_pulsars(file_pairs, pta_configs) Dict[str, Union[PintPulsar, Tempo2Pulsar]]
+        +_get_pulsar_name(pulsars) str
+        +_build_metadata(file_pairs, pta_configs) Dict[str, Any]
+        +_find_file(pulsar_name, base_dir, pattern) Optional[Path]
+        +_discover_pulsars_in_pta(config) List[str]
+    }
+
+    %% Parameter Management Classes
+    class MetaPulsarParameterManager {
+        +Dict[str, TimingModel] pint_models
+        +ParameterResolver resolver
+        +__init__(pint_models)
+        +build_parameter_mappings(merge_astrometry, merge_spin, merge_binary, merge_dm) ParameterMapping
+        +_build_merge_parameters_list(merge_config) List[str]
+        +_process_all_pta_parameters(merge_pars) Tuple[Dict, Dict]
+        +_process_pta_fit_parameters(pta_name, model, merge_pars, fitparameters)
+        +_process_pta_set_parameters(pta_name, model, setparameters)
+        +_add_merged_parameter(meta_parname, pta_name, param_name, fitparameters)
+        +_add_pta_specific_parameter(meta_parname, pta_name, param_name, fitparameters)
+        +_validate_parameter_consistency(fitparameters, setparameters)
+        +_build_parameter_mapping_result(fitparameters, setparameters) ParameterMapping
+    }
+
+    class ParameterResolver {
+        +Dict[str, TimingModel] pint_models
+        +Dict _aliases
+        +Dict _reverse_aliases
+        +__init__(pint_models)
+        +resolve_parameter_equivalence(param_name) str
+        +check_parameter_available_across_ptas(param_name) bool
+        +check_parameter_identifiable(pta_name, param_name) bool
+        +check_component_available_across_ptas(component_name) bool
+        +_build_reverse_aliases() Dict
+    }
+
+    class ParameterMapping {
+        +Dict fitparameters
+        +Dict setparameters
+        +List merged_parameters
+        +List pta_specific_parameters
+        +__init__(fitparameters, setparameters, merged_parameters, pta_specific_parameters)
+    }
+
+    %% Helper Classes
+    class PINTDiscoveryError {
+        +str message
+    }
+
+    class ParameterInconsistencyError {
+        +str message
+    }
+
+    %% External Dependencies
+    class PintPulsar {
+        &lt;&lt;external&gt;&gt;
+    }
+
+    class Tempo2Pulsar {
+        &lt;&lt;external&gt;&gt;
+    }
+
+    class TimingModel {
+        &lt;&lt;external&gt;&gt;
+    }
+
+    %% Relationships
+    MetaPulsarFactory --&gt; PTARegistry : uses
+    MetaPulsarFactory --&gt; MetaPulsar : creates
+    MetaPulsarFactory --&gt; PintPulsar : creates
+    MetaPulsarFactory --&gt; Tempo2Pulsar : creates
+    
+    MetaPulsarParameterManager --&gt; ParameterResolver : uses
+    MetaPulsarParameterManager --&gt; TimingModel : uses
+    MetaPulsarParameterManager --&gt; ParameterMapping : creates
+    
+    ParameterResolver --&gt; TimingModel : uses
+    
+    MetaPulsar --&gt; TimingModel : contains
+    MetaPulsar --&gt; PintPulsar : contains
+    MetaPulsar --&gt; Tempo2Pulsar : contains
+</pre></div>
+</div>
+</section>
+<section id="class-descriptions">
+<h2>Class Descriptions<a class="headerlink" href="#class-descriptions" title="Link to this heading"></a></h2>
+<section id="core-classes">
+<h3>Core Classes<a class="headerlink" href="#core-classes" title="Link to this heading"></a></h3>
+<section id="metapulsar">
+<h4><code class="docutils literal notranslate"><span class="pre">MetaPulsar</span></code><a class="headerlink" href="#metapulsar" title="Link to this heading"></a></h4>
+<p>The main composite class that combines pulsar timing data from multiple PTA collaborations into a unified object. It handles different pulsar object types (PINT models, libstempo objects, Enterprise Pulsars) and provides parameter merging capabilities.</p>
+<p><strong>Key Features:</strong></p>
+<ul class="simple">
+<li><p>Supports multiple pulsar object types</p></li>
+<li><p>Configurable parameter merging (astrometry, spindown, binary, dispersion)</p></li>
+<li><p>Memory management with optional object cleanup</p></li>
+<li><p>PINT model extraction and processing</p></li>
+</ul>
+</section>
+<section id="ptaregistry">
+<h4><code class="docutils literal notranslate"><span class="pre">PTARegistry</span></code><a class="headerlink" href="#ptaregistry" title="Link to this heading"></a></h4>
+<p>A configuration management system for PTA data releases. It provides preset configurations for major PTA collaborations and allows custom PTA configurations to be added.</p>
+<p><strong>Key Features:</strong></p>
+<ul class="simple">
+<li><p>Pre-configured IPTA DR3 data releases (EPTA, PPTA, NANOGrav, MPTA, InPTA)</p></li>
+<li><p>Support for both PINT and Tempo2 timing packages</p></li>
+<li><p>Coordinate system management (equatorial/ecliptical)</p></li>
+<li><p>Validation and filtering capabilities</p></li>
+</ul>
+</section>
+<section id="metapulsarfactory">
+<h4><code class="docutils literal notranslate"><span class="pre">MetaPulsarFactory</span></code><a class="headerlink" href="#metapulsarfactory" title="Link to this heading"></a></h4>
+<p>The main factory class that orchestrates the creation of MetaPulsars by discovering files, creating Enterprise Pulsars, and wrapping them with metadata.</p>
+<p><strong>Key Features:</strong></p>
+<ul class="simple">
+<li><p>File discovery using regex patterns</p></li>
+<li><p>Enterprise Pulsar creation (PintPulsar, Tempo2Pulsar)</p></li>
+<li><p>Canonical name resolution</p></li>
+<li><p>Batch processing capabilities</p></li>
+<li><p>Comprehensive error handling</p></li>
+</ul>
+</section>
+</section>
+<section id="parameter-management-classes">
+<h3>Parameter Management Classes<a class="headerlink" href="#parameter-management-classes" title="Link to this heading"></a></h3>
+<section id="metapulsarparametermanager">
+<h4><code class="docutils literal notranslate"><span class="pre">MetaPulsarParameterManager</span></code><a class="headerlink" href="#metapulsarparametermanager" title="Link to this heading"></a></h4>
+<p>High-level orchestrator for parameter mapping workflows. It coordinates parameter discovery, resolution, and mapping across multiple PINT models.</p>
+<p><strong>Key Features:</strong></p>
+<ul class="simple">
+<li><p>Parameter type-based discovery (astrometry, spindown, binary, dispersion)</p></li>
+<li><p>Merged vs PTA-specific parameter handling</p></li>
+<li><p>Consistency validation</p></li>
+<li><p>Structured result generation</p></li>
+</ul>
+</section>
+<section id="parameterresolver">
+<h4><code class="docutils literal notranslate"><span class="pre">ParameterResolver</span></code><a class="headerlink" href="#parameterresolver" title="Link to this heading"></a></h4>
+<p>Handles parameter equivalence resolution and availability checking across multiple PINT models. It encapsulates the logic for resolving parameter aliases and validating component availability.</p>
+<p><strong>Key Features:</strong></p>
+<ul class="simple">
+<li><p>Parameter alias resolution</p></li>
+<li><p>Cross-PTA availability checking</p></li>
+<li><p>Component validation</p></li>
+<li><p>Identifiability assessment</p></li>
+</ul>
+</section>
+<section id="parametermapping">
+<h4><code class="docutils literal notranslate"><span class="pre">ParameterMapping</span></code><a class="headerlink" href="#parametermapping" title="Link to this heading"></a></h4>
+<p>Data class that holds the results of parameter mapping operations, including fit parameters, set parameters, and categorization of merged vs PTA-specific parameters.</p>
+</section>
+</section>
+</section>
+<section id="usage-examples">
+<h2>Usage Examples<a class="headerlink" href="#usage-examples" title="Link to this heading"></a></h2>
+<section id="basic-metapulsar-creation">
+<h3>Basic MetaPulsar Creation<a class="headerlink" href="#basic-metapulsar-creation" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetaPulsarFactory</span><span class="p">,</span> <span class="n">PTARegistry</span>
+
+<span class="c1"># Create factory with default registry</span>
+<span class="n">factory</span> <span class="o">=</span> <span class="n">MetaPulsarFactory</span><span class="p">()</span>
+
+<span class="c1"># Create MetaPulsar for a specific pulsar</span>
+<span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span><span class="s2">&quot;J1857+0943&quot;</span><span class="p">)</span>
+
+<span class="c1"># Access the underlying pulsar data</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Available PTAs: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">metapulsar</span><span class="o">.</span><span class="n">pulsars</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parameter merging config: astrometry=</span><span class="si">{</span><span class="n">metapulsar</span><span class="o">.</span><span class="n">_merge_astrometry</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="custom-pta-configuration">
+<h3>Custom PTA Configuration<a class="headerlink" href="#custom-pta-configuration" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">PTARegistry</span><span class="p">,</span> <span class="n">MetaPulsarFactory</span>
+
+<span class="c1"># Create custom registry</span>
+<span class="n">registry</span> <span class="o">=</span> <span class="n">PTARegistry</span><span class="p">()</span>
+
+<span class="c1"># Add custom PTA configuration</span>
+<span class="n">custom_config</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="s2">&quot;/data/custom_pta&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;par_pattern&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})\.par&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tim_pattern&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})\.tim&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;coordinates&quot;</span><span class="p">:</span> <span class="s2">&quot;equatorial&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timing_package&quot;</span><span class="p">:</span> <span class="s2">&quot;pint&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Custom PTA&quot;</span>
+<span class="p">}</span>
+
+<span class="n">registry</span><span class="o">.</span><span class="n">add_pta</span><span class="p">(</span><span class="s2">&quot;custom_pta&quot;</span><span class="p">,</span> <span class="n">custom_config</span><span class="p">)</span>
+
+<span class="c1"># Create factory with custom registry</span>
+<span class="n">factory</span> <span class="o">=</span> <span class="n">MetaPulsarFactory</span><span class="p">(</span><span class="n">registry</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="batch-processing">
+<h3>Batch Processing<a class="headerlink" href="#batch-processing" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create MetaPulsars for all available pulsars</span>
+<span class="n">all_metapulsars</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_all_metapulsars</span><span class="p">()</span>
+
+<span class="c1"># Create MetaPulsars for specific PTA subset</span>
+<span class="n">epta_metapulsars</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_all_metapulsars</span><span class="p">(</span><span class="n">pta_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr3&quot;</span><span class="p">])</span>
+
+<span class="c1"># Discover available pulsars</span>
+<span class="n">available_pulsars</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">discover_available_pulsars</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">available_pulsars</span><span class="p">)</span><span class="si">}</span><span class="s2"> pulsars across all PTAs&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="parameter-management">
+<h3>Parameter Management<a class="headerlink" href="#parameter-management" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetaPulsarParameterManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pint.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_model_and_toas</span>
+
+<span class="c1"># Load PINT models from different PTAs</span>
+<span class="n">pint_models</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="k">for</span> <span class="n">pta_name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr3&quot;</span><span class="p">,</span> <span class="s2">&quot;nanograv_15y&quot;</span><span class="p">]:</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">toas</span> <span class="o">=</span> <span class="n">get_model_and_toas</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pta_name</span><span class="si">}</span><span class="s2">_parfile.par&quot;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">pta_name</span><span class="si">}</span><span class="s2">_timfile.tim&quot;</span><span class="p">)</span>
+    <span class="n">pint_models</span><span class="p">[</span><span class="n">pta_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+
+<span class="c1"># Create parameter manager</span>
+<span class="n">param_manager</span> <span class="o">=</span> <span class="n">MetaPulsarParameterManager</span><span class="p">(</span><span class="n">pint_models</span><span class="p">)</span>
+
+<span class="c1"># Build parameter mappings</span>
+<span class="n">mapping</span> <span class="o">=</span> <span class="n">param_manager</span><span class="o">.</span><span class="n">build_parameter_mappings</span><span class="p">(</span>
+    <span class="n">merge_astrometry</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">merge_spin</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">merge_binary</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>  <span class="c1"># Don&#39;t merge binary parameters</span>
+    <span class="n">merge_dm</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="c1"># Access results</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Merged parameters: </span><span class="si">{</span><span class="n">mapping</span><span class="o">.</span><span class="n">merged_parameters</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;PTA-specific parameters: </span><span class="si">{</span><span class="n">mapping</span><span class="o">.</span><span class="n">pta_specific_parameters</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Fit parameters: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">mapping</span><span class="o">.</span><span class="n">fitparameters</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="pta-registry-operations">
+<h3>PTA Registry Operations<a class="headerlink" href="#pta-registry-operations" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">PTARegistry</span>
+
+<span class="c1"># Create registry</span>
+<span class="n">registry</span> <span class="o">=</span> <span class="n">PTARegistry</span><span class="p">()</span>
+
+<span class="c1"># List all PTAs</span>
+<span class="n">all_ptas</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">list_ptas</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Available PTAs: </span><span class="si">{</span><span class="n">all_ptas</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Filter by timing package</span>
+<span class="n">pint_ptas</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">get_ptas_by_timing_package</span><span class="p">(</span><span class="s2">&quot;pint&quot;</span><span class="p">)</span>
+<span class="n">tempo2_ptas</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">get_ptas_by_timing_package</span><span class="p">(</span><span class="s2">&quot;tempo2&quot;</span><span class="p">)</span>
+
+
+<span class="c1"># Get specific PTA configuration</span>
+<span class="n">epta_config</span> <span class="o">=</span> <span class="n">registry</span><span class="o">.</span><span class="n">get_pta</span><span class="p">(</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;EPTA base directory: </span><span class="si">{</span><span class="n">epta_config</span><span class="p">[</span><span class="s1">&#39;base_dir&#39;</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="error-handling">
+<h3>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetaPulsarFactory</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar.metapulsar_parameter_manager</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParameterInconsistencyError</span>
+
+<span class="n">factory</span> <span class="o">=</span> <span class="n">MetaPulsarFactory</span><span class="p">()</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># This might fail if no files are found</span>
+    <span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span><span class="s2">&quot;J9999+9999&quot;</span><span class="p">)</span>
+<span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;No files found: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="c1"># This might fail if parameters are inconsistent</span>
+    <span class="n">mapping</span> <span class="o">=</span> <span class="n">param_manager</span><span class="o">.</span><span class="n">build_parameter_mappings</span><span class="p">()</span>
+<span class="k">except</span> <span class="n">ParameterInconsistencyError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Parameter inconsistency: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="architecture-benefits">
+<h2>Architecture Benefits<a class="headerlink" href="#architecture-benefits" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Modular Design</strong>: Clear separation of concerns with specialized classes for different responsibilities</p></li>
+<li><p><strong>Extensibility</strong>: Easy to add new PTA configurations and parameter types</p></li>
+<li><p><strong>Flexibility</strong>: Supports both PINT and Tempo2 timing packages</p></li>
+<li><p><strong>Robustness</strong>: Comprehensive error handling and validation</p></li>
+<li><p><strong>Integration</strong>: Seamless integration with Enterprise ecosystem</p></li>
+<li><p><strong>Maintainability</strong>: Clean interfaces and well-documented APIs</p></li>
+</ol>
+</section>
+<section id="dependencies">
+<h2>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading"></a></h2>
+<section id="external-dependencies">
+<h3>External Dependencies<a class="headerlink" href="#external-dependencies" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">enterprise</span></code> - For PintPulsar and Tempo2Pulsar classes</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pint</span></code> - For PINT timing models and TOAs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">libstempo</span></code> - For Tempo2Pulsar creation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">astropy</span></code> - For coordinate transformations</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">loguru</span></code> - For logging</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">numpy</span></code> - For numerical operations</p></li>
+</ul>
+</section>
+<section id="internal-dependencies">
+<h3>Internal Dependencies<a class="headerlink" href="#internal-dependencies" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">position_helpers</span></code> - For coordinate conversion and J-name generation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pint_helpers</span></code> - For PINT-specific parameter discovery</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parameter_resolver</span></code> - For parameter equivalence resolution</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="performance.html" class="btn btn-neutral float-left" title="MetaPulsar Performance Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="selection_utils_api.html" class="btn btn-neutral float-right" title="Selection Utilities API Documentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Rutger van Haasteren, Wang-Wei Yu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

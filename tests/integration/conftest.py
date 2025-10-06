@@ -54,8 +54,8 @@ def test_pulsars():
 
 
 @pytest.fixture(scope="session")
-def test_pta_configs():
-    """Return test PTA configurations for integration testing."""
+def test_pta_data_releases():
+    """Return test PTA data releases for integration testing."""
     return [
         "epta_dr1_v2_2",
         "ppta_dr2",

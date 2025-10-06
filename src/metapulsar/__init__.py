@@ -5,23 +5,40 @@ collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar"
 objects for gravitational wave detection.
 """
 
+# Core classes
 from .metapulsar import MetaPulsar
-
-# New factory architecture imports
-from .file_discovery_service import FileDiscoveryService
 from .metapulsar_factory import MetaPulsarFactory
+from .file_discovery_service import FileDiscoveryService, PTA_DATA_RELEASES
+from .pattern_discovery_engine import PatternDiscoveryEngine
+from .parameter_manager import (
+    ParameterManager,
+    ParameterMapping,
+    ParameterInconsistencyError,
+)
+from .mockpulsar import MockPulsar
+from .tim_file_analyzer import TimFileAnalyzer
+from .selection_utils import create_staggered_selection
+
+# Exceptions
+from .pint_helpers import PINTDiscoveryError
 
 __version__ = "0.1.0"
 __author__ = "Rutger van Haasteren, Wangwei Yu"
 __email__ = "rutger@vhaasteren.com"
 
-# Selection utilities
-from .selection_utils import create_staggered_selection
-
-# Export both legacy and new classes for backward compatibility
 __all__ = [
+    # Core classes
     "MetaPulsar",
-    "FileDiscoveryService",
     "MetaPulsarFactory",
+    "FileDiscoveryService",
+    "PTA_DATA_RELEASES",
+    "PatternDiscoveryEngine",
+    "ParameterManager",
+    "ParameterMapping",
+    "ParameterInconsistencyError",
+    "MockPulsar",
+    "TimFileAnalyzer",
     "create_staggered_selection",
+    # Exceptions
+    "PINTDiscoveryError",
 ]

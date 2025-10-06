@@ -1,0 +1,173 @@
+# MetaPulsar Performance Guide
+
+## Performance Optimization
+
+### File Discovery Optimization
+
+#### Batch Processing
+Process multiple PTAs in batches to reduce memory usage:
+
+```python
+# Good: Process in batches
+ptas = ["epta_dr2", "ppta_dr2", "nanograv_15y"]
+for batch in [ptas[i:i+2] for i in range(0, len(ptas), 2)]:
+    file_data = discovery.discover_all_files_in_ptas(batch)
+    # Process batch...
+
+# Avoid: Process all at once
+file_data = discovery.discover_all_files_in_ptas(ptas)  # May use too much memory
+```
+
+#### Specific PTA Selection
+Use specific PTA names instead of discovering all PTAs:
+
+```python
+# Good: Specific PTAs
+file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
+
+# Avoid: All PTAs (slower)
+file_data = discovery.discover_all_files_in_ptas(discovery.list_ptas())
+```
+
+### Memory Management
+
+#### Object Cleanup
+Clean up large objects when no longer needed:
+
+```python
+# Good: Clean up after use
+metapulsar = factory.create_metapulsar(file_data, strategy="composite")
+# Use metapulsar...
+del metapulsar  # Free memory
+
+# Or use context managers
+with factory.create_metapulsar(file_data, strategy="composite") as metapulsar:
+    # Use metapulsar...
+    pass  # Automatically cleaned up
+```
+
+#### Data Type Optimization
+Use appropriate data types to reduce memory usage:
+
+```python
+# Good: Use float32 for large arrays when precision allows
+timing_data = np.array(data, dtype=np.float32)
+
+# Avoid: Default float64 for everything
+timing_data = np.array(data)  # Uses more memory
+```
+
+### File I/O Optimization
+
+#### Efficient File Formats
+Use efficient file formats for large datasets:
+
+```python
+# Good: Use HDF5 for large datasets
+import h5py
+with h5py.File('data.h5', 'w') as f:
+    f.create_dataset('timing_data', data=timing_data, compression='gzip')
+
+# Avoid: Plain text files for large data
+np.savetxt('data.txt', timing_data)  # Slow and large
+```
+
+#### Caching
+Cache frequently accessed data:
+
+```python
+# Good: Cache discovery results
+@functools.lru_cache(maxsize=128)
+def discover_pta_files(pta_name):
+    return discovery.discover_files_in_pta(pta_name)
+```
+
+### Algorithm Optimization
+
+#### Vectorized Operations
+Use NumPy vectorized operations instead of loops:
+
+```python
+# Good: Vectorized operations
+residuals = np.array([calc_residual(toa) for toa in toas])  # Slow
+residuals = calc_residuals_vectorized(toas)  # Fast
+
+# Avoid: Python loops
+for i, toa in enumerate(toas):
+    residuals[i] = calc_residual(toa)
+```
+
+#### Parallel Processing
+Use parallel processing for independent operations:
+
+```python
+# Good: Parallel file discovery
+from concurrent.futures import ThreadPoolExecutor
+
+def discover_pta(pta_name):
+    return discovery.discover_files_in_pta(pta_name)
+
+with ThreadPoolExecutor(max_workers=4) as executor:
+    results = list(executor.map(discover_pta, pta_names))
+```
+
+## Performance Monitoring
+
+### Memory Usage
+Monitor memory usage during processing:
+
+```python
+import psutil
+import os
+
+def monitor_memory():
+    process = psutil.Process(os.getpid())
+    memory_info = process.memory_info()
+    print(f"Memory usage: {memory_info.rss / 1024 / 1024:.1f} MB")
+
+# Use before and after operations
+monitor_memory()
+metapulsar = factory.create_metapulsar(file_data)
+monitor_memory()
+```
+
+### Timing
+Measure execution time for optimization:
+
+```python
+import time
+
+start_time = time.time()
+metapulsar = factory.create_metapulsar(file_data)
+end_time = time.time()
+
+print(f"MetaPulsar creation took: {end_time - start_time:.2f} seconds")
+```
+
+## Best Practices
+
+1. **Profile First**: Use profiling tools to identify bottlenecks
+2. **Measure Changes**: Always measure performance before and after optimizations
+3. **Test with Real Data**: Performance characteristics may differ with real data
+4. **Monitor Resources**: Keep track of memory and CPU usage
+5. **Use Appropriate Data Types**: Choose data types based on precision requirements
+6. **Cache When Possible**: Cache expensive operations that are repeated
+7. **Parallelize Independent Operations**: Use parallel processing for independent tasks
+
+## Common Performance Issues
+
+### Slow File Discovery
+- **Cause**: Too many files or slow file system
+- **Solution**: Use specific PTA names, cache results, or use faster storage
+
+### High Memory Usage
+- **Cause**: Large datasets or inefficient data types
+- **Solution**: Use appropriate data types, process in batches, clean up objects
+
+### Slow Parameter Processing
+- **Cause**: Inefficient parameter mapping or validation
+- **Solution**: Use vectorized operations, cache parameter mappings
+
+### Slow MetaPulsar Creation
+- **Cause**: Complex parameter consistency checks
+- **Solution**: Use composite strategy if consistency not needed, optimize parameter mapping

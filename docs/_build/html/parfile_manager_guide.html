@@ -1,0 +1,543 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ParFileManager and MetaPulsarFactory User Guide &mdash; MetaPulsar 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MetaPulsar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">MetaPulsar Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">MetaPulsar User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">MetaPulsar API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide.html">MetaPulsar Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">MetaPulsar Troubleshooting Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">MetaPulsar Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture-overview.html">MetaPulsar - Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="selection_utils_api.html">Selection Utilities API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="enterprise_integration_guide.html">Enterprise Integration Guide for Staggered Selection Utilities</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MetaPulsar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">ParFileManager and MetaPulsarFactory User Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/parfile_manager_guide.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="parfilemanager-and-metapulsarfactory-user-guide">
+<h1>ParFileManager and MetaPulsarFactory User Guide<a class="headerlink" href="#parfilemanager-and-metapulsarfactory-user-guide" title="Link to this heading"></a></h1>
+<p><strong>Version</strong>: 1.0<br />
+<strong>Date</strong>: 2025-09-30<br />
+<strong>Author</strong>: MetaPulsar Team</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The ParFileManager and MetaPulsarFactory classes provide a comprehensive solution for combining pulsar timing data from multiple PTA (Pulsar Timing Array) collaborations. This guide covers the two main combination strategies and their use cases.</p>
+</section>
+<section id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><a class="reference external" href="https://docs.python.org/3/reference/introduction.html#introduction" title="Python 3.13"><span class="xref myst">Introduction</span></a></p></li>
+<li><p><a class="reference internal" href="#combination-strategies"><span class="xref myst">Combination Strategies</span></a></p></li>
+<li><p><a class="reference internal" href="#parfilemanager-class"><span class="xref myst">ParFileManager Class</span></a></p></li>
+<li><p><a class="reference internal" href="#metapulsarfactory-class"><span class="xref myst">MetaPulsarFactory Class</span></a></p></li>
+<li><p><a class="reference internal" href="#metapulsar-class"><span class="xref myst">MetaPulsar Class</span></a></p></li>
+<li><p><a class="reference internal" href="#usage-examples"><span class="xref myst">Usage Examples</span></a></p></li>
+<li><p><a class="reference internal" href="#advanced-configuration"><span class="xref myst">Advanced Configuration</span></a></p></li>
+<li><p><a class="reference internal" href="troubleshooting.html"><span class="doc std std-doc">Troubleshooting</span></a></p></li>
+<li><p><a class="reference internal" href="#api-reference"><span class="xref myst">API Reference</span></a></p></li>
+</ol>
+</section>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading"></a></h2>
+<p>The MetaPulsar framework enables the combination of pulsar timing data from multiple PTA collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified “metapulsar” objects suitable for gravitational wave detection analysis.</p>
+<section id="key-components">
+<h3>Key Components<a class="headerlink" href="#key-components" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>ParFileManager</strong>: Handles par file operations, unit conversion, and parameter consistency</p></li>
+<li><p><strong>MetaPulsarFactory</strong>: Orchestrates the creation of MetaPulsar objects with different combination strategies</p></li>
+<li><p><strong>MetaPulsar</strong>: The final composite object containing multi-PTA pulsar data</p></li>
+<li><p><strong>PTARegistry</strong>: Manages PTA configurations and file discovery</p></li>
+</ul>
+</section>
+</section>
+<section id="combination-strategies">
+<h2>Combination Strategies<a class="headerlink" href="#combination-strategies" title="Link to this heading"></a></h2>
+<section id="composite-strategy-borg-frankenstat-method">
+<h3>1. Composite Strategy (Borg/FrankenStat Method)<a class="headerlink" href="#composite-strategy-borg-frankenstat-method" title="Link to this heading"></a></h3>
+<p><strong>Purpose</strong>: Preserve PTA-specific parameter differences for analysis methods that require them.</p>
+<p><strong>Characteristics</strong>:</p>
+<ul class="simple">
+<li><p>Uses raw par files without modification</p></li>
+<li><p>Preserves individual PTA parameter values</p></li>
+<li><p>Suitable for “Borg” or “FrankenStat” analysis methods</p></li>
+<li><p>No parameter harmonization performed</p></li>
+</ul>
+<p><strong>Use Cases</strong>:</p>
+<ul class="simple">
+<li><p>When PTA-specific systematic effects need to be preserved</p></li>
+<li><p>For analysis methods that explicitly model PTA differences</p></li>
+<li><p>When parameter consistency is not required</p></li>
+</ul>
+</section>
+<section id="consistent-strategy-astrophysical-consistency">
+<h3>2. Consistent Strategy (Astrophysical Consistency)<a class="headerlink" href="#consistent-strategy-astrophysical-consistency" title="Link to this heading"></a></h3>
+<p><strong>Purpose</strong>: Create astrophysically consistent par files for unified analysis.</p>
+<p><strong>Characteristics</strong>:</p>
+<ul class="simple">
+<li><p>Modifies par files to ensure parameter consistency</p></li>
+<li><p>Aligns parameters to a reference PTA</p></li>
+<li><p>Handles unit conversion (TCB ↔ TDB)</p></li>
+<li><p>Manages DM parameter derivatives</p></li>
+</ul>
+<p><strong>Use Cases</strong>:</p>
+<ul class="simple">
+<li><p>For unified gravitational wave analysis</p></li>
+<li><p>When parameter consistency is required</p></li>
+<li><p>For cross-PTA comparison studies</p></li>
+</ul>
+</section>
+</section>
+<section id="parfilemanager-class">
+<h2>ParFileManager Class<a class="headerlink" href="#parfilemanager-class" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">ParFileManager</span></code> class handles all par file operations for the consistent strategy.</p>
+<section id="key-methods">
+<h3>Key Methods<a class="headerlink" href="#key-methods" title="Link to this heading"></a></h3>
+<section id="write-consistent-parfiles">
+<h4><code class="docutils literal notranslate"><span class="pre">write_consistent_parfiles()</span></code><a class="headerlink" href="#write-consistent-parfiles" title="Link to this heading"></a></h4>
+<p>Creates astrophysically consistent par files for multiple PTAs.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">consistent_files</span> <span class="o">=</span> <span class="n">parfile_manager</span><span class="o">.</span><span class="n">write_consistent_parfiles</span><span class="p">(</span>
+    <span class="n">pulsar_name</span><span class="o">=</span><span class="s2">&quot;J1909-3744&quot;</span><span class="p">,</span>
+    <span class="n">pta_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;nanograv_15y&quot;</span><span class="p">],</span>
+    <span class="n">reference_pta</span><span class="o">=</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span>
+    <span class="n">combine_components</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;spin&quot;</span><span class="p">,</span> <span class="s2">&quot;astrometry&quot;</span><span class="p">,</span> <span class="s2">&quot;binary&quot;</span><span class="p">,</span> <span class="s2">&quot;dispersion&quot;</span><span class="p">],</span>
+    <span class="n">add_dm_derivatives</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">output_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/output/consistent/&quot;</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Parameters</strong>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">pulsar_name</span></code>: Name of the pulsar (e.g., “J1909-3744”)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pta_names</span></code>: List of PTA names to combine</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reference_pta</span></code>: PTA to use as reference for parameter values</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">combine_components</span></code>: List of parameter components to make consistent</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">add_dm_derivatives</span></code>: Whether to add DM1, DM2 parameters</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">output_dir</span></code>: Directory to save consistent par files</p></li>
+</ul>
+<p><strong>Returns</strong>: Dictionary mapping PTA names to output file paths</p>
+</section>
+</section>
+<section id="component-types">
+<h3>Component Types<a class="headerlink" href="#component-types" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">combine_components</span></code> parameter accepts these component types:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;spin&quot;</span></code>: Spin parameters (F0, F1, F2, etc.)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;astrometry&quot;</span></code>: Astrometric parameters (RA, DEC, PMRA, PMDEC, etc.)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;binary&quot;</span></code>: Binary system parameters (PB, A1, E, etc.)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&quot;dispersion&quot;</span></code>: Dispersion measure parameters (DM, DM1, DM2, etc.)</p></li>
+</ul>
+</section>
+<section id="dm-parameter-handling">
+<h3>DM Parameter Handling<a class="headerlink" href="#dm-parameter-handling" title="Link to this heading"></a></h3>
+<p>When <code class="docutils literal notranslate"><span class="pre">add_dm_derivatives=True</span></code>:</p>
+<ul class="simple">
+<li><p>DMX parameters are removed from all PTAs</p></li>
+<li><p>DM1 and DM2 are added if not present</p></li>
+<li><p>All DM parameters are aligned to reference PTA values</p></li>
+</ul>
+<p>When <code class="docutils literal notranslate"><span class="pre">add_dm_derivatives=False</span></code>:</p>
+<ul class="simple">
+<li><p>DMX parameters are removed from all PTAs</p></li>
+<li><p>Existing DM1, DM2 are aligned to reference PTA values</p></li>
+<li><p>No new DM derivatives are added</p></li>
+</ul>
+<p><strong>Note</strong>: <code class="docutils literal notranslate"><span class="pre">add_dm_derivatives=True</span></code> requires <code class="docutils literal notranslate"><span class="pre">&quot;dispersion&quot;</span></code> in <code class="docutils literal notranslate"><span class="pre">combine_components</span></code>.</p>
+</section>
+</section>
+<section id="metapulsarfactory-class">
+<h2>MetaPulsarFactory Class<a class="headerlink" href="#metapulsarfactory-class" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">MetaPulsarFactory</span></code> class orchestrates the creation of MetaPulsar objects.</p>
+<section id="id1">
+<h3>Key Methods<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<section id="create-metapulsar">
+<h4><code class="docutils literal notranslate"><span class="pre">create_metapulsar()</span></code><a class="headerlink" href="#create-metapulsar" title="Link to this heading"></a></h4>
+<p>Creates a MetaPulsar object with the specified combination strategy.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span>
+    <span class="n">pulsar_name</span><span class="o">=</span><span class="s2">&quot;J1909-3744&quot;</span><span class="p">,</span>
+    <span class="n">pta_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;nanograv_15y&quot;</span><span class="p">],</span>
+    <span class="n">combination_strategy</span><span class="o">=</span><span class="s2">&quot;consistent&quot;</span><span class="p">,</span>  <span class="c1"># or &quot;composite&quot;</span>
+    <span class="n">reference_pta</span><span class="o">=</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span>
+    <span class="n">combine_components</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;spin&quot;</span><span class="p">,</span> <span class="s2">&quot;astrometry&quot;</span><span class="p">,</span> <span class="s2">&quot;binary&quot;</span><span class="p">,</span> <span class="s2">&quot;dispersion&quot;</span><span class="p">],</span>
+    <span class="n">add_dm_derivatives</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="list-available-pulsars">
+<h4><code class="docutils literal notranslate"><span class="pre">list_available_pulsars()</span></code><a class="headerlink" href="#list-available-pulsars" title="Link to this heading"></a></h4>
+<p>Lists pulsars available in the specified PTAs.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">available_pulsars</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">list_available_pulsars</span><span class="p">([</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="constructor-parameters">
+<h3>Constructor Parameters<a class="headerlink" href="#constructor-parameters" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">factory</span> <span class="o">=</span> <span class="n">MetaPulsarFactory</span><span class="p">(</span>
+    <span class="n">registry</span><span class="o">=</span><span class="n">PTARegistry</span><span class="p">(),</span>  <span class="c1"># Custom PTA registry</span>
+    <span class="n">parfile_manager</span><span class="o">=</span><span class="n">ParFileManager</span><span class="p">()</span>  <span class="c1"># Custom parfile manager</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="metapulsar-class">
+<h2>MetaPulsar Class<a class="headerlink" href="#metapulsar-class" title="Link to this heading"></a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">MetaPulsar</span></code> class represents the final composite pulsar object.</p>
+<section id="id2">
+<h3>Constructor Parameters<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">metapulsar</span> <span class="o">=</span> <span class="n">MetaPulsar</span><span class="p">(</span>
+    <span class="n">pulsars</span><span class="o">=</span><span class="n">enterprise_pulsars</span><span class="p">,</span>  <span class="c1"># Dictionary of PTA -&gt; Enterprise Pulsar</span>
+    <span class="n">combination_strategy</span><span class="o">=</span><span class="s2">&quot;composite&quot;</span><span class="p">,</span>  <span class="c1"># Strategy used</span>
+    <span class="n">sort</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Sort data by time</span>
+    <span class="n">planets</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>  <span class="c1"># Model solar system planets</span>
+    <span class="c1"># ... other parameters</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="combination-strategy-methods">
+<h3>Combination Strategy Methods<a class="headerlink" href="#combination-strategy-methods" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Get the combination strategy</span>
+<span class="n">strategy</span> <span class="o">=</span> <span class="n">metapulsar</span><span class="o">.</span><span class="n">get_combination_strategy</span><span class="p">()</span>
+
+<span class="c1"># Check if using composite strategy</span>
+<span class="n">is_composite</span> <span class="o">=</span> <span class="n">metapulsar</span><span class="o">.</span><span class="n">combination_strategy</span> <span class="o">==</span> <span class="s2">&quot;composite&quot;</span>
+
+<span class="c1"># Check if using consistent strategy</span>
+<span class="n">is_consistent</span> <span class="o">=</span> <span class="n">metapulsar</span><span class="o">.</span><span class="n">combination_strategy</span> <span class="o">==</span> <span class="s2">&quot;consistent&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="usage-examples">
+<h2>Usage Examples<a class="headerlink" href="#usage-examples" title="Link to this heading"></a></h2>
+<section id="basic-usage">
+<h3>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetaPulsarFactory</span>
+
+<span class="c1"># Create factory</span>
+<span class="n">factory</span> <span class="o">=</span> <span class="n">MetaPulsarFactory</span><span class="p">()</span>
+
+<span class="c1"># List available pulsars</span>
+<span class="n">available_pulsars</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">list_available_pulsars</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Available pulsars: </span><span class="si">{</span><span class="n">available_pulsars</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Create MetaPulsar with composite approach</span>
+<span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span>
+    <span class="s2">&quot;J1909-3744&quot;</span><span class="p">,</span> 
+    <span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;nanograv_15y&quot;</span><span class="p">]</span>
+<span class="p">)</span>
+
+<span class="c1"># Create MetaPulsar with consistent approach</span>
+<span class="n">metapulsar_consistent</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span>
+    <span class="s2">&quot;J1909-3744&quot;</span><span class="p">,</span> 
+    <span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;nanograv_15y&quot;</span><span class="p">],</span>
+    <span class="n">combination_strategy</span><span class="o">=</span><span class="s2">&quot;consistent&quot;</span><span class="p">,</span>
+    <span class="n">reference_pta</span><span class="o">=</span><span class="s2">&quot;epta_dr2&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="custom-pta-registry">
+<h3>Custom PTA Registry<a class="headerlink" href="#custom-pta-registry" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">PTARegistry</span><span class="p">,</span> <span class="n">MetaPulsarFactory</span>
+
+<span class="c1"># Create custom PTA registry</span>
+<span class="n">custom_registry</span> <span class="o">=</span> <span class="n">PTARegistry</span><span class="p">()</span>
+
+<span class="c1"># Add custom PTA</span>
+<span class="n">custom_registry</span><span class="o">.</span><span class="n">add_pta</span><span class="p">(</span><span class="s2">&quot;custom_pta&quot;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="s2">&quot;/data/custom_pta/&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;par_pattern&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})_custom\.par&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tim_pattern&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})_custom\.tim&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timing_package&quot;</span><span class="p">:</span> <span class="s2">&quot;pint&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Custom PTA with specific naming convention&quot;</span>
+<span class="p">})</span>
+
+<span class="c1"># Create factory with custom registry</span>
+<span class="n">factory</span> <span class="o">=</span> <span class="n">MetaPulsarFactory</span><span class="p">(</span><span class="n">registry</span><span class="o">=</span><span class="n">custom_registry</span><span class="p">)</span>
+
+<span class="c1"># Use custom PTAs</span>
+<span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span>
+    <span class="s2">&quot;J1909-3744&quot;</span><span class="p">,</span> 
+    <span class="p">[</span><span class="s2">&quot;custom_pta&quot;</span><span class="p">],</span>
+    <span class="n">combination_strategy</span><span class="o">=</span><span class="s2">&quot;composite&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="advanced-configuration">
+<h3>Advanced Configuration<a class="headerlink" href="#advanced-configuration" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Custom astrophysical consistency</span>
+<span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span>
+    <span class="s2">&quot;J1909-3744&quot;</span><span class="p">,</span> 
+    <span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;nanograv_15y&quot;</span><span class="p">],</span>
+    <span class="n">combination_strategy</span><span class="o">=</span><span class="s2">&quot;consistent&quot;</span><span class="p">,</span>
+    <span class="n">reference_pta</span><span class="o">=</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span>
+    <span class="n">combine_components</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;spin&quot;</span><span class="p">,</span> <span class="s2">&quot;astrometry&quot;</span><span class="p">],</span>  <span class="c1"># Only these components</span>
+    <span class="n">add_dm_derivatives</span><span class="o">=</span><span class="kc">True</span>  <span class="c1"># Add DM1, DM2</span>
+<span class="p">)</span>
+
+<span class="c1"># No DM derivatives</span>
+<span class="n">metapulsar_no_dm</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span>
+    <span class="s2">&quot;J1909-3744&quot;</span><span class="p">,</span> 
+    <span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;nanograv_15y&quot;</span><span class="p">],</span>
+    <span class="n">combination_strategy</span><span class="o">=</span><span class="s2">&quot;consistent&quot;</span><span class="p">,</span>
+    <span class="n">reference_pta</span><span class="o">=</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span>
+    <span class="n">combine_components</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;spin&quot;</span><span class="p">,</span> <span class="s2">&quot;astrometry&quot;</span><span class="p">,</span> <span class="s2">&quot;binary&quot;</span><span class="p">,</span> <span class="s2">&quot;dispersion&quot;</span><span class="p">],</span>
+    <span class="n">add_dm_derivatives</span><span class="o">=</span><span class="kc">False</span>  <span class="c1"># Align existing DM1, DM2 only</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="direct-parfilemanager-usage">
+<h3>Direct ParFileManager Usage<a class="headerlink" href="#direct-parfilemanager-usage" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParFileManager</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+
+<span class="c1"># Create ParFileManager</span>
+<span class="n">parfile_manager</span> <span class="o">=</span> <span class="n">ParFileManager</span><span class="p">()</span>
+
+<span class="c1"># Create consistent par files</span>
+<span class="n">consistent_files</span> <span class="o">=</span> <span class="n">parfile_manager</span><span class="o">.</span><span class="n">write_consistent_parfiles</span><span class="p">(</span>
+    <span class="s2">&quot;J1909-3744&quot;</span><span class="p">,</span>
+    <span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">],</span>
+    <span class="n">reference_pta</span><span class="o">=</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span>
+    <span class="n">combine_components</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;spin&quot;</span><span class="p">,</span> <span class="s2">&quot;astrometry&quot;</span><span class="p">,</span> <span class="s2">&quot;binary&quot;</span><span class="p">,</span> <span class="s2">&quot;dispersion&quot;</span><span class="p">],</span>
+    <span class="n">add_dm_derivatives</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">output_dir</span><span class="o">=</span><span class="n">Path</span><span class="p">(</span><span class="s2">&quot;/output/consistent/&quot;</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Created files: </span><span class="si">{</span><span class="n">consistent_files</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="id3">
+<h2>Advanced Configuration<a class="headerlink" href="#id3" title="Link to this heading"></a></h2>
+<section id="pta-registry-configuration">
+<h3>PTA Registry Configuration<a class="headerlink" href="#pta-registry-configuration" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">PTARegistry</span></code> class manages PTA configurations:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">PTARegistry</span>
+
+<span class="c1"># Create empty registry</span>
+<span class="n">registry</span> <span class="o">=</span> <span class="n">PTARegistry</span><span class="p">(</span><span class="n">configs</span><span class="o">=</span><span class="p">{})</span>
+
+<span class="c1"># Add PTA configuration</span>
+<span class="n">registry</span><span class="o">.</span><span class="n">add_pta</span><span class="p">(</span><span class="s2">&quot;my_pta&quot;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="s2">&quot;/data/my_pta/&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;par_pattern&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})\.par&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tim_pattern&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})\.tim&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timing_package&quot;</span><span class="p">:</span> <span class="s2">&quot;pint&quot;</span><span class="p">,</span>  <span class="c1"># or &quot;tempo2&quot;</span>
+    <span class="s2">&quot;priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;My custom PTA&quot;</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+</section>
+<section id="file-pattern-configuration">
+<h3>File Pattern Configuration<a class="headerlink" href="#file-pattern-configuration" title="Link to this heading"></a></h3>
+<p>Par file patterns use regex with capture groups for pulsar names:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Example patterns</span>
+<span class="n">patterns</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;epta_dr2&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})\.par&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})\.par&quot;</span><span class="p">,</span> 
+    <span class="s2">&quot;nanograv_15y&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})\.par&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;custom_pta&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;pulsar_([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})_custom\.par&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<section id="common-issues">
+<h3>Common Issues<a class="headerlink" href="#common-issues" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>File Not Found Errors</strong></p>
+<ul class="simple">
+<li><p>Check PTA registry configuration</p></li>
+<li><p>Verify file patterns match actual file names</p></li>
+<li><p>Ensure base directories are correct</p></li>
+</ul>
+</li>
+<li><p><strong>Unit Conversion Warnings</strong></p>
+<ul class="simple">
+<li><p>Normal when mixing TCB and TDB units</p></li>
+<li><p>Check if conversion is actually needed</p></li>
+</ul>
+</li>
+<li><p><strong>DM Derivatives Warning</strong></p>
+<ul class="simple">
+<li><p>Occurs when <code class="docutils literal notranslate"><span class="pre">add_dm_derivatives=True</span></code> but <code class="docutils literal notranslate"><span class="pre">&quot;dispersion&quot;</span></code> not in <code class="docutils literal notranslate"><span class="pre">combine_components</span></code></p></li>
+<li><p>Add <code class="docutils literal notranslate"><span class="pre">&quot;dispersion&quot;</span></code> to <code class="docutils literal notranslate"><span class="pre">combine_components</span></code> or set <code class="docutils literal notranslate"><span class="pre">add_dm_derivatives=False</span></code></p></li>
+</ul>
+</li>
+<li><p><strong>Parameter Discovery Errors</strong></p>
+<ul class="simple">
+<li><p>Check PINT installation and version</p></li>
+<li><p>Verify par file format compatibility</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="debug-mode">
+<h3>Debug Mode<a class="headerlink" href="#debug-mode" title="Link to this heading"></a></h3>
+<p>Enable debug logging:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="validation">
+<h3>Validation<a class="headerlink" href="#validation" title="Link to this heading"></a></h3>
+<p>Check if files exist before processing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># List available pulsars first</span>
+<span class="n">available</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">list_available_pulsars</span><span class="p">()</span>
+<span class="k">if</span> <span class="s2">&quot;J1909-3744&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available</span><span class="p">:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Pulsar not available in any PTA&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h2>
+<section id="parfilemanager">
+<h3>ParFileManager<a class="headerlink" href="#parfilemanager" title="Link to this heading"></a></h3>
+<section id="init-self-registry-ptaregistry-none">
+<h4><code class="docutils literal notranslate"><span class="pre">__init__(self,</span> <span class="pre">registry:</span> <span class="pre">PTARegistry</span> <span class="pre">=</span> <span class="pre">None)</span></code><a class="headerlink" href="#init-self-registry-ptaregistry-none" title="Link to this heading"></a></h4>
+<p>Initialize ParFileManager with optional PTA registry.</p>
+</section>
+<section id="write-consistent-parfiles-self-pulsar-name-str-pta-names-list-str-reference-pta-str-combine-components-list-str-astrometry-spin-binary-dispersion-add-dm-derivatives-bool-false-output-dir-path-none-dict-str-path">
+<h4><code class="docutils literal notranslate"><span class="pre">write_consistent_parfiles(self,</span> <span class="pre">pulsar_name:</span> <span class="pre">str,</span> <span class="pre">pta_names:</span> <span class="pre">List[str],</span> <span class="pre">reference_pta:</span> <span class="pre">str,</span> <span class="pre">combine_components:</span> <span class="pre">List[str]</span> <span class="pre">=</span> <span class="pre">[&quot;astrometry&quot;,</span> <span class="pre">&quot;spin&quot;,</span> <span class="pre">&quot;binary&quot;,</span> <span class="pre">&quot;dispersion&quot;],</span> <span class="pre">add_dm_derivatives:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False,</span> <span class="pre">output_dir:</span> <span class="pre">Path</span> <span class="pre">=</span> <span class="pre">None)</span> <span class="pre">-&gt;</span> <span class="pre">Dict[str,</span> <span class="pre">Path]</span></code><a class="headerlink" href="#write-consistent-parfiles-self-pulsar-name-str-pta-names-list-str-reference-pta-str-combine-components-list-str-astrometry-spin-binary-dispersion-add-dm-derivatives-bool-false-output-dir-path-none-dict-str-path" title="Link to this heading"></a></h4>
+<p>Create astrophysically consistent par files.</p>
+</section>
+</section>
+<section id="metapulsarfactory">
+<h3>MetaPulsarFactory<a class="headerlink" href="#metapulsarfactory" title="Link to this heading"></a></h3>
+<section id="init-self-registry-ptaregistry-none-parfile-manager-parfilemanager-none">
+<h4><code class="docutils literal notranslate"><span class="pre">__init__(self,</span> <span class="pre">registry:</span> <span class="pre">PTARegistry</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">parfile_manager:</span> <span class="pre">ParFileManager</span> <span class="pre">=</span> <span class="pre">None)</span></code><a class="headerlink" href="#init-self-registry-ptaregistry-none-parfile-manager-parfilemanager-none" title="Link to this heading"></a></h4>
+<p>Initialize factory with optional registry and parfile manager.</p>
+</section>
+<section id="create-metapulsar-self-pulsar-name-str-pta-names-list-str-combination-strategy-str-composite-reference-pta-str-none-combine-components-list-str-astrometry-spin-binary-dispersion-add-dm-derivatives-bool-false-metapulsar">
+<h4><code class="docutils literal notranslate"><span class="pre">create_metapulsar(self,</span> <span class="pre">pulsar_name:</span> <span class="pre">str,</span> <span class="pre">pta_names:</span> <span class="pre">List[str],</span> <span class="pre">combination_strategy:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">&quot;composite&quot;,</span> <span class="pre">reference_pta:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">combine_components:</span> <span class="pre">List[str]</span> <span class="pre">=</span> <span class="pre">[&quot;astrometry&quot;,</span> <span class="pre">&quot;spin&quot;,</span> <span class="pre">&quot;binary&quot;,</span> <span class="pre">&quot;dispersion&quot;],</span> <span class="pre">add_dm_derivatives:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False)</span> <span class="pre">-&gt;</span> <span class="pre">MetaPulsar</span></code><a class="headerlink" href="#create-metapulsar-self-pulsar-name-str-pta-names-list-str-combination-strategy-str-composite-reference-pta-str-none-combine-components-list-str-astrometry-spin-binary-dispersion-add-dm-derivatives-bool-false-metapulsar" title="Link to this heading"></a></h4>
+<p>Create MetaPulsar with specified strategy.</p>
+</section>
+<section id="list-available-pulsars-self-pta-names-list-str-none-list-str">
+<h4><code class="docutils literal notranslate"><span class="pre">list_available_pulsars(self,</span> <span class="pre">pta_names:</span> <span class="pre">List[str]</span> <span class="pre">=</span> <span class="pre">None)</span> <span class="pre">-&gt;</span> <span class="pre">List[str]</span></code><a class="headerlink" href="#list-available-pulsars-self-pta-names-list-str-none-list-str" title="Link to this heading"></a></h4>
+<p>List available pulsars in specified PTAs.</p>
+</section>
+</section>
+<section id="metapulsar">
+<h3>MetaPulsar<a class="headerlink" href="#metapulsar" title="Link to this heading"></a></h3>
+<section id="init-self-pulsars-dict-str-union-tuple-object-combination-strategy-str-composite-kwargs">
+<h4><code class="docutils literal notranslate"><span class="pre">__init__(self,</span> <span class="pre">pulsars:</span> <span class="pre">Dict[str,</span> <span class="pre">Union[Tuple,</span> <span class="pre">object]],</span> <span class="pre">combination_strategy:</span> <span class="pre">str</span> <span class="pre">=</span> <span class="pre">&quot;composite&quot;,</span> <span class="pre">**kwargs)</span></code><a class="headerlink" href="#init-self-pulsars-dict-str-union-tuple-object-combination-strategy-str-composite-kwargs" title="Link to this heading"></a></h4>
+<p>Initialize MetaPulsar with pulsar data and combination strategy.</p>
+</section>
+<section id="get-combination-strategy-self-str">
+<h4><code class="docutils literal notranslate"><span class="pre">get_combination_strategy(self)</span> <span class="pre">-&gt;</span> <span class="pre">str</span></code><a class="headerlink" href="#get-combination-strategy-self-str" title="Link to this heading"></a></h4>
+<p>Get the combination strategy used.</p>
+<p><strong>Note</strong>: You can also access the strategy directly via <code class="docutils literal notranslate"><span class="pre">metapulsar.combination_strategy</span></code>.</p>
+<hr class="docutils" />
+<p>For more examples, see <code class="docutils literal notranslate"><span class="pre">examples/parfile_manager_usage.py</span></code>.</p>
+<p>For technical details, see the feature proposal: <code class="docutils literal notranslate"><span class="pre">ai/prompts/active/2025-09-30-parfile-manager-multi-pta-combination-feature-proposal.md</span></code>.</p>
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Rutger van Haasteren, Wang-Wei Yu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,343 @@
+# MetaPulsar - Architecture Overview
+
+## Project Description
+
+**MetaPulsar** is a Python package for combining pulsar timing data from multiple PTA (Pulsar Timing Array) collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar" objects for gravitational wave detection.
+
+## UML Class Diagram
+
+```mermaid
+classDiagram
+    %% Core Classes
+    class MetaPulsar {
+        +Dict[str, Union[Tuple, object]] pulsars
+        +bool sort
+        +bool planets
+        +bool drop_t2pulsar
+        +bool drop_pintpsr
+        +bool _merge_astrometry
+        +bool _merge_spin
+        +bool _merge_binary
+        +bool _merge_dm
+        +Dict _pint_models
+        +Dict _pint_toas
+        +Dict _fitparameters
+        +Dict _setparameters
+        +List fitpars
+        +List setpars
+        +__init__(pulsars, sort, planets, drop_t2pulsar, drop_pintpsr, merge_astrometry, merge_spin, merge_binary, merge_dm)
+        +_process_pulsars()
+        +drop_pulsars(drop_t2pulsar, drop_pintpsr)
+    }
+
+    class PTARegistry {
+        +Dict configs
+        +__init__(configs)
+        +get_pta(name) Dict
+        +list_ptas() List[str]
+        +get_pta_subset(pta_names) Dict[str, Dict]
+        +add_pta(name, config)
+        +update_pta(name, config)
+        +remove_pta(name)
+        +get_ptas_by_timing_package(timing_package) List[str]
+        +_validate_config(config)
+    }
+
+    class MetaPulsarFactory {
+        +PTARegistry registry
+        +Logger logger
+        +__init__(registry)
+        +create_metapulsar(pulsar_name, pta_names) MetaPulsar
+        +create_all_metapulsars(pta_names) Dict[str, MetaPulsar]
+        +discover_available_pulsars(pta_names) List[str]
+        +_check_dependencies()
+        +_discover_files(pulsar_name, pta_configs) Dict[str, Tuple[Path, Path]]
+        +_create_enterprise_pulsars(file_pairs, pta_configs) Dict[str, Union[PintPulsar, Tempo2Pulsar]]
+        +_get_pulsar_name(pulsars) str
+        +_build_metadata(file_pairs, pta_configs) Dict[str, Any]
+        +_find_file(pulsar_name, base_dir, pattern) Optional[Path]
+        +_discover_pulsars_in_pta(config) List[str]
+    }
+
+    %% Parameter Management Classes
+    class MetaPulsarParameterManager {
+        +Dict[str, TimingModel] pint_models
+        +ParameterResolver resolver
+        +__init__(pint_models)
+        +build_parameter_mappings(merge_astrometry, merge_spin, merge_binary, merge_dm) ParameterMapping
+        +_build_merge_parameters_list(merge_config) List[str]
+        +_process_all_pta_parameters(merge_pars) Tuple[Dict, Dict]
+        +_process_pta_fit_parameters(pta_name, model, merge_pars, fitparameters)
+        +_process_pta_set_parameters(pta_name, model, setparameters)
+        +_add_merged_parameter(meta_parname, pta_name, param_name, fitparameters)
+        +_add_pta_specific_parameter(meta_parname, pta_name, param_name, fitparameters)
+        +_validate_parameter_consistency(fitparameters, setparameters)
+        +_build_parameter_mapping_result(fitparameters, setparameters) ParameterMapping
+    }
+
+    class ParameterResolver {
+        +Dict[str, TimingModel] pint_models
+        +Dict _aliases
+        +Dict _reverse_aliases
+        +__init__(pint_models)
+        +resolve_parameter_equivalence(param_name) str
+        +check_parameter_available_across_ptas(param_name) bool
+        +check_parameter_identifiable(pta_name, param_name) bool
+        +check_component_available_across_ptas(component_name) bool
+        +_build_reverse_aliases() Dict
+    }
+
+    class ParameterMapping {
+        +Dict fitparameters
+        +Dict setparameters
+        +List merged_parameters
+        +List pta_specific_parameters
+        +__init__(fitparameters, setparameters, merged_parameters, pta_specific_parameters)
+    }
+
+    %% Helper Classes
+    class PINTDiscoveryError {
+        +str message
+    }
+
+    class ParameterInconsistencyError {
+        +str message
+    }
+
+    %% External Dependencies
+    class PintPulsar {
+        <<external>>
+    }
+
+    class Tempo2Pulsar {
+        <<external>>
+    }
+
+    class TimingModel {
+        <<external>>
+    }
+
+    %% Relationships
+    MetaPulsarFactory --> PTARegistry : uses
+    MetaPulsarFactory --> MetaPulsar : creates
+    MetaPulsarFactory --> PintPulsar : creates
+    MetaPulsarFactory --> Tempo2Pulsar : creates
+    
+    MetaPulsarParameterManager --> ParameterResolver : uses
+    MetaPulsarParameterManager --> TimingModel : uses
+    MetaPulsarParameterManager --> ParameterMapping : creates
+    
+    ParameterResolver --> TimingModel : uses
+    
+    MetaPulsar --> TimingModel : contains
+    MetaPulsar --> PintPulsar : contains
+    MetaPulsar --> Tempo2Pulsar : contains
+```
+
+## Class Descriptions
+
+### Core Classes
+
+#### `MetaPulsar`
+The main composite class that combines pulsar timing data from multiple PTA collaborations into a unified object. It handles different pulsar object types (PINT models, libstempo objects, Enterprise Pulsars) and provides parameter merging capabilities.
+
+**Key Features:**
+- Supports multiple pulsar object types
+- Configurable parameter merging (astrometry, spindown, binary, dispersion)
+- Memory management with optional object cleanup
+- PINT model extraction and processing
+
+#### `PTARegistry`
+A configuration management system for PTA data releases. It provides preset configurations for major PTA collaborations and allows custom PTA configurations to be added.
+
+**Key Features:**
+- Pre-configured IPTA DR3 data releases (EPTA, PPTA, NANOGrav, MPTA, InPTA)
+- Support for both PINT and Tempo2 timing packages
+- Coordinate system management (equatorial/ecliptical)
+- Validation and filtering capabilities
+
+#### `MetaPulsarFactory`
+The main factory class that orchestrates the creation of MetaPulsars by discovering files, creating Enterprise Pulsars, and wrapping them with metadata.
+
+**Key Features:**
+- File discovery using regex patterns
+- Enterprise Pulsar creation (PintPulsar, Tempo2Pulsar)
+- Canonical name resolution
+- Batch processing capabilities
+- Comprehensive error handling
+
+### Parameter Management Classes
+
+#### `MetaPulsarParameterManager`
+High-level orchestrator for parameter mapping workflows. It coordinates parameter discovery, resolution, and mapping across multiple PINT models.
+
+**Key Features:**
+- Parameter type-based discovery (astrometry, spindown, binary, dispersion)
+- Merged vs PTA-specific parameter handling
+- Consistency validation
+- Structured result generation
+
+#### `ParameterResolver`
+Handles parameter equivalence resolution and availability checking across multiple PINT models. It encapsulates the logic for resolving parameter aliases and validating component availability.
+
+**Key Features:**
+- Parameter alias resolution
+- Cross-PTA availability checking
+- Component validation
+- Identifiability assessment
+
+#### `ParameterMapping`
+Data class that holds the results of parameter mapping operations, including fit parameters, set parameters, and categorization of merged vs PTA-specific parameters.
+
+## Usage Examples
+
+### Basic MetaPulsar Creation
+
+```python
+from metapulsar import MetaPulsarFactory, PTARegistry
+
+# Create factory with default registry
+factory = MetaPulsarFactory()
+
+# Create MetaPulsar for a specific pulsar
+metapulsar = factory.create_metapulsar("J1857+0943")
+
+# Access the underlying pulsar data
+print(f"Available PTAs: {list(metapulsar.pulsars.keys())}")
+print(f"Parameter merging config: astrometry={metapulsar._merge_astrometry}")
+```
+
+### Custom PTA Configuration
+
+```python
+from metapulsar import PTARegistry, MetaPulsarFactory
+
+# Create custom registry
+registry = PTARegistry()
+
+# Add custom PTA configuration
+custom_config = {
+    "base_dir": "/data/custom_pta",
+    "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
+    "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
+    "coordinates": "equatorial",
+    "timing_package": "pint",
+    "priority": 1,
+    "description": "Custom PTA"
+}
+
+registry.add_pta("custom_pta", custom_config)
+
+# Create factory with custom registry
+factory = MetaPulsarFactory(registry)
+```
+
+### Batch Processing
+
+```python
+# Create MetaPulsars for all available pulsars
+all_metapulsars = factory.create_all_metapulsars()
+
+# Create MetaPulsars for specific PTA subset
+epta_metapulsars = factory.create_all_metapulsars(pta_names=["epta_dr2", "ppta_dr3"])
+
+# Discover available pulsars
+available_pulsars = factory.discover_available_pulsars()
+print(f"Found {len(available_pulsars)} pulsars across all PTAs")
+```
+
+### Parameter Management
+
+```python
+from metapulsar import MetaPulsarParameterManager
+from pint.models import get_model_and_toas
+
+# Load PINT models from different PTAs
+pint_models = {}
+for pta_name in ["epta_dr2", "ppta_dr3", "nanograv_15y"]:
+    model, toas = get_model_and_toas(f"{pta_name}_parfile.par", f"{pta_name}_timfile.tim")
+    pint_models[pta_name] = model
+
+# Create parameter manager
+param_manager = MetaPulsarParameterManager(pint_models)
+
+# Build parameter mappings
+mapping = param_manager.build_parameter_mappings(
+    merge_astrometry=True,
+    merge_spin=True,
+    merge_binary=False,  # Don't merge binary parameters
+    merge_dm=True
+)
+
+# Access results
+print(f"Merged parameters: {mapping.merged_parameters}")
+print(f"PTA-specific parameters: {mapping.pta_specific_parameters}")
+print(f"Fit parameters: {list(mapping.fitparameters.keys())}")
+```
+
+### PTA Registry Operations
+
+```python
+from metapulsar import PTARegistry
+
+# Create registry
+registry = PTARegistry()
+
+# List all PTAs
+all_ptas = registry.list_ptas()
+print(f"Available PTAs: {all_ptas}")
+
+# Filter by timing package
+pint_ptas = registry.get_ptas_by_timing_package("pint")
+tempo2_ptas = registry.get_ptas_by_timing_package("tempo2")
+
+
+# Get specific PTA configuration
+epta_config = registry.get_pta("epta_dr2")
+print(f"EPTA base directory: {epta_config['base_dir']}")
+```
+
+### Error Handling
+
+```python
+from metapulsar import MetaPulsarFactory
+from metapulsar.metapulsar_parameter_manager import ParameterInconsistencyError
+
+factory = MetaPulsarFactory()
+
+try:
+    # This might fail if no files are found
+    metapulsar = factory.create_metapulsar("J9999+9999")
+except ValueError as e:
+    print(f"No files found: {e}")
+
+try:
+    # This might fail if parameters are inconsistent
+    mapping = param_manager.build_parameter_mappings()
+except ParameterInconsistencyError as e:
+    print(f"Parameter inconsistency: {e}")
+```
+
+## Architecture Benefits
+
+1. **Modular Design**: Clear separation of concerns with specialized classes for different responsibilities
+2. **Extensibility**: Easy to add new PTA configurations and parameter types
+3. **Flexibility**: Supports both PINT and Tempo2 timing packages
+4. **Robustness**: Comprehensive error handling and validation
+5. **Integration**: Seamless integration with Enterprise ecosystem
+6. **Maintainability**: Clean interfaces and well-documented APIs
+
+## Dependencies
+
+### External Dependencies
+- `enterprise` - For PintPulsar and Tempo2Pulsar classes
+- `pint` - For PINT timing models and TOAs
+- `libstempo` - For Tempo2Pulsar creation
+- `astropy` - For coordinate transformations
+- `loguru` - For logging
+- `numpy` - For numerical operations
+
+### Internal Dependencies
+- `position_helpers` - For coordinate conversion and J-name generation
+- `pint_helpers` - For PINT-specific parameter discovery
+- `parameter_resolver` - For parameter equivalence resolution

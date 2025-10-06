@@ -326,13 +326,15 @@ class MetaPulsarFactory:
         return None
 
     def _create_raw_pulsars(
-        self, file_pairs: Dict[str, Tuple[Path, Path]], pta_configs: Dict[str, Dict]
+        self,
+        file_pairs: Dict[str, Tuple[Path, Path]],
+        pta_data_releases: Dict[str, Dict],
     ) -> Dict[str, Any]:
         """Create raw PINT/Tempo2 objects from file pairs.
 
         Args:
             file_pairs: Dictionary mapping PTA names to (parfile, timfile) tuples
-            pta_configs: Dictionary of PTA configurations
+            pta_data_releases: Dictionary of PTA data releases
 
         Returns:
             Dictionary mapping PTA names to raw PINT/Tempo2 objects
@@ -343,10 +345,10 @@ class MetaPulsarFactory:
         raw_pulsars = {}
 
         for pta_name, (parfile, timfile) in file_pairs.items():
-            config = pta_configs[pta_name]
+            data_release = pta_data_releases[pta_name]
 
             try:
-                if config["timing_package"] == "pint":
+                if data_release["timing_package"] == "pint":
                     # Create raw PINT objects
                     if get_model_and_toas is None:
                         raise RuntimeError("PINT not available for raw PINT creation")
@@ -365,7 +367,7 @@ class MetaPulsarFactory:
                     raw_pulsars[pta_name] = t2_psr
 
                 self.logger.debug(
-                    f"Created raw {config['timing_package']} object for {pta_name}"
+                    f"Created raw {data_release['timing_package']} object for {pta_name}"
                 )
 
             except Exception as e:
@@ -460,13 +462,15 @@ class MetaPulsarFactory:
         return self._find_timfile_by_name(pulsar_name, config)
 
     def _build_metadata(
-        self, file_pairs: Dict[str, Tuple[Path, Path]], pta_configs: Dict[str, Dict]
+        self,
+        file_pairs: Dict[str, Tuple[Path, Path]],
+        pta_data_releases: Dict[str, Dict],
     ) -> Dict[str, Any]:
         """Build metadata for the MetaPulsar.
 
         Args:
             file_pairs: Dictionary mapping PTA names to (parfile, timfile) tuples
-            pta_configs: Dictionary of PTA configurations
+            pta_data_releases: Dictionary of PTA data releases
 
         Returns:
             Dictionary containing metadata
@@ -476,21 +480,22 @@ class MetaPulsarFactory:
                 pta: (str(par), str(tim)) for pta, (par, tim) in file_pairs.items()
             },
             "timing_packages": {
-                pta: config["timing_package"] for pta, config in pta_configs.items()
+                pta: data_release["timing_package"]
+                for pta, data_release in pta_data_releases.items()
             },
             "creation_timestamp": datetime.now().isoformat(),
         }
 
-    def _discover_pulsars_in_pta(self, config: Dict) -> List[str]:
+    def _discover_pulsars_in_pta(self, data_release: Dict) -> List[str]:
         """Discover all pulsars in a single PTA using PINT models.
 
         Args:
-            config: PTA configuration to search
+            data_release: PTA data release to search
 
         Returns:
             List of pulsar names found in the PTA
         """
-        base_path = Path(config["base_dir"])
+        base_path = Path(data_release["base_dir"])
         if not base_path.exists():
             return []
 
@@ -498,9 +503,11 @@ class MetaPulsarFactory:
 
         # Use regex only for initial file discovery (this is the ONLY place regex should be used)
         try:
-            regex = re.compile(config["par_pattern"])
+            regex = re.compile(data_release["par_pattern"])
         except re.error as e:
-            self.logger.error(f"Invalid regex pattern '{config['par_pattern']}': {e}")
+            self.logger.error(
+                f"Invalid regex pattern '{data_release['par_pattern']}': {e}"
+            )
             return []
 
         for file_path in base_path.rglob("*.par"):

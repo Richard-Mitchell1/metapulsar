@@ -1,0 +1,272 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MetaPulsar Troubleshooting Guide &mdash; MetaPulsar 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Frequently Asked Questions (FAQ)" href="faq.html" />
+    <link rel="prev" title="MetaPulsar Developer Guide" href="developer_guide.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MetaPulsar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">MetaPulsar Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">MetaPulsar User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">MetaPulsar API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide.html">MetaPulsar Developer Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">MetaPulsar Troubleshooting Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#common-issues">Common Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#installation-issues">Installation Issues</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#import-errors">Import Errors</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#missing-dependencies">Missing Dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#runtime-issues">Runtime Issues</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#file-not-found">File Not Found</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#parameter-consistency-errors">Parameter Consistency Errors</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#performance-issues">Performance Issues</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#slow-file-discovery">Slow File Discovery</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#memory-issues">Memory Issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-help">Getting Help</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#faq">FAQ</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#q-whats-the-difference-between-composite-and-consistent-strategies">Q: What’s the difference between composite and consistent strategies?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#q-how-do-i-add-a-custom-pta">Q: How do I add a custom PTA?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#q-can-i-use-metapulsar-without-enterprise">Q: Can I use MetaPulsar without Enterprise?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#q-how-do-i-handle-missing-data-files">Q: How do I handle missing data files?</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#q-what-timing-packages-are-supported">Q: What timing packages are supported?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">MetaPulsar Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture-overview.html">MetaPulsar - Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="selection_utils_api.html">Selection Utilities API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="enterprise_integration_guide.html">Enterprise Integration Guide for Staggered Selection Utilities</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MetaPulsar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">MetaPulsar Troubleshooting Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/troubleshooting.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="metapulsar-troubleshooting-guide">
+<h1>MetaPulsar Troubleshooting Guide<a class="headerlink" href="#metapulsar-troubleshooting-guide" title="Link to this heading"></a></h1>
+<section id="common-issues">
+<h2>Common Issues<a class="headerlink" href="#common-issues" title="Link to this heading"></a></h2>
+<section id="installation-issues">
+<h3>Installation Issues<a class="headerlink" href="#installation-issues" title="Link to this heading"></a></h3>
+<section id="import-errors">
+<h4>Import Errors<a class="headerlink" href="#import-errors" title="Link to this heading"></a></h4>
+<p><strong>Problem</strong>: <code class="docutils literal notranslate"><span class="pre">ModuleNotFoundError:</span> <span class="pre">No</span> <span class="pre">module</span> <span class="pre">named</span> <span class="pre">'metapulsar'</span></code></p>
+<p><strong>Solutions</strong>:</p>
+<ol class="arabic">
+<li><p>Check Python path:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">sys</span><span class="o">.</span><span class="n">path</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+<li><p>Reinstall package:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>uninstall<span class="w"> </span>metapulsar
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+</li>
+<li><p>Check virtual environment:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>which<span class="w"> </span>python
+pip<span class="w"> </span>list<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span>metapulsar
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+<section id="missing-dependencies">
+<h4>Missing Dependencies<a class="headerlink" href="#missing-dependencies" title="Link to this heading"></a></h4>
+<p><strong>Problem</strong>: <code class="docutils literal notranslate"><span class="pre">ImportError:</span> <span class="pre">No</span> <span class="pre">module</span> <span class="pre">named</span> <span class="pre">'enterprise'</span></code></p>
+<p><strong>Solutions</strong>:</p>
+<ol class="arabic">
+<li><p>Install all dependencies:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev,libstempo,analysis]&quot;</span>
+</pre></div>
+</div>
+</li>
+<li><p>Check specific dependency:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">enterprise</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">enterprise</span><span class="o">.</span><span class="n">__version__</span><span class="p">)</span>
+</pre></div>
+</div>
+</li>
+</ol>
+</section>
+</section>
+<section id="runtime-issues">
+<h3>Runtime Issues<a class="headerlink" href="#runtime-issues" title="Link to this heading"></a></h3>
+<section id="file-not-found">
+<h4>File Not Found<a class="headerlink" href="#file-not-found" title="Link to this heading"></a></h4>
+<p><strong>Problem</strong>: <code class="docutils literal notranslate"><span class="pre">FileNotFoundError</span></code> when discovering files</p>
+<p><strong>Solutions</strong>:</p>
+<ol class="arabic simple">
+<li><p>Check PTA registry configuration</p></li>
+<li><p>Verify file patterns match actual files</p></li>
+<li><p>Ensure base directories exist</p></li>
+</ol>
+</section>
+<section id="parameter-consistency-errors">
+<h4>Parameter Consistency Errors<a class="headerlink" href="#parameter-consistency-errors" title="Link to this heading"></a></h4>
+<p><strong>Problem</strong>: <code class="docutils literal notranslate"><span class="pre">ParameterInconsistencyError</span></code></p>
+<p><strong>Solutions</strong>:</p>
+<ol class="arabic simple">
+<li><p>Check parameter names across PTAs</p></li>
+<li><p>Verify parameter units</p></li>
+<li><p>Use composite strategy if consistency not needed</p></li>
+</ol>
+</section>
+</section>
+<section id="performance-issues">
+<h3>Performance Issues<a class="headerlink" href="#performance-issues" title="Link to this heading"></a></h3>
+<section id="slow-file-discovery">
+<h4>Slow File Discovery<a class="headerlink" href="#slow-file-discovery" title="Link to this heading"></a></h4>
+<p><strong>Solutions</strong>:</p>
+<ol class="arabic simple">
+<li><p>Use specific PTA names instead of all PTAs</p></li>
+<li><p>Pre-filter data when possible</p></li>
+<li><p>Cache frequently used objects</p></li>
+</ol>
+</section>
+<section id="memory-issues">
+<h4>Memory Issues<a class="headerlink" href="#memory-issues" title="Link to this heading"></a></h4>
+<p><strong>Solutions</strong>:</p>
+<ol class="arabic simple">
+<li><p>Use appropriate data types</p></li>
+<li><p>Clean up large objects</p></li>
+<li><p>Process data in chunks</p></li>
+</ol>
+</section>
+</section>
+</section>
+<section id="getting-help">
+<h2>Getting Help<a class="headerlink" href="#getting-help" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Check this troubleshooting guide</p></li>
+<li><p>Review examples in <code class="docutils literal notranslate"><span class="pre">examples/</span></code> directory</p></li>
+<li><p>Check API documentation</p></li>
+<li><p>Report issues on GitHub</p></li>
+</ol>
+</section>
+<section id="faq">
+<h2>FAQ<a class="headerlink" href="#faq" title="Link to this heading"></a></h2>
+<section id="q-whats-the-difference-between-composite-and-consistent-strategies">
+<h3>Q: What’s the difference between composite and consistent strategies?<a class="headerlink" href="#q-whats-the-difference-between-composite-and-consistent-strategies" title="Link to this heading"></a></h3>
+<p>A: Composite strategy preserves PTA-specific parameter differences, while consistent strategy aligns parameters to a reference PTA for astrophysical consistency.</p>
+</section>
+<section id="q-how-do-i-add-a-custom-pta">
+<h3>Q: How do I add a custom PTA?<a class="headerlink" href="#q-how-do-i-add-a-custom-pta" title="Link to this heading"></a></h3>
+<p>A: Use the <code class="docutils literal notranslate"><span class="pre">FileDiscoveryService.add_pta()</span></code> method with a configuration dictionary containing file patterns and settings.</p>
+</section>
+<section id="q-can-i-use-metapulsar-without-enterprise">
+<h3>Q: Can I use MetaPulsar without Enterprise?<a class="headerlink" href="#q-can-i-use-metapulsar-without-enterprise" title="Link to this heading"></a></h3>
+<p>A: Yes, MetaPulsar is a standalone package. Enterprise integration is optional but recommended for gravitational wave analysis.</p>
+</section>
+<section id="q-how-do-i-handle-missing-data-files">
+<h3>Q: How do I handle missing data files?<a class="headerlink" href="#q-how-do-i-handle-missing-data-files" title="Link to this heading"></a></h3>
+<p>A: MetaPulsar gracefully handles missing files by filtering out PTAs with no data before creating MetaPulsar objects.</p>
+</section>
+<section id="q-what-timing-packages-are-supported">
+<h3>Q: What timing packages are supported?<a class="headerlink" href="#q-what-timing-packages-are-supported" title="Link to this heading"></a></h3>
+<p>A: MetaPulsar supports both PINT and TEMPO2 timing packages through the <code class="docutils literal notranslate"><span class="pre">timing_package</span></code> configuration option.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="developer_guide.html" class="btn btn-neutral float-left" title="MetaPulsar Developer Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="faq.html" class="btn btn-neutral float-right" title="Frequently Asked Questions (FAQ)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Rutger van Haasteren, Wang-Wei Yu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

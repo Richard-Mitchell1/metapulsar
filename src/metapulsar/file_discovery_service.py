@@ -10,13 +10,14 @@ from pathlib import Path
 import re
 from loguru import logger
 
-PTA_CONFIGS = {
+__all__ = ["FileDiscoveryService", "PTA_DATA_RELEASES"]
+
+PTA_DATA_RELEASES = {
     "epta_dr1_v2_2": {
         "base_dir": "data/ipta-dr2/EPTA_v2.2/",
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1_all\.tim",
         "timing_package": "tempo2",
-        "priority": 1,
         "description": "EPTA Data Release 1 v2.2",
     },
     "epta_dr2": {
@@ -24,7 +25,6 @@ PTA_CONFIGS = {
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})/\1_all\.tim",
         "timing_package": "tempo2",
-        "priority": 1,
         "description": "EPTA Data Release 2",
     },
     "ppta_dr2": {
@@ -32,7 +32,6 @@ PTA_CONFIGS = {
         "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})_dr1dr2\.par",
         "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})_dr1dr2\.tim",
         "timing_package": "tempo2",
-        "priority": 1,
         "description": "PPTA Data Release 1+2",
     },
     "nanograv_9y": {
@@ -40,7 +39,6 @@ PTA_CONFIGS = {
         "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})_NANOGrav_9yv1\.gls\.par",
         "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})_NANOGrav_9yv1\.tim",
         "timing_package": "pint",
-        "priority": 1,
         "description": "NANOGrav 9-year Data Release",
     },
     "inpta_dr1": {
@@ -48,7 +46,6 @@ PTA_CONFIGS = {
         "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\/\1_all\.tim",
         "timing_package": "tempo2",
-        "priority": 1,
         "description": "InPTA Data Release 1",
     },
     "mpta_dr1": {
@@ -56,7 +53,6 @@ PTA_CONFIGS = {
         "par_pattern": r"MTMSP-([BJ]\d{4}[+-]\d{2,4})-\.par",
         "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})_16ch\.tim",
         "timing_package": "tempo2",
-        "priority": 1,
         "description": "MPTA Data Release 1",
     },
     "nanograv_12y": {
@@ -64,7 +60,6 @@ PTA_CONFIGS = {
         "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})(?!.*\.t2)_NANOGrav_12yv2\.gls\.par",
         "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})_NANOGrav_12yv2\.tim",
         "timing_package": "pint",
-        "priority": 1,
         "description": "NANOGrav 12-year Data Release",
     },
     "nanograv_15y": {
@@ -72,7 +67,6 @@ PTA_CONFIGS = {
         "par_pattern": r"par/([BJ]\d{4}[+-]\d{2,4})(?!.*(ao|gbt)).*\.par",
         "tim_pattern": r"tim/([BJ]\d{4}[+-]\d{2,4})(?!.*(ao|gbt)).*\.tim",
         "timing_package": "pint",
-        "priority": 2,
         "description": "NANOGrav 15-year Data Release",
     },
 }
@@ -125,13 +119,15 @@ class FileDiscoveryService:
     - Completely isolated and testable
     """
 
-    def __init__(self, pta_configs: Dict = None):
+    def __init__(self, pta_data_releases: Dict = None, working_dir: str = None):
         """Initialize the file discovery service.
 
         Args:
-            pta_configs: Dictionary of PTA configurations. If None, uses default presets.
+            pta_data_releases: Dictionary of PTA data releases. If None, uses default presets.
+            working_dir: Working directory for resolving relative paths. If None, uses current working directory.
         """
-        self.pta_configs = pta_configs or PTA_CONFIGS.copy()
+        self.working_dir = Path(working_dir) if working_dir else Path.cwd()
+        self.pta_data_releases = pta_data_releases or PTA_DATA_RELEASES.copy()
         self.logger = logger
 
     def discover_patterns_in_pta(self, pta_name: str) -> List[str]:
@@ -146,11 +142,11 @@ class FileDiscoveryService:
         Raises:
             KeyError: If PTA not found in configurations
         """
-        if pta_name not in self.pta_configs:
-            raise KeyError(f"PTA '{pta_name}' not found in configurations")
+        if pta_name not in self.pta_data_releases:
+            raise KeyError(f"PTA '{pta_name}' not found in data releases")
 
-        config = self.pta_configs[pta_name]
-        return self._discover_patterns_in_config(config)
+        data_release = self.pta_data_releases[pta_name]
+        return self._discover_patterns_in_data_release(data_release)
 
     def discover_patterns_in_ptas(self, pta_names: List[str]) -> Dict[str, List[str]]:
         """Discover all file patterns in multiple PTAs using regex.
@@ -180,7 +176,7 @@ class FileDiscoveryService:
 
         Returns:
             Dictionary mapping PTA names to lists of enriched file dictionaries
-            Format: {pta_name: [{'par': parfile_path, 'tim': timfile_path, 'timing_package': 'pint', 'priority': 1}, ...]}
+            Format: {pta_name: [{'par': parfile_path, 'tim': timfile_path, 'timing_package': 'pint', 'timespan_days': 1000.0}, ...]}
         """
         if pta_names is None:
             pta_names = self.list_ptas()
@@ -188,12 +184,12 @@ class FileDiscoveryService:
         result = {}
 
         for pta_name in pta_names:
-            if pta_name not in self.pta_configs:
-                self.logger.error(f"PTA '{pta_name}' not found in configurations")
-                raise KeyError(f"PTA '{pta_name}' not found in configurations")
+            if pta_name not in self.pta_data_releases:
+                self.logger.error(f"PTA '{pta_name}' not found in data releases")
+                raise KeyError(f"PTA '{pta_name}' not found in data releases")
 
-            result[pta_name] = self._discover_all_file_pairs_in_config(
-                self.pta_configs[pta_name]
+            result[pta_name] = self._discover_all_file_pairs_in_data_release(
+                self.pta_data_releases[pta_name]
             )
 
         return result
@@ -202,38 +198,35 @@ class FileDiscoveryService:
         """Get list of all PTA names in the configurations.
 
         Returns:
-            List of PTA names, sorted by priority (descending) then name
+            List of PTA names, sorted alphabetically
         """
-        return sorted(
-            self.pta_configs.keys(),
-            key=lambda x: (-self.pta_configs[x].get("priority", 0), x),
-        )
+        return sorted(self.pta_data_releases.keys())
 
-    def add_pta(self, name: str, config: Dict) -> None:
-        """Add a PTA configuration.
+    def add_pta(self, name: str, data_release: Dict) -> None:
+        """Add a PTA data release.
 
         Args:
-            name: Name of the PTA configuration
-            config: Dictionary containing PTA configuration
+            name: Name of the PTA data release
+            data_release: Dictionary containing PTA data release specification
 
         Raises:
-            ValueError: If PTA with same name already exists or config is invalid
+            ValueError: If PTA with same name already exists or data_release is invalid
         """
-        if name in self.pta_configs:
-            raise ValueError(f"PTA '{name}' already exists in configurations")
+        if name in self.pta_data_releases:
+            raise ValueError(f"PTA '{name}' already exists in data releases")
 
-        self._validate_config(config)
-        self.pta_configs[name] = config
-        self.logger.debug(f"Added PTA configuration: {name}")
+        self._validate_data_release(data_release)
+        self.pta_data_releases[name] = data_release
+        self.logger.debug(f"Added PTA data release: {name}")
 
-    def _validate_config(self, config: Dict) -> None:
-        """Validate a PTA configuration dictionary.
+    def _validate_data_release(self, data_release: Dict) -> None:
+        """Validate a PTA data release dictionary.
 
         Args:
-            config: Configuration dictionary to validate
+            data_release: Data release dictionary to validate
 
         Raises:
-            ValueError: If configuration is invalid
+            ValueError: If data release is invalid
         """
         required_keys = {
             "base_dir",
@@ -241,33 +234,33 @@ class FileDiscoveryService:
             "tim_pattern",
             "timing_package",
         }
-        missing_keys = required_keys - config.keys()
+        missing_keys = required_keys - data_release.keys()
 
         if missing_keys:
             raise ValueError(f"Missing required keys: {missing_keys}")
 
-        if config["timing_package"] not in ["pint", "tempo2"]:
+        if data_release["timing_package"] not in ["pint", "tempo2"]:
             raise ValueError(
-                f"Invalid timing_package: {config['timing_package']}. Must be 'pint' or 'tempo2'"
+                f"Invalid timing_package: {data_release['timing_package']}. Must be 'pint' or 'tempo2'"
             )
 
         # Validate regex patterns
         try:
-            re.compile(config["par_pattern"])
-            re.compile(config["tim_pattern"])
+            re.compile(data_release["par_pattern"])
+            re.compile(data_release["tim_pattern"])
         except re.error as e:
             raise ValueError(f"Invalid regex pattern: {e}")
 
-    def _discover_patterns_in_config(self, config: Dict) -> List[str]:
-        """Discover all file patterns in a single PTA configuration using regex.
+    def _discover_patterns_in_data_release(self, data_release: Dict) -> List[str]:
+        """Discover all file patterns in a single PTA data release using regex.
 
         Args:
-            config: PTA configuration dictionary
+            data_release: PTA data release dictionary
 
         Returns:
             List of regex-extracted patterns (NOT validated pulsar names)
         """
-        base_path = Path(config["base_dir"])
+        base_path = self.working_dir / data_release["base_dir"]
         if not base_path.exists():
             return []
 
@@ -275,9 +268,11 @@ class FileDiscoveryService:
 
         # Use regex for file discovery and pattern extraction
         try:
-            regex = re.compile(config["par_pattern"])
+            regex = re.compile(data_release["par_pattern"])
         except re.error as e:
-            self.logger.error(f"Invalid regex pattern '{config['par_pattern']}': {e}")
+            self.logger.error(
+                f"Invalid regex pattern '{data_release['par_pattern']}': {e}"
+            )
             return []
 
         for file_path in base_path.rglob("*.par"):
@@ -289,18 +284,20 @@ class FileDiscoveryService:
 
         return list(patterns)
 
-    def _discover_all_file_pairs_in_config(self, config: Dict) -> List[Dict[str, Path]]:
-        """Discover all par/tim file pairs in a PTA configuration.
+    def _discover_all_file_pairs_in_data_release(
+        self, data_release: Dict
+    ) -> List[Dict[str, Path]]:
+        """Discover all par/tim file pairs in a PTA data release.
 
         Files are matched by their canonical pulsar name (e.g., J1857+0943, B1855+09A).
         """
-        base_path = Path(config["base_dir"])
+        base_path = self.working_dir / data_release["base_dir"]
         if not base_path.exists():
             return []
 
         file_pairs = []
-        par_regex = re.compile(config["par_pattern"])
-        tim_regex = re.compile(config["tim_pattern"])
+        par_regex = re.compile(data_release["par_pattern"])
+        tim_regex = re.compile(data_release["tim_pattern"])
 
         # Step 1: Find all par files and extract their canonical pulsar names
         par_files_by_pulsar = {}
@@ -340,8 +337,7 @@ class FileDiscoveryService:
                     {
                         "par": par_files_by_pulsar[pulsar_name],
                         "tim": tim_files_by_pulsar[pulsar_name],
-                        "timing_package": config["timing_package"],
-                        "priority": config.get("priority", 0),
+                        "timing_package": data_release["timing_package"],
                         "timespan_days": timespan,
                         "par_content": par_files_by_pulsar[pulsar_name].read_text(
                             encoding="utf-8"

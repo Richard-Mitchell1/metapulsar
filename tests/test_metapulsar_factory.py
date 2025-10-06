@@ -29,7 +29,6 @@ class TestMetaPulsarFactory:
                 "par": Path("/data/epta/J1857+0943.par"),
                 "tim": Path("/data/epta/J1857+0943.tim"),
                 "timing_package": "tempo2",
-                "priority": 1,
             }
         }
 
@@ -170,13 +169,12 @@ class TestMetaPulsarFactory:
             "ppta_dr3": (Path("/data/ppta.par"), Path("/data/ppta.tim")),
         }
 
-        pta_configs = {
+        pta_data_releases = {
             "epta_dr2": {
                 "base_dir": "/data/epta",
                 "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
                 "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
                 "timing_package": "tempo2",
-                "priority": 1,
                 "description": "EPTA DR2",
             },
             "ppta_dr3": {
@@ -184,12 +182,11 @@ class TestMetaPulsarFactory:
                 "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
                 "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
                 "timing_package": "tempo2",
-                "priority": 2,
                 "description": "PPTA DR3",
             },
         }
 
-        metadata = self.factory._build_metadata(file_pairs, pta_configs)
+        metadata = self.factory._build_metadata(file_pairs, pta_data_releases)
 
         assert "file_pairs" in metadata
         assert "timing_packages" in metadata
@@ -215,7 +212,6 @@ class TestMetaPulsarFactory:
                     "tim": Path("/data/epta/J1857+0943.tim"),
                     "timing_package": "pint",
                     "timespan_days": 1000.0,
-                    "priority": 1,
                 }
             ]
         }
@@ -319,7 +315,6 @@ class TestMetaPulsarFactory:
                     "par_content": "PSR J1857+0943\nRAJ 18:57:36.4\nDECJ 09:43:17.1\n",
                     "timing_package": "pint",
                     "timespan_days": 1000.0,
-                    "priority": 1,
                 }
             ]
         }

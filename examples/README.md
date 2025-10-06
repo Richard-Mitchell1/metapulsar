@@ -1,57 +1,47 @@
-# Examples Directory
+# MetaPulsar Examples
 
-This directory contains comprehensive examples and documentation for the MetaPulsar staggered selection utilities.
+This directory contains comprehensive examples and tutorials for the MetaPulsar framework.
 
-## Contents
+## Structure
 
-### Jupyter Notebooks
+### Python Scripts
+- `basic_workflow.py` - Complete workflow from file discovery to MetaPulsar creation
+- `parameter_management.py` - ParameterManager usage and strategies
+- `custom_pta_configuration.py` - Adding custom PTA configurations
+- `enterprise_integration.py` - Integration with Enterprise framework
 
-- **`staggered_selection_usage.ipynb`**: Comprehensive usage examples demonstrating:
-  - Basic flag selection
-  - Staggered selection with fallback
-  - Frequency band filtering
-  - Enterprise integration
-  - Real-world scenarios
-  - Advanced usage patterns
-  - Performance optimization
-  - Error handling
+### Interactive Tutorials
+- `notebooks/01_basic_usage.ipynb` - Basic workflow tutorial
+- `notebooks/02_parameter_management.ipynb` - Parameter management tutorial
+- `notebooks/03_enterprise_integration.ipynb` - Enterprise integration tutorial
+- `notebooks/04_advanced_workflows.ipynb` - Advanced use cases
 
-### Documentation
+### Sample Data
+- `data/sample_data/` - Sample data for examples
 
-- **`../docs/selection_utils_api.md`**: Complete API documentation
-- **`../docs/enterprise_integration_guide.md`**: Enterprise integration guide
+### Legacy Examples
+- `staggered_selection_usage.ipynb` - Staggered selection utilities (specific feature)
 
 ## Getting Started
 
-### Prerequisites
-
-Make sure you have the following installed:
-
-```bash
-# Core dependencies
-pip install numpy matplotlib enterprise
-
-# Jupyter notebook support
-pip install jupyter notebook
-
-# MetaPulsar
-pip install -e .
-```
-
-### Running the Examples
-
-1. **Start Jupyter Notebook**:
+1. **Run Python Scripts**:
    ```bash
-   jupyter notebook
+   python examples/basic_workflow.py
+   python examples/parameter_management.py
+   python examples/custom_pta_configuration.py
+   python examples/enterprise_integration.py
    ```
 
-2. **Open the example notebook**:
-   - Navigate to `examples/staggered_selection_usage.ipynb`
-   - Run all cells to see the examples in action
+2. **Open Interactive Tutorials**:
+   ```bash
+   jupyter notebook examples/notebooks/
+   ```
 
-3. **Follow the documentation**:
-   - Read through the API documentation for detailed reference
-   - Use the Enterprise integration guide for advanced scenarios
+## Examples vs Tests
+
+- **Examples**: Demonstrate workflows and educate users
+- **Tests**: Verify functionality and ensure code quality
+- **Separation**: Examples are educational, tests are comprehensive
 
 ## Example Categories
 

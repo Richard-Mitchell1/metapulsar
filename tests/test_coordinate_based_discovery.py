@@ -203,10 +203,10 @@ class TestCoordinateBasedDiscovery:
         mock_model_builder_class.return_value = mock_model_builder
 
         # Update registry with real paths
-        mock_file_discovery_service.pta_configs["test_pta1"]["base_dir"] = str(
+        mock_file_discovery_service.pta_data_releases["test_pta1"]["base_dir"] = str(
             mock_file_system / "data1"
         )
-        mock_file_discovery_service.pta_configs["test_pta2"]["base_dir"] = str(
+        mock_file_discovery_service.pta_data_releases["test_pta2"]["base_dir"] = str(
             mock_file_system / "data2"
         )
 
@@ -227,7 +227,6 @@ class TestCoordinateBasedDiscovery:
                         "par_content": "PSR J1857+0943\nRAJ 18:57:36.4\nDECJ 09:43:17.1\n",
                         "timing_package": "pint",
                         "timespan_days": 1000.0,
-                        "priority": 1,
                     }
                 ],
                 "test_pta2": [
@@ -237,7 +236,6 @@ class TestCoordinateBasedDiscovery:
                         "par_content": "PSR J1857+0943\nRAJ 18:57:36.4\nDECJ 09:43:17.1\n",
                         "timing_package": "pint",
                         "timespan_days": 1000.0,
-                        "priority": 1,
                     }
                 ],
             }
@@ -331,7 +329,7 @@ class TestEdgeCases:
         malformed_par.write_text("This is not a valid parfile")
 
         # Update the mock service with the test directory
-        mock_file_discovery_service.pta_configs["test_pta1"]["base_dir"] = str(
+        mock_file_discovery_service.pta_data_releases["test_pta1"]["base_dir"] = str(
             mock_file_system / "data1"
         )
 
@@ -349,7 +347,6 @@ class TestEdgeCases:
                         "par_content": "This is not a valid parfile",
                         "timing_package": "pint",
                         "timespan_days": 1000.0,
-                        "priority": 1,
                     }
                 ]
             }

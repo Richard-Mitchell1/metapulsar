@@ -1,0 +1,694 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enterprise Integration Guide for Staggered Selection Utilities &mdash; MetaPulsar 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Selection Utilities API Documentation" href="selection_utils_api.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MetaPulsar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">MetaPulsar Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">MetaPulsar User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">MetaPulsar API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide.html">MetaPulsar Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">MetaPulsar Troubleshooting Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">MetaPulsar Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture-overview.html">MetaPulsar - Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="selection_utils_api.html">Selection Utilities API Documentation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Enterprise Integration Guide for Staggered Selection Utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#table-of-contents">Table of Contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#key-benefits">Key Benefits</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-integration">Basic Integration</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#simple-selection">Simple Selection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#staggered-selection">Staggered Selection</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#frequency-band-selection">Frequency Band Selection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-usage-patterns">Advanced Usage Patterns</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#multiple-selection-criteria">Multiple Selection Criteria</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pta-specific-selections">PTA-Specific Selections</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#complex-staggered-selection">Complex Staggered Selection</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#model-building-examples">Model Building Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#basic-pulsar-model">Basic Pulsar Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#multi-pta-model">Multi-PTA Model</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#custom-selection-factory">Custom Selection Factory</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-optimization">Performance Optimization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#memory-optimization">Memory Optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#computational-optimization">Computational Optimization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#batch-processing">Batch Processing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#common-issues">Common Issues</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#selection-not-working">1. Selection Not Working</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#enterprise-integration-issues">2. Enterprise Integration Issues</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#performance-issues">3. Performance Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#debugging-tools">Debugging Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#selection-design">1. Selection Design</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#performance">2. Performance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#error-handling">3. Error Handling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#integration">4. Integration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#documentation">5. Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#conclusion">Conclusion</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MetaPulsar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Enterprise Integration Guide for Staggered Selection Utilities</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/enterprise_integration_guide.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="enterprise-integration-guide-for-staggered-selection-utilities">
+<h1>Enterprise Integration Guide for Staggered Selection Utilities<a class="headerlink" href="#enterprise-integration-guide-for-staggered-selection-utilities" title="Link to this heading"></a></h1>
+<p>This guide provides detailed instructions for integrating the staggered selection utilities with Enterprise for pulsar timing analysis.</p>
+<section id="table-of-contents">
+<h2>Table of Contents<a class="headerlink" href="#table-of-contents" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="#overview"><span class="xref myst">Overview</span></a></p></li>
+<li><p><a class="reference internal" href="#basic-integration"><span class="xref myst">Basic Integration</span></a></p></li>
+<li><p><a class="reference internal" href="#advanced-usage-patterns"><span class="xref myst">Advanced Usage Patterns</span></a></p></li>
+<li><p><a class="reference internal" href="#model-building-examples"><span class="xref myst">Model Building Examples</span></a></p></li>
+<li><p><a class="reference internal" href="#performance-optimization"><span class="xref myst">Performance Optimization</span></a></p></li>
+<li><p><a class="reference internal" href="troubleshooting.html"><span class="doc std std-doc">Troubleshooting</span></a></p></li>
+<li><p><a class="reference internal" href="#best-practices"><span class="xref myst">Best Practices</span></a></p></li>
+</ul>
+</section>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<p>The staggered selection utilities are designed to work seamlessly with Enterprise’s <code class="docutils literal notranslate"><span class="pre">Selection</span></code> class, providing a modern, well-documented API for creating selection functions. This guide covers everything from basic integration to advanced model building scenarios.</p>
+<section id="key-benefits">
+<h3>Key Benefits<a class="headerlink" href="#key-benefits" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Enterprise Compatibility</strong>: Full compatibility with <code class="docutils literal notranslate"><span class="pre">enterprise.signals.selections.Selection</span></code></p></li>
+<li><p><strong>Hierarchical Selection</strong>: Support for staggered selection with automatic fallback</p></li>
+<li><p><strong>Frequency Filtering</strong>: Optional frequency band filtering</p></li>
+<li><p><strong>Type Safety</strong>: Complete type hints for better IDE support</p></li>
+<li><p><strong>Performance</strong>: Efficient numpy-based operations</p></li>
+</ul>
+</section>
+</section>
+<section id="basic-integration">
+<h2>Basic Integration<a class="headerlink" href="#basic-integration" title="Link to this heading"></a></h2>
+<section id="simple-selection">
+<h3>Simple Selection<a class="headerlink" href="#simple-selection" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">enterprise.signals.selections</span><span class="w"> </span><span class="kn">import</span> <span class="n">Selection</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enterprise.signals</span><span class="w"> </span><span class="kn">import</span> <span class="n">white_signals</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar.selection_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_staggered_selection</span>
+
+<span class="c1"># Create a simple group-based selection</span>
+<span class="n">group_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+
+<span class="c1"># Wrap with Enterprise Selection</span>
+<span class="n">efac_selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">group_sel</span><span class="p">)</span>
+
+<span class="c1"># Use in Enterprise model</span>
+<span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+    <span class="n">efac</span><span class="o">=</span><span class="n">efac_selection</span><span class="p">,</span>
+    <span class="n">log10_efac</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="staggered-selection">
+<h3>Staggered Selection<a class="headerlink" href="#staggered-selection" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create staggered selection with fallback</span>
+<span class="n">staggered_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;ecorr&quot;</span><span class="p">,</span> <span class="p">{(</span><span class="s2">&quot;group&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">):</span> <span class="kc">None</span><span class="p">})</span>
+
+<span class="c1"># Wrap with Enterprise Selection</span>
+<span class="n">ecorr_selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">staggered_sel</span><span class="p">)</span>
+
+<span class="c1"># Use in Enterprise model</span>
+<span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+    <span class="n">ecorr</span><span class="o">=</span><span class="n">ecorr_selection</span><span class="p">,</span>
+    <span class="n">log10_ecorr</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="frequency-band-selection">
+<h3>Frequency Band Selection<a class="headerlink" href="#frequency-band-selection" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create frequency band selection</span>
+<span class="n">band_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span>
+    <span class="s2">&quot;band&quot;</span><span class="p">,</span> 
+    <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span> 
+    <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)</span>  <span class="c1"># 400-1000 MHz</span>
+<span class="p">)</span>
+
+<span class="c1"># Wrap with Enterprise Selection</span>
+<span class="n">band_selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">band_sel</span><span class="p">)</span>
+
+<span class="c1"># Use in Enterprise model</span>
+<span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+    <span class="n">efac</span><span class="o">=</span><span class="n">band_selection</span><span class="p">,</span>
+    <span class="n">log10_efac</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="advanced-usage-patterns">
+<h2>Advanced Usage Patterns<a class="headerlink" href="#advanced-usage-patterns" title="Link to this heading"></a></h2>
+<section id="multiple-selection-criteria">
+<h3>Multiple Selection Criteria<a class="headerlink" href="#multiple-selection-criteria" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create multiple selections for different purposes</span>
+<span class="n">efac_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+<span class="n">ecorr_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;ecorr&quot;</span><span class="p">,</span> <span class="p">{(</span><span class="s2">&quot;group&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">):</span> <span class="kc">None</span><span class="p">})</span>
+<span class="n">band_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;band&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mi">400</span><span class="p">,</span> <span class="mi">1000</span><span class="p">))</span>
+
+<span class="c1"># Wrap with Enterprise Selections</span>
+<span class="n">efac_selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">efac_sel</span><span class="p">)</span>
+<span class="n">ecorr_selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">ecorr_sel</span><span class="p">)</span>
+<span class="n">band_selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">band_sel</span><span class="p">)</span>
+
+<span class="c1"># Use in Enterprise model</span>
+<span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+    <span class="n">efac</span><span class="o">=</span><span class="n">efac_selection</span><span class="p">,</span>
+    <span class="n">ecorr</span><span class="o">=</span><span class="n">ecorr_selection</span><span class="p">,</span>
+    <span class="n">log10_efac</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+    <span class="n">log10_ecorr</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="pta-specific-selections">
+<h3>PTA-Specific Selections<a class="headerlink" href="#pta-specific-selections" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create PTA-specific selections</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">create_pta_selections</span><span class="p">():</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create selections specific to each PTA.&quot;&quot;&quot;</span>
+    
+    <span class="c1"># EPTA-specific selection</span>
+    <span class="n">epta_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;pta&quot;</span><span class="p">:</span> <span class="s2">&quot;EPTA&quot;</span><span class="p">})</span>
+    
+    <span class="c1"># PPTA-specific selection with fallback</span>
+    <span class="n">ppta_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{(</span><span class="s2">&quot;pta&quot;</span><span class="p">,</span> <span class="s2">&quot;group&quot;</span><span class="p">):</span> <span class="s2">&quot;PPTA&quot;</span><span class="p">})</span>
+    
+    <span class="c1"># NANOGrav-specific selection</span>
+    <span class="n">nanograv_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;pta&quot;</span><span class="p">:</span> <span class="s2">&quot;NANOGrav&quot;</span><span class="p">})</span>
+    
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s1">&#39;EPTA&#39;</span><span class="p">:</span> <span class="n">Selection</span><span class="p">(</span><span class="n">epta_sel</span><span class="p">),</span>
+        <span class="s1">&#39;PPTA&#39;</span><span class="p">:</span> <span class="n">Selection</span><span class="p">(</span><span class="n">ppta_sel</span><span class="p">),</span>
+        <span class="s1">&#39;NANOGrav&#39;</span><span class="p">:</span> <span class="n">Selection</span><span class="p">(</span><span class="n">nanograv_sel</span><span class="p">)</span>
+    <span class="p">}</span>
+
+<span class="c1"># Use in model</span>
+<span class="n">pta_selections</span> <span class="o">=</span> <span class="n">create_pta_selections</span><span class="p">()</span>
+<span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+    <span class="n">efac</span><span class="o">=</span><span class="n">pta_selections</span><span class="p">[</span><span class="s1">&#39;EPTA&#39;</span><span class="p">],</span>
+    <span class="n">log10_efac</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="complex-staggered-selection">
+<h3>Complex Staggered Selection<a class="headerlink" href="#complex-staggered-selection" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create complex staggered selection with multiple fallbacks</span>
+<span class="n">complex_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="p">(</span><span class="s2">&quot;group&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">,</span> <span class="s2">&quot;B&quot;</span><span class="p">):</span> <span class="kc">None</span><span class="p">,</span>  <span class="c1"># Triple fallback</span>
+    <span class="s2">&quot;pta&quot;</span><span class="p">:</span> <span class="s2">&quot;EPTA&quot;</span>  <span class="c1"># PTA-specific</span>
+<span class="p">})</span>
+
+<span class="c1"># Wrap with Enterprise Selection</span>
+<span class="n">complex_selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">complex_sel</span><span class="p">)</span>
+
+<span class="c1"># Use in Enterprise model</span>
+<span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+    <span class="n">efac</span><span class="o">=</span><span class="n">complex_selection</span><span class="p">,</span>
+    <span class="n">log10_efac</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="model-building-examples">
+<h2>Model Building Examples<a class="headerlink" href="#model-building-examples" title="Link to this heading"></a></h2>
+<section id="basic-pulsar-model">
+<h3>Basic Pulsar Model<a class="headerlink" href="#basic-pulsar-model" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">enterprise.pulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulsar</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enterprise.signals</span><span class="w"> </span><span class="kn">import</span> <span class="n">white_signals</span><span class="p">,</span> <span class="n">red_signals</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enterprise.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_singlepsr_noise</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar.selection_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_staggered_selection</span>
+
+<span class="c1"># Load pulsar data</span>
+<span class="n">psr</span> <span class="o">=</span> <span class="n">Pulsar</span><span class="p">(</span><span class="n">parfile</span><span class="p">,</span> <span class="n">timfile</span><span class="p">)</span>
+
+<span class="c1"># Create selections</span>
+<span class="n">efac_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+<span class="n">ecorr_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;ecorr&quot;</span><span class="p">,</span> <span class="p">{(</span><span class="s2">&quot;group&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">):</span> <span class="kc">None</span><span class="p">})</span>
+
+<span class="c1"># Create white noise signal</span>
+<span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+    <span class="n">efac</span><span class="o">=</span><span class="n">Selection</span><span class="p">(</span><span class="n">efac_sel</span><span class="p">),</span>
+    <span class="n">ecorr</span><span class="o">=</span><span class="n">Selection</span><span class="p">(</span><span class="n">ecorr_sel</span><span class="p">),</span>
+    <span class="n">log10_efac</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+    <span class="n">log10_ecorr</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Create red noise signal</span>
+<span class="n">red_signal</span> <span class="o">=</span> <span class="n">red_signals</span><span class="o">.</span><span class="n">RedNoise</span><span class="p">(</span>
+    <span class="n">log10_A</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="o">-</span><span class="mi">11</span><span class="p">),</span>
+    <span class="n">gamma</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+<span class="p">)</span>
+
+<span class="c1"># Build model</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">model_singlepsr_noise</span><span class="p">(</span><span class="n">psr</span><span class="p">,</span> <span class="n">white_signal</span><span class="p">,</span> <span class="n">red_signal</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="multi-pta-model">
+<h3>Multi-PTA Model<a class="headerlink" href="#multi-pta-model" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">enterprise.pulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pulsar</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enterprise.signals</span><span class="w"> </span><span class="kn">import</span> <span class="n">white_signals</span><span class="p">,</span> <span class="n">red_signals</span><span class="p">,</span> <span class="n">gp_signals</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">enterprise.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">model_singlepsr_noise</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar.selection_utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_staggered_selection</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">create_multi_pta_model</span><span class="p">(</span><span class="n">psr</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Create a model with multi-PTA selections.&quot;&quot;&quot;</span>
+    
+    <span class="c1"># Create PTA-specific selections</span>
+    <span class="n">pta_efac_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;pta&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+    <span class="n">pta_ecorr_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;ecorr&quot;</span><span class="p">,</span> <span class="p">{(</span><span class="s2">&quot;pta&quot;</span><span class="p">,</span> <span class="s2">&quot;group&quot;</span><span class="p">):</span> <span class="kc">None</span><span class="p">})</span>
+    
+    <span class="c1"># Create backend-specific selections</span>
+    <span class="n">backend_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{(</span><span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="s2">&quot;group&quot;</span><span class="p">):</span> <span class="kc">None</span><span class="p">})</span>
+    
+    <span class="c1"># Create frequency band selections</span>
+    <span class="n">low_band_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span>
+        <span class="s2">&quot;band_low&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">)</span>
+    <span class="p">)</span>
+    <span class="n">high_band_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span>
+        <span class="s2">&quot;band_high&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span> <span class="n">freq_range</span><span class="o">=</span><span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">)</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Create white noise signal</span>
+    <span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+        <span class="n">efac</span><span class="o">=</span><span class="n">Selection</span><span class="p">(</span><span class="n">pta_efac_sel</span><span class="p">),</span>
+        <span class="n">ecorr</span><span class="o">=</span><span class="n">Selection</span><span class="p">(</span><span class="n">pta_ecorr_sel</span><span class="p">),</span>
+        <span class="n">log10_efac</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+        <span class="n">log10_ecorr</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Create red noise signal</span>
+    <span class="n">red_signal</span> <span class="o">=</span> <span class="n">red_signals</span><span class="o">.</span><span class="n">RedNoise</span><span class="p">(</span>
+        <span class="n">log10_A</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">20</span><span class="p">,</span> <span class="o">-</span><span class="mi">11</span><span class="p">),</span>
+        <span class="n">gamma</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">7</span><span class="p">)</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Create GWB signal</span>
+    <span class="n">gwb_signal</span> <span class="o">=</span> <span class="n">gp_signals</span><span class="o">.</span><span class="n">FourierBasisGP</span><span class="p">(</span>
+        <span class="n">log10_A</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">18</span><span class="p">,</span> <span class="o">-</span><span class="mi">14</span><span class="p">),</span>
+        <span class="n">gamma</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Build model</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">model_singlepsr_noise</span><span class="p">(</span><span class="n">psr</span><span class="p">,</span> <span class="n">white_signal</span><span class="p">,</span> <span class="n">red_signal</span><span class="p">,</span> <span class="n">gwb_signal</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">model</span>
+
+<span class="c1"># Use the model</span>
+<span class="n">psr</span> <span class="o">=</span> <span class="n">Pulsar</span><span class="p">(</span><span class="n">parfile</span><span class="p">,</span> <span class="n">timfile</span><span class="p">)</span>
+<span class="n">model</span> <span class="o">=</span> <span class="n">create_multi_pta_model</span><span class="p">(</span><span class="n">psr</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="custom-selection-factory">
+<h3>Custom Selection Factory<a class="headerlink" href="#custom-selection-factory" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">SelectionFactory</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Factory for creating standardized selections.&quot;&quot;&quot;</span>
+    
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_efac_selection</span><span class="p">(</span><span class="n">flag_criteria</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create standardized EFAC selection.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag_criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">flag_criteria</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+        
+        <span class="n">sel_func</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="n">flag_criteria</span><span class="p">,</span> <span class="n">freq_range</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Selection</span><span class="p">(</span><span class="n">sel_func</span><span class="p">)</span>
+    
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_ecorr_selection</span><span class="p">(</span><span class="n">flag_criteria</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create standardized ECORR selection.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag_criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">flag_criteria</span> <span class="o">=</span> <span class="p">{(</span><span class="s2">&quot;group&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">):</span> <span class="kc">None</span><span class="p">}</span>
+        
+        <span class="n">sel_func</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;ecorr&quot;</span><span class="p">,</span> <span class="n">flag_criteria</span><span class="p">,</span> <span class="n">freq_range</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Selection</span><span class="p">(</span><span class="n">sel_func</span><span class="p">)</span>
+    
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">create_band_selection</span><span class="p">(</span><span class="n">band_name</span><span class="p">,</span> <span class="n">freq_range</span><span class="p">,</span> <span class="n">flag_criteria</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create frequency band selection.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">flag_criteria</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">flag_criteria</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+        
+        <span class="n">sel_func</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="n">band_name</span><span class="p">,</span> <span class="n">flag_criteria</span><span class="p">,</span> <span class="n">freq_range</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Selection</span><span class="p">(</span><span class="n">sel_func</span><span class="p">)</span>
+
+<span class="c1"># Use the factory</span>
+<span class="n">factory</span> <span class="o">=</span> <span class="n">SelectionFactory</span><span class="p">()</span>
+
+<span class="c1"># Create standardized selections</span>
+<span class="n">efac_sel</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_efac_selection</span><span class="p">()</span>
+<span class="n">ecorr_sel</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_ecorr_selection</span><span class="p">()</span>
+<span class="n">low_band_sel</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_band_selection</span><span class="p">(</span><span class="s2">&quot;low_band&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">100</span><span class="p">,</span> <span class="mi">500</span><span class="p">))</span>
+<span class="n">high_band_sel</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_band_selection</span><span class="p">(</span><span class="s2">&quot;high_band&quot;</span><span class="p">,</span> <span class="p">(</span><span class="mi">1000</span><span class="p">,</span> <span class="mi">2000</span><span class="p">))</span>
+
+<span class="c1"># Use in model</span>
+<span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+    <span class="n">efac</span><span class="o">=</span><span class="n">efac_sel</span><span class="p">,</span>
+    <span class="n">ecorr</span><span class="o">=</span><span class="n">ecorr_sel</span><span class="p">,</span>
+    <span class="n">log10_efac</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+    <span class="n">log10_ecorr</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="performance-optimization">
+<h2>Performance Optimization<a class="headerlink" href="#performance-optimization" title="Link to this heading"></a></h2>
+<section id="memory-optimization">
+<h3>Memory Optimization<a class="headerlink" href="#memory-optimization" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># For large datasets, consider chunked processing</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_large_dataset</span><span class="p">(</span><span class="n">psr</span><span class="p">,</span> <span class="n">chunk_size</span><span class="o">=</span><span class="mi">10000</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Process large dataset in chunks.&quot;&quot;&quot;</span>
+    
+    <span class="n">n_toas</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">psr</span><span class="o">.</span><span class="n">toas</span><span class="p">)</span>
+    <span class="n">selections</span> <span class="o">=</span> <span class="p">[]</span>
+    
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">n_toas</span><span class="p">,</span> <span class="n">chunk_size</span><span class="p">):</span>
+        <span class="n">end_idx</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="n">chunk_size</span><span class="p">,</span> <span class="n">n_toas</span><span class="p">)</span>
+        
+        <span class="c1"># Create chunk-specific selections</span>
+        <span class="n">chunk_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+        <span class="n">selections</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Selection</span><span class="p">(</span><span class="n">chunk_sel</span><span class="p">))</span>
+    
+    <span class="k">return</span> <span class="n">selections</span>
+</pre></div>
+</div>
+</section>
+<section id="computational-optimization">
+<h3>Computational Optimization<a class="headerlink" href="#computational-optimization" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Pre-compute selections for repeated use</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">CachedSelectionFactory</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Factory with caching for repeated selections.&quot;&quot;&quot;</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span> <span class="o">=</span> <span class="p">{}</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_selection</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">flag_criteria</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get cached selection or create new one.&quot;&quot;&quot;</span>
+        <span class="n">cache_key</span> <span class="o">=</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="nb">str</span><span class="p">(</span><span class="n">flag_criteria</span><span class="p">),</span> <span class="n">freq_range</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="n">cache_key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">:</span>
+            <span class="n">sel_func</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">flag_criteria</span><span class="p">,</span> <span class="n">freq_range</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">cache_key</span><span class="p">]</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">sel_func</span><span class="p">)</span>
+        
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_cache</span><span class="p">[</span><span class="n">cache_key</span><span class="p">]</span>
+
+<span class="c1"># Use cached factory</span>
+<span class="n">factory</span> <span class="o">=</span> <span class="n">CachedSelectionFactory</span><span class="p">()</span>
+<span class="n">efac_sel</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">get_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+</pre></div>
+</div>
+</section>
+<section id="batch-processing">
+<h3>Batch Processing<a class="headerlink" href="#batch-processing" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Process multiple pulsars efficiently</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">process_multiple_pulsars</span><span class="p">(</span><span class="n">pulsar_list</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Process multiple pulsars with shared selections.&quot;&quot;&quot;</span>
+    
+    <span class="c1"># Create shared selections</span>
+    <span class="n">efac_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+    <span class="n">ecorr_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;ecorr&quot;</span><span class="p">,</span> <span class="p">{(</span><span class="s2">&quot;group&quot;</span><span class="p">,</span> <span class="s2">&quot;f&quot;</span><span class="p">):</span> <span class="kc">None</span><span class="p">})</span>
+    
+    <span class="c1"># Wrap with Enterprise Selections</span>
+    <span class="n">efac_selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">efac_sel</span><span class="p">)</span>
+    <span class="n">ecorr_selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">ecorr_sel</span><span class="p">)</span>
+    
+    <span class="c1"># Create models for all pulsars</span>
+    <span class="n">models</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">psr</span> <span class="ow">in</span> <span class="n">pulsar_list</span><span class="p">:</span>
+        <span class="n">white_signal</span> <span class="o">=</span> <span class="n">white_signals</span><span class="o">.</span><span class="n">MeasurementNoise</span><span class="p">(</span>
+            <span class="n">efac</span><span class="o">=</span><span class="n">efac_selection</span><span class="p">,</span>
+            <span class="n">ecorr</span><span class="o">=</span><span class="n">ecorr_selection</span><span class="p">,</span>
+            <span class="n">log10_efac</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+            <span class="n">log10_ecorr</span><span class="o">=</span><span class="n">Uniform</span><span class="p">(</span><span class="o">-</span><span class="mi">10</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+        <span class="p">)</span>
+        
+        <span class="n">model</span> <span class="o">=</span> <span class="n">model_singlepsr_noise</span><span class="p">(</span><span class="n">psr</span><span class="p">,</span> <span class="n">white_signal</span><span class="p">)</span>
+        <span class="n">models</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">models</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<section id="common-issues">
+<h3>Common Issues<a class="headerlink" href="#common-issues" title="Link to this heading"></a></h3>
+<section id="selection-not-working">
+<h4>1. Selection Not Working<a class="headerlink" href="#selection-not-working" title="Link to this heading"></a></h4>
+<p><strong>Problem</strong>: Selection returns empty results</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">sel_func</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">freqs</span><span class="p">)</span>  <span class="c1"># Returns: {}</span>
+</pre></div>
+</div>
+<p><strong>Debugging</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check flag values</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Available flags: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">flags</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">flag_name</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">flags</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">flag_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">values</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Check frequency range</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Frequency range: </span><span class="si">{</span><span class="n">freqs</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">freqs</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Test with simple criteria</span>
+<span class="n">simple_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;test&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">simple_sel</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">freqs</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Simple selection result: </span><span class="si">{</span><span class="n">result</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="enterprise-integration-issues">
+<h4>2. Enterprise Integration Issues<a class="headerlink" href="#enterprise-integration-issues" title="Link to this heading"></a></h4>
+<p><strong>Problem</strong>: Selection doesn’t work with Enterprise</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># TypeError: selection_function() missing 1 required positional argument</span>
+</pre></div>
+</div>
+<p><strong>Solution</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Ensure correct function signature</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">test_selection_function</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">freqs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Test function with correct signature.&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">sel_func</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">freqs</span><span class="p">)</span>
+
+<span class="c1"># Test with Enterprise</span>
+<span class="n">selection</span> <span class="o">=</span> <span class="n">Selection</span><span class="p">(</span><span class="n">test_selection_function</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="performance-issues">
+<h4>3. Performance Issues<a class="headerlink" href="#performance-issues" title="Link to this heading"></a></h4>
+<p><strong>Problem</strong>: Slow selection performance</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Selection takes too long</span>
+</pre></div>
+</div>
+<p><strong>Solutions</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Use specific values instead of None</span>
+<span class="n">specific_sel</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="s2">&quot;ASP_430&quot;</span><span class="p">})</span>
+
+<span class="c1"># Pre-filter data</span>
+<span class="n">filtered_freqs</span> <span class="o">=</span> <span class="n">freqs</span><span class="p">[(</span><span class="n">freqs</span> <span class="o">&gt;=</span> <span class="mi">400</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">freqs</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">)]</span>
+<span class="n">filtered_flags</span> <span class="o">=</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="n">v</span><span class="p">[(</span><span class="n">freqs</span> <span class="o">&gt;=</span> <span class="mi">400</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">freqs</span> <span class="o">&lt;</span> <span class="mi">1000</span><span class="p">)]</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">flags</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+
+<span class="c1"># Use cached selections</span>
+<span class="n">factory</span> <span class="o">=</span> <span class="n">CachedSelectionFactory</span><span class="p">()</span>
+<span class="n">efac_sel</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">get_selection</span><span class="p">(</span><span class="s2">&quot;efac&quot;</span><span class="p">,</span> <span class="p">{</span><span class="s2">&quot;group&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">})</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="debugging-tools">
+<h3>Debugging Tools<a class="headerlink" href="#debugging-tools" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">debug_selection</span><span class="p">(</span><span class="n">sel_func</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">freqs</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Debug selection function.&quot;&quot;&quot;</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;=== Selection Debug Info ===&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Flags: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="n">flags</span><span class="o">.</span><span class="n">keys</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Frequencies: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">freqs</span><span class="p">)</span><span class="si">}</span><span class="s2"> TOAs&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Frequency range: </span><span class="si">{</span><span class="n">freqs</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> - </span><span class="si">{</span><span class="n">freqs</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">flag_name</span><span class="p">,</span> <span class="n">values</span> <span class="ow">in</span> <span class="n">flags</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">unique_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">values</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">flag_name</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">unique_values</span><span class="p">)</span><span class="si">}</span><span class="s2"> unique values: </span><span class="si">{</span><span class="n">unique_values</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+    <span class="n">result</span> <span class="o">=</span> <span class="n">sel_func</span><span class="p">(</span><span class="n">flags</span><span class="p">,</span> <span class="n">freqs</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Result: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">result</span><span class="p">)</span><span class="si">}</span><span class="s2"> selections&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">mask</span> <span class="ow">in</span> <span class="n">result</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;  </span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">mask</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2"> TOAs selected&quot;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">result</span>
+
+<span class="c1"># Use debug function</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">debug_selection</span><span class="p">(</span><span class="n">sel_func</span><span class="p">,</span> <span class="n">flags</span><span class="p">,</span> <span class="n">freqs</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<section id="selection-design">
+<h3>1. Selection Design<a class="headerlink" href="#selection-design" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Use realistic flag names</strong>: Use actual flag names from your data</p></li>
+<li><p><strong>Test with real data</strong>: Always test selections with your actual pulsar data</p></li>
+<li><p><strong>Document selections</strong>: Document the purpose and behavior of each selection</p></li>
+<li><p><strong>Use fallback wisely</strong>: Use staggered selection for robust multi-PTA analysis</p></li>
+</ul>
+</section>
+<section id="performance">
+<h3>2. Performance<a class="headerlink" href="#performance" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Minimize flag criteria</strong>: Use only necessary flag criteria</p></li>
+<li><p><strong>Pre-filter data</strong>: Apply frequency filtering early when possible</p></li>
+<li><p><strong>Cache selections</strong>: Cache frequently used selections</p></li>
+<li><p><strong>Batch processing</strong>: Process multiple pulsars in batches</p></li>
+</ul>
+</section>
+<section id="error-handling">
+<h3>3. Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Validate inputs</strong>: Check flag names and values before creating selections</p></li>
+<li><p><strong>Handle edge cases</strong>: Test with empty data, missing flags, etc.</p></li>
+<li><p><strong>Provide feedback</strong>: Give clear error messages for common issues</p></li>
+</ul>
+</section>
+<section id="integration">
+<h3>4. Integration<a class="headerlink" href="#integration" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Test Enterprise compatibility</strong>: Always test with Enterprise Selection class</p></li>
+<li><p><strong>Use type hints</strong>: Leverage type hints for better IDE support</p></li>
+<li><p><strong>Follow conventions</strong>: Follow Enterprise naming conventions</p></li>
+</ul>
+</section>
+<section id="documentation">
+<h3>5. Documentation<a class="headerlink" href="#documentation" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Document selections</strong>: Document the purpose and behavior of each selection</p></li>
+<li><p><strong>Provide examples</strong>: Include realistic usage examples</p></li>
+<li><p><strong>Update documentation</strong>: Keep documentation up to date with code changes</p></li>
+</ul>
+</section>
+</section>
+<section id="conclusion">
+<h2>Conclusion<a class="headerlink" href="#conclusion" title="Link to this heading"></a></h2>
+<p>The staggered selection utilities provide a powerful and flexible API for creating Enterprise-compatible selection functions. By following this guide, you can effectively integrate them into your pulsar timing analysis workflows while maintaining good performance and reliability.</p>
+<p>For more information, see:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="selection_utils_api.html"><span class="std std-doc">API Documentation</span></a></p></li>
+<li><p><a class="reference internal" href="#examples/staggered_selection_usage.ipynb"><span class="xref myst">Usage Examples</span></a></p></li>
+<li><p><a class="reference internal" href="#tests/test_selections.py"><span class="xref myst">Test Suite</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="selection_utils_api.html" class="btn btn-neutral float-left" title="Selection Utilities API Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Rutger van Haasteren, Wang-Wei Yu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,277 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MetaPulsar User Guide &mdash; MetaPulsar 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="MetaPulsar API Reference" href="api_reference.html" />
+    <link rel="prev" title="MetaPulsar Installation Guide" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MetaPulsar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">MetaPulsar Installation Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">MetaPulsar User Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#quick-start">Quick Start</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#basic-usage">Basic Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#core-concepts">Core Concepts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#combination-strategies">Combination Strategies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#file-discovery">File Discovery</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parameter-management">Parameter Management</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#advanced-usage">Advanced Usage</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#custom-pta-configuration">Custom PTA Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#enterprise-integration">Enterprise Integration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#examples">Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#api-reference">API Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">MetaPulsar API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide.html">MetaPulsar Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">MetaPulsar Troubleshooting Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">MetaPulsar Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture-overview.html">MetaPulsar - Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="selection_utils_api.html">Selection Utilities API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="enterprise_integration_guide.html">Enterprise Integration Guide for Staggered Selection Utilities</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MetaPulsar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">MetaPulsar User Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/user_guide.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="metapulsar-user-guide">
+<h1>MetaPulsar User Guide<a class="headerlink" href="#metapulsar-user-guide" title="Link to this heading"></a></h1>
+<section id="quick-start">
+<h2>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading"></a></h2>
+<p>MetaPulsar combines pulsar timing data from multiple PTA collaborations into unified objects for gravitational wave detection.</p>
+<section id="basic-usage">
+<h3>Basic Usage<a class="headerlink" href="#basic-usage" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">MetaPulsarFactory</span><span class="p">,</span> <span class="n">FileDiscoveryService</span>
+
+<span class="c1"># Create file discovery service</span>
+<span class="n">discovery</span> <span class="o">=</span> <span class="n">FileDiscoveryService</span><span class="p">()</span>
+
+<span class="c1"># Discover files for a pulsar</span>
+<span class="n">file_data</span> <span class="o">=</span> <span class="n">discovery</span><span class="o">.</span><span class="n">discover_all_files_in_ptas</span><span class="p">([</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr3&quot;</span><span class="p">])</span>
+
+<span class="c1"># Create factory</span>
+<span class="n">factory</span> <span class="o">=</span> <span class="n">MetaPulsarFactory</span><span class="p">()</span>
+
+<span class="c1"># Create MetaPulsar</span>
+<span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span>
+    <span class="n">file_data</span><span class="p">,</span>
+    <span class="n">combination_strategy</span><span class="o">=</span><span class="s2">&quot;consistent&quot;</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="core-concepts">
+<h2>Core Concepts<a class="headerlink" href="#core-concepts" title="Link to this heading"></a></h2>
+<section id="combination-strategies">
+<h3>Combination Strategies<a class="headerlink" href="#combination-strategies" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Consistent</strong>: Astrophysical consistency across PTAs</p>
+<ul class="simple">
+<li><p>Aligns parameters to reference PTA values</p></li>
+<li><p>Suitable for unified gravitational wave analysis</p></li>
+</ul>
+</li>
+<li><p><strong>Composite</strong>: Multi-PTA composition</p>
+<ul class="simple">
+<li><p>Uses raw par files without modification</p></li>
+<li><p>Preserves PTA-specific parameter differences</p></li>
+<li><p>Suitable for ‘Borg’ or ‘FrankenStat’ analysis methods</p></li>
+</ul>
+</li>
+</ol>
+</section>
+<section id="file-discovery">
+<h3>File Discovery<a class="headerlink" href="#file-discovery" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">FileDiscoveryService</span>
+
+<span class="c1"># Create file discovery service</span>
+<span class="n">discovery</span> <span class="o">=</span> <span class="n">FileDiscoveryService</span><span class="p">()</span>
+
+<span class="c1"># List available PTAs</span>
+<span class="n">ptas</span> <span class="o">=</span> <span class="n">discovery</span><span class="o">.</span><span class="n">list_ptas</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Available PTAs: </span><span class="si">{</span><span class="n">ptas</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+<span class="c1"># Discover files for specific PTAs</span>
+<span class="n">files</span> <span class="o">=</span> <span class="n">discovery</span><span class="o">.</span><span class="n">discover_all_files_in_ptas</span><span class="p">([</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr3&quot;</span><span class="p">])</span>
+</pre></div>
+</div>
+</section>
+<section id="parameter-management">
+<h3>Parameter Management<a class="headerlink" href="#parameter-management" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">ParameterManager</span>
+
+<span class="c1"># Assuming file_data is obtained from FileDiscoveryService</span>
+<span class="c1"># and contains paths to par/tim files for multiple PTAs</span>
+<span class="c1"># For example:</span>
+<span class="n">file_data</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;epta_dr2&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;par&quot;</span><span class="p">:</span> <span class="s2">&quot;path/to/epta.par&quot;</span><span class="p">,</span> <span class="s2">&quot;tim&quot;</span><span class="p">:</span> <span class="s2">&quot;path/to/epta.tim&quot;</span><span class="p">}],</span>
+    <span class="s2">&quot;ppta_dr3&quot;</span><span class="p">:</span> <span class="p">[{</span><span class="s2">&quot;par&quot;</span><span class="p">:</span> <span class="s2">&quot;path/to/ppta.par&quot;</span><span class="p">,</span> <span class="s2">&quot;tim&quot;</span><span class="p">:</span> <span class="s2">&quot;path/to/ppta.tim&quot;</span><span class="p">}],</span>
+<span class="p">}</span>
+
+<span class="n">param_manager</span> <span class="o">=</span> <span class="n">ParameterManager</span><span class="p">(</span>
+    <span class="n">file_data</span><span class="o">=</span><span class="n">file_data</span><span class="p">,</span>
+    <span class="n">reference_pta</span><span class="o">=</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span>
+    <span class="n">combine_components</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;astrometry&quot;</span><span class="p">,</span> <span class="s2">&quot;spindown&quot;</span><span class="p">,</span> <span class="s2">&quot;binary&quot;</span><span class="p">,</span> <span class="s2">&quot;dispersion&quot;</span><span class="p">],</span>
+    <span class="n">add_dm_derivatives</span><span class="o">=</span><span class="kc">True</span>
+<span class="p">)</span>
+
+<span class="n">mapping</span> <span class="o">=</span> <span class="n">param_manager</span><span class="o">.</span><span class="n">build_parameter_mappings</span><span class="p">(</span>
+    <span class="n">merge_astrometry</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">merge_spin</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="n">merge_binary</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="advanced-usage">
+<h2>Advanced Usage<a class="headerlink" href="#advanced-usage" title="Link to this heading"></a></h2>
+<section id="custom-pta-configuration">
+<h3>Custom PTA Configuration<a class="headerlink" href="#custom-pta-configuration" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Add custom PTA</span>
+<span class="n">discovery</span><span class="o">.</span><span class="n">add_pta</span><span class="p">(</span><span class="s2">&quot;custom_pta&quot;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="s2">&quot;base_dir&quot;</span><span class="p">:</span> <span class="s2">&quot;/data/custom_pta/&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;par_pattern&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})_custom\.par&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;tim_pattern&quot;</span><span class="p">:</span> <span class="sa">r</span><span class="s2">&quot;([BJ]\d</span><span class="si">{4}</span><span class="s2">[+-]\d{2,4})_custom\.tim&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;timing_package&quot;</span><span class="p">:</span> <span class="s2">&quot;pint&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;priority&quot;</span><span class="p">:</span> <span class="mi">1</span><span class="p">,</span>
+    <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Custom PTA for demonstration&quot;</span>
+<span class="p">})</span>
+</pre></div>
+</div>
+</section>
+<section id="enterprise-integration">
+<h3>Enterprise Integration<a class="headerlink" href="#enterprise-integration" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">metapulsar</span><span class="w"> </span><span class="kn">import</span> <span class="n">create_staggered_selection</span>
+
+<span class="c1"># Create staggered selection for Enterprise</span>
+<span class="n">selection</span> <span class="o">=</span> <span class="n">create_staggered_selection</span><span class="p">(</span>
+    <span class="n">flags</span><span class="o">=</span><span class="n">flags</span><span class="p">,</span>
+    <span class="n">freqs</span><span class="o">=</span><span class="n">freqs</span><span class="p">,</span>
+    <span class="n">primary_flag</span><span class="o">=</span><span class="s2">&quot;telescope&quot;</span><span class="p">,</span>
+    <span class="n">fallback_flags</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;backend&quot;</span><span class="p">,</span> <span class="s2">&quot;freq_band&quot;</span><span class="p">],</span>
+    <span class="n">freq_bands</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;low&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">50</span><span class="p">,</span> <span class="mi">200</span><span class="p">),</span> <span class="s2">&quot;mid&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">200</span><span class="p">,</span> <span class="mi">800</span><span class="p">),</span> <span class="s2">&quot;high&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mi">800</span><span class="p">,</span> <span class="mi">2000</span><span class="p">)}</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="examples">
+<h2>Examples<a class="headerlink" href="#examples" title="Link to this heading"></a></h2>
+<p>See the <code class="docutils literal notranslate"><span class="pre">examples/</span></code> directory for comprehensive usage examples:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">basic_workflow.py</span></code> - Complete workflow tutorial</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">parameter_management.py</span></code> - Parameter management strategies</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">custom_pta_configuration.py</span></code> - Custom PTA setup</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">enterprise_integration.py</span></code> - Enterprise framework integration</p></li>
+</ul>
+</section>
+<section id="api-reference">
+<h2>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h2>
+<p>For detailed API documentation, see <a class="reference internal" href="api_reference.html"><span class="std std-doc">API Reference</span></a>.</p>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<p>For common issues and solutions, see <a class="reference internal" href="troubleshooting.html"><span class="std std-doc">Troubleshooting Guide</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-left" title="MetaPulsar Installation Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api_reference.html" class="btn btn-neutral float-right" title="MetaPulsar API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Rutger van Haasteren, Wang-Wei Yu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

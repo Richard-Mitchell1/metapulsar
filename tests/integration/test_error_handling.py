@@ -4,7 +4,7 @@ import pytest
 import tempfile
 from pathlib import Path
 from metapulsar import MetaPulsarFactory, FileDiscoveryService
-from metapulsar.file_discovery_service import PTA_CONFIGS
+from metapulsar.file_discovery_service import PTA_DATA_RELEASES
 from metapulsar.pint_helpers import PINTDiscoveryError
 
 
@@ -54,10 +54,10 @@ F0 123.456 1 0.001
             with open(temp_par, "w") as f:
                 f.write(malformed_parfile_content)
 
-                # Create a temporary PTA config pointing to malformed file
-                config = PTA_CONFIGS["epta_dr1_v2_2"].copy()
-                config["base_dir"] = str(temp_dir)
-                config["par_pattern"] = "J0030+0451.par"
+                # Create a temporary PTA data release pointing to malformed file
+                data_release = PTA_DATA_RELEASES["epta_dr1_v2_2"].copy()
+                data_release["base_dir"] = str(temp_dir)
+                data_release["par_pattern"] = "J0030+0451.par"
 
                 # This should raise RuntimeError because the parfile is malformed (missing timfile)
                 with pytest.raises(RuntimeError):
@@ -70,7 +70,6 @@ F0 123.456 1 0.001
                                 "par_content": malformed_parfile_content,
                                 "timing_package": "tempo2",
                                 "timespan_days": 1000.0,
-                                "priority": 1,
                             }
                         ]
                     }
@@ -95,10 +94,10 @@ C 12345.67890 0.0001
 """
                 )
 
-                # Create a temporary PTA config pointing to malformed file
-                config = PTA_CONFIGS["epta_dr1_v2_2"].copy()
-                config["base_dir"] = str(temp_dir)
-                config["tim_pattern"] = "J0030+0451.tim"
+                # Create a temporary PTA data release pointing to malformed file
+                data_release = PTA_DATA_RELEASES["epta_dr1_v2_2"].copy()
+                data_release["base_dir"] = str(temp_dir)
+                data_release["tim_pattern"] = "J0030+0451.tim"
 
                 # This should raise PINTDiscoveryError because the tim file is malformed
                 with pytest.raises(PINTDiscoveryError):
@@ -111,7 +110,6 @@ C 12345.67890 0.0001
                                 "par_content": "PSR J0030+0451\nRAJ 00:30:27.4\nDECJ 04:51:39.7\n",
                                 "timing_package": "tempo2",
                                 "timespan_days": 1000.0,
-                                "priority": 1,
                             }
                         ]
                     }
@@ -122,7 +120,7 @@ C 12345.67890 0.0001
         """Test handling of invalid PTA configurations."""
         # Test with invalid PTA config name
         with pytest.raises(KeyError):
-            PTA_CONFIGS["invalid_config"]
+            PTA_DATA_RELEASES["invalid_config"]
 
         # Test with invalid primary/reference PTA - this should raise KeyError
         with pytest.raises(KeyError):
@@ -154,10 +152,10 @@ C 12345.67890 0.0001
             temp_par = Path(temp_dir) / "J0030+0451.par"
             temp_par.touch()  # Create empty file
 
-            # Create a temporary PTA config pointing to empty file
-            config = PTA_CONFIGS["epta_dr1_v2_2"].copy()
-            config["base_dir"] = str(temp_dir)
-            config["par_pattern"] = "J0030+0451.par"
+            # Create a temporary PTA data release pointing to empty file
+            data_release = PTA_DATA_RELEASES["epta_dr1_v2_2"].copy()
+            data_release["base_dir"] = str(temp_dir)
+            data_release["par_pattern"] = "J0030+0451.par"
 
             # This should raise PINTDiscoveryError because the par file is empty
             with pytest.raises(PINTDiscoveryError):
@@ -190,10 +188,10 @@ C 12345.67890 0.0001
             with open(temp_par, "wb") as f:
                 f.write(b"\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09")
 
-            # Create a temporary PTA config pointing to corrupted file
-            config = PTA_CONFIGS["epta_dr1_v2_2"].copy()
-            config["base_dir"] = str(temp_dir)
-            config["par_pattern"] = "J0030+0451.par"
+            # Create a temporary PTA data release pointing to corrupted file
+            data_release = PTA_DATA_RELEASES["epta_dr1_v2_2"].copy()
+            data_release["base_dir"] = str(temp_dir)
+            data_release["par_pattern"] = "J0030+0451.par"
 
             # This should raise TypeError because the par file is corrupted (binary data)
             with pytest.raises(TypeError):

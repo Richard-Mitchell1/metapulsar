@@ -1,0 +1,217 @@
+# Frequently Asked Questions (FAQ)
+
+## General Questions
+
+### What is MetaPulsar?
+MetaPulsar is a multi-PTA pulsar timing data combination framework for gravitational wave detection. It provides tools for combining pulsar timing data from multiple PTA collaborations (EPTA, PPTA, NANOGrav, MPTA, etc.) into unified "metapulsar" objects.
+
+### What PTAs are supported?
+MetaPulsar supports all major PTA collaborations:
+- **EPTA** (European Pulsar Timing Array)
+- **PPTA** (Parkes Pulsar Timing Array)
+- **NANOGrav** (North American Nanohertz Observatory for Gravitational Waves)
+- **MPTA** (Millisecond Pulsar Timing Array)
+- **Custom PTAs** (user-defined configurations)
+
+### What's the difference between composite and consistent strategies?
+- **Composite Strategy**: Preserves PTA-specific parameter differences. Useful for 'Borg' or 'FrankenStat' analysis methods where you want to maintain the original parameter values from each PTA.
+- **Consistent Strategy**: Aligns parameters to a reference PTA for astrophysical consistency. Useful for unified gravitational wave analysis where you need consistent parameters across all PTAs.
+
+## Installation and Setup
+
+### How do I install MetaPulsar?
+```bash
+# Basic installation
+pip install -e .
+
+# With all dependencies
+pip install -e ".[dev,libstempo,analysis]"
+
+# For documentation
+pip install -e ".[docs]"
+```
+
+### What are the system requirements?
+- Python 3.8 or higher
+- 4GB RAM minimum (8GB recommended for large datasets)
+- 1GB disk space for installation
+- Optional: Enterprise framework for gravitational wave analysis
+
+### How do I set up the data directory?
+1. Create a data directory (e.g., `/data/ipta-dr2/`)
+2. Place PTA data files in subdirectories following the naming convention
+3. Configure the `FileDiscoveryService` to point to your data directory
+
+## Usage Questions
+
+### How do I add a custom PTA?
+```python
+from metapulsar import FileDiscoveryService
+
+discovery = FileDiscoveryService()
+custom_config = {
+    "base_dir": "/data/custom_pta/",
+    "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})_custom\.par",
+    "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})_custom\.tim",
+    "timing_package": "pint",
+    "priority": 1,
+    "description": "Custom PTA for demonstration"
+}
+discovery.add_pta("custom_pta", custom_config)
+```
+
+### How do I handle missing data files?
+MetaPulsar gracefully handles missing files by filtering out PTAs with no data before creating MetaPulsar objects:
+
+```python
+# This will automatically filter out PTAs with no files
+file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
+file_data_with_files = {pta: files for pta, files in file_data.items() if files}
+```
+
+### Can I use MetaPulsar without Enterprise?
+Yes, MetaPulsar is a standalone package. Enterprise integration is optional but recommended for gravitational wave analysis. You can use MetaPulsar for:
+- Data discovery and organization
+- Parameter management
+- Custom PTA configuration
+- Basic pulsar timing analysis
+
+## Technical Questions
+
+### What timing packages are supported?
+MetaPulsar supports both major timing packages:
+- **PINT** (Python package for pulsar timing)
+- **TEMPO2** (C-based pulsar timing package)
+
+You can specify which package to use in the PTA configuration.
+
+### How do I handle parameter inconsistencies?
+Use the `ParameterManager` to handle parameter inconsistencies:
+
+```python
+from metapulsar import ParameterManager
+
+param_manager = ParameterManager(
+    file_data=file_data,
+    reference_pta="epta_dr2",
+    combine_components=["astrometry", "spindown", "binary", "dispersion"],
+    add_dm_derivatives=True
+)
+mapping = param_manager.build_parameter_mappings()
+```
+
+### How do I integrate with Enterprise?
+```python
+from metapulsar import create_staggered_selection
+
+# Create staggered selection function
+selection_func = create_staggered_selection(
+    name="telescope_backend_selection",
+    flag_criteria={
+        "telescope": None,
+        ("backend", "freq_band"): None,
+    },
+    freq_range=(50, 2000)
+)
+
+# Use with Enterprise
+import enterprise
+from enterprise.pulsar import Pulsar
+
+enterprise_pta = Pulsar(metapulsar_data)
+selected_data = selection_func(enterprise_pta)
+```
+
+## Troubleshooting
+
+### Import Errors
+**Problem**: `ModuleNotFoundError: No module named 'metapulsar'`
+
+**Solution**: 
+1. Check your Python path
+2. Reinstall the package: `pip install -e .`
+3. Verify virtual environment activation
+
+### File Not Found Errors
+**Problem**: `FileNotFoundError` when discovering files
+
+**Solution**:
+1. Check PTA configuration
+2. Verify file patterns match actual files
+3. Ensure base directories exist
+
+### Parameter Consistency Errors
+**Problem**: `ParameterInconsistencyError`
+
+**Solution**:
+1. Check parameter names across PTAs
+2. Verify parameter units
+3. Use composite strategy if consistency not needed
+
+### Performance Issues
+**Problem**: Slow processing or high memory usage
+
+**Solution**:
+1. Use specific PTA names instead of all PTAs
+2. Process data in batches
+3. Use appropriate data types
+4. Clean up large objects
+
+## Development Questions
+
+### How do I contribute to MetaPulsar?
+1. Fork the repository on GitHub
+2. Create a feature branch
+3. Make your changes
+4. Add tests for new functionality
+5. Submit a pull request
+
+### How do I run the tests?
+```bash
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_metapulsar_factory.py
+
+# Run with coverage
+pytest --cov=metapulsar
+```
+
+### How do I build the documentation?
+```bash
+# Install documentation dependencies
+pip install -e ".[docs]"
+
+# Build documentation
+cd docs
+make html
+
+# View documentation
+open _build/html/index.html
+```
+
+## Support
+
+### Where can I get help?
+1. Check this FAQ
+2. Review the troubleshooting guide
+3. Look at examples in the `examples/` directory
+4. Check the API documentation
+5. Report issues on GitHub
+
+### How do I report bugs?
+1. Check if the issue is already reported
+2. Create a new issue on GitHub
+3. Include:
+   - Python version
+   - MetaPulsar version
+   - Error message
+   - Steps to reproduce
+   - Expected vs actual behavior
+
+### How do I request features?
+1. Check if the feature is already requested
+2. Create a new issue on GitHub
+3. Describe the feature and its use case
+4. Provide examples if possible

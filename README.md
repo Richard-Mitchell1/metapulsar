@@ -22,7 +22,7 @@ A comprehensive framework for combining pulsar timing data from multiple PTA (Pu
 
 ```bash
 # Clone the repository
-git clone https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar.git
+git clone https://github.com/vhaasteren/metapulsar.git
 cd metapulsar
 
 # Install in development mode
@@ -35,83 +35,76 @@ pip install -e ".[dev,libstempo,analysis]"
 ### Basic Usage
 
 ```python
-from metapulsar import MetaPulsar, MetaPulsarFactory, PTARegistry
+from metapulsar import MetaPulsarFactory, FileDiscoveryService
 
-# Create a MetaPulsar from multiple PTAs
-registry = PTARegistry()
-factory = MetaPulsarFactory(registry)
+# Discover files from multiple PTAs
+discovery = FileDiscoveryService()
+file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
 
 # Create MetaPulsar with consistent parameters
+factory = MetaPulsarFactory()
 metapulsar = factory.create_metapulsar(
-    pulsar_name="J1857+0943",
-    pta_names=["epta_dr2", "ppta_dr3", "nanograv_12p5yr"],
+    file_data,
     combination_strategy="consistent"
 )
 
 # Access combined timing data
-print(f"Combined TOAs: {len(metapulsar._toas)}")
-print(f"Parameters: {metapulsar.fitpars}")
-print(f"Design matrix shape: {metapulsar._designmatrix.shape}")
+print(f"Strategy: {metapulsar.combination_strategy}")
+print(f"Number of PTAs: {len(metapulsar.pulsars)}")
+print(f"PTA names: {list(metapulsar.pulsars.keys())}")
 ```
 
 ## 📖 Documentation
 
 ### Core Components
 
-#### MetaPulsar Class
-The central class that combines pulsar timing data from multiple PTAs:
-
-```python
-from metapulsar import MetaPulsar
-
-# Create from raw pulsar objects
-metapulsar = MetaPulsar(
-    pulsars={
-        'epta': pint_pulsar_epta,
-        'ppta': tempo2_pulsar_ppta,
-        'nanograv': pint_pulsar_nanograv
-    },
-    combination_strategy="consistent",  # or "composite"
-    merge_astrometry=True,
-    merge_spin=True,
-    merge_binary=True,
-    merge_dispersion=True
-)
-```
-
 #### MetaPulsarFactory
 High-level factory for creating MetaPulsars from file configurations:
 
 ```python
-from metapulsar import MetaPulsarFactory, PTARegistry
+from metapulsar import MetaPulsarFactory, FileDiscoveryService
 
-# Initialize factory
-registry = PTARegistry()
-factory = MetaPulsarFactory(registry)
+# Discover files
+discovery = FileDiscoveryService()
+file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
 
-# Create MetaPulsar from files
+# Create MetaPulsar
+factory = MetaPulsarFactory()
 metapulsar = factory.create_metapulsar(
-    pulsar_name="J1857+0943",
-    pta_names=["epta_dr2", "ppta_dr3"],
+    file_data,
     combination_strategy="consistent"
 )
 ```
 
-#### PTARegistry
+#### FileDiscoveryService
 Manages PTA configurations and data discovery:
 
 ```python
-from metapulsar import PTARegistry
+from metapulsar import FileDiscoveryService
 
-registry = PTARegistry()
+discovery = FileDiscoveryService()
 
 # List available PTAs
-print(registry.list_ptas())
-# ['epta_dr2', 'ppta_dr3', 'nanograv_12p5yr', 'mpta_dr1']
+print(discovery.list_ptas())
+# ['epta_dr2', 'ppta_dr2', 'nanograv_15y', 'mpta_dr1']
 
-# Get PTA configuration
-config = registry.get_pta("epta_dr2")
-print(config['timing_package'])  # 'pint' or 'tempo2'
+# Discover files for specific PTAs
+file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
+```
+
+#### ParameterManager
+Manages parameter consistency across PTAs:
+
+```python
+from metapulsar import ParameterManager
+
+param_manager = ParameterManager(
+    file_data=file_data,
+    reference_pta="epta_dr2",
+    combine_components=["astrometry", "spindown", "binary", "dispersion"],
+    add_dm_derivatives=True
+)
+mapping = param_manager.build_parameter_mappings()
 ```
 
 ### Advanced Usage
@@ -119,50 +112,54 @@ print(config['timing_package'])  # 'pint' or 'tempo2'
 #### Custom PTA Configuration
 
 ```python
+from metapulsar import FileDiscoveryService
+
+discovery = FileDiscoveryService()
+
 # Add custom PTA
 custom_config = {
     "base_dir": "/path/to/custom_pta",
-    "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
-    "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
-    "coordinates": "equatorial",
+    "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})_custom\.par",
+    "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})_custom\.tim",
     "timing_package": "pint",
     "priority": 1,
     "description": "Custom PTA dataset"
 }
 
-registry.add_pta("custom_pta", custom_config)
+discovery.add_pta("custom_pta", custom_config)
 ```
 
 #### Parameter Management
 
 ```python
+from metapulsar import ParameterManager
+
+# Create parameter manager for consistency
+param_manager = ParameterManager(
+    file_data=file_data,
+    reference_pta="epta_dr2",
+    combine_components=["astrometry", "spindown", "binary", "dispersion"],
+    add_dm_derivatives=True
+)
+
+# Build parameter mappings
+mapping = param_manager.build_parameter_mappings()
+```
+
+#### Combination Strategies
+
+```python
 # Consistent strategy: merge parameters across PTAs
-metapulsar_consistent = MetaPulsar(
-    pulsars=pulsars,
+metapulsar_consistent = factory.create_metapulsar(
+    file_data,
     combination_strategy="consistent",
-    merge_astrometry=True,    # Merge RA, Dec, proper motion
-    merge_spin=True,          # Merge spin parameters
-    merge_binary=True,        # Merge binary parameters
-    merge_dispersion=True     # Merge DM parameters
+    reference_pta="epta_dr2"
 )
 
 # Composite strategy: preserve original PTA parameters
-metapulsar_composite = MetaPulsar(
-    pulsars=pulsars,
+metapulsar_composite = factory.create_metapulsar(
+    file_data,
     combination_strategy="composite"
-)
-```
-
-#### File-based Creation
-
-```python
-# Create MetaPulsar directly from files
-metapulsar = MetaPulsar.from_files(
-    file_configs=[
-        {"pta": "epta_dr2", "parfile": "path/to/epta.par", "timfile": "path/to/epta.tim"},
-        {"pta": "ppta_dr3", "parfile": "path/to/ppta.par", "timfile": "path/to/ppta.tim"}
-    ],
-    combination_strategy="consistent"
 )
 ```
 
@@ -196,16 +193,19 @@ metapulsar/
 ├── src/metapulsar/                # Main package
 │   ├── metapulsar.py             # Core MetaPulsar class
 │   ├── metapulsar_factory.py     # Factory for creation
-│   ├── metapulsar_parameter_manager.py  # Parameter management
+│   ├── parameter_manager.py      # Parameter management
+│   ├── file_discovery_service.py # File discovery and PTA management
 │   ├── mockpulsar.py             # MockPulsar for testing
-│   ├── pta_registry.py           # PTA configuration management
-│   ├── parfile_manager.py        # Par file handling
-│   ├── position_helpers.py       # Coordinate utilities
-│   └── selection_utils.py        # Data selection utilities
+│   ├── tim_file_analyzer.py      # TIM file analysis utilities
+│   ├── selection_utils.py        # Data selection utilities
+│   └── pint_helpers.py           # PINT integration helpers
 ├── tests/                        # Test suite (219 tests)
-├── examples/                     # Usage examples
+├── examples/                     # Usage examples and tutorials
+│   ├── notebooks/                # Interactive Jupyter tutorials
+│   ├── *.py                      # Python examples
+│   └── data/                     # Sample data
 ├── docs/                         # Documentation
-└── data/                         # Sample data
+└── pyproject.toml                # Project configuration
 ```
 
 ## 🔧 Dependencies
@@ -228,8 +228,8 @@ metapulsar/
 | PTA | Dataset | Timing Package | Status |
 |-----|---------|----------------|--------|
 | EPTA | DR2 | PINT | ✅ Supported |
-| PPTA | DR3 | PINT | ✅ Supported |
-| NANOGrav | 12.5yr | PINT | ✅ Supported |
+| PPTA | DR2 | PINT | ✅ Supported |
+| NANOGrav | 15yr | PINT | ✅ Supported |
 | MPTA | DR1 | PINT | ✅ Supported |
 | Custom | Any | PINT/Tempo2 | ✅ Supported |
 
@@ -241,7 +241,7 @@ We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.
 
 ```bash
 # Clone and install in development mode
-git clone https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar.git
+git clone https://github.com/vhaasteren/metapulsar.git
 cd metapulsar
 pip install -e ".[dev]"
 
@@ -265,7 +265,7 @@ If you use this software in your research, please cite:
   title={MetaPulsar},
   author={van Haasteren, Rutger and Yu, Wang-Wei},
   year={2025},
-  url={https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar},
+  url={https://github.com/vhaasteren/metapulsar},
   license={MIT}
 }
 ```
@@ -286,10 +286,23 @@ If you use this software in your research, please cite:
 
 For questions, issues, or contributions:
 
-- **Issues**: [GitLab Issues](https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar/-/issues)
+- **Issues**: [GitHub Issues](https://github.com/vhaasteren/metapulsar/issues)
 - **Email**: [rutger@vhaasteren.com](mailto:rutger@vhaasteren.com)
 - **Documentation**: [Read the Docs](https://metapulsar.readthedocs.io)
 
----
+## 📚 Documentation
 
-**Note**: This is currently a private repository. It will be moved to GitHub and made public in the future.
+- **Installation Guide**: [docs/installation.md](docs/installation.md)
+- **User Guide**: [docs/user_guide.md](docs/user_guide.md)
+- **API Reference**: [docs/api_reference.md](docs/api_reference.md)
+- **Developer Guide**: [docs/developer_guide.md](docs/developer_guide.md)
+- **Troubleshooting**: [docs/troubleshooting.md](docs/troubleshooting.md)
+- **FAQ**: [docs/faq.md](docs/faq.md)
+
+## 🎯 Examples
+
+- **Basic Workflow**: [examples/basic_workflow.py](examples/basic_workflow.py)
+- **Parameter Management**: [examples/parameter_management.py](examples/parameter_management.py)
+- **Custom PTA Configuration**: [examples/custom_pta_configuration.py](examples/custom_pta_configuration.py)
+- **Enterprise Integration**: [examples/enterprise_integration.py](examples/enterprise_integration.py)
+- **Interactive Tutorials**: [examples/notebooks/](examples/notebooks/)

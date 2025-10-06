@@ -1,0 +1,349 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MetaPulsar Performance Guide &mdash; MetaPulsar 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="MetaPulsar - Architecture Overview" href="architecture-overview.html" />
+    <link rel="prev" title="Frequently Asked Questions (FAQ)" href="faq.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MetaPulsar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">MetaPulsar Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">MetaPulsar User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">MetaPulsar API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="developer_guide.html">MetaPulsar Developer Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">MetaPulsar Troubleshooting Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions (FAQ)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">MetaPulsar Performance Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#performance-optimization">Performance Optimization</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#file-discovery-optimization">File Discovery Optimization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#batch-processing">Batch Processing</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#specific-pta-selection">Specific PTA Selection</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#memory-management">Memory Management</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#object-cleanup">Object Cleanup</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#data-type-optimization">Data Type Optimization</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#file-i-o-optimization">File I/O Optimization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#efficient-file-formats">Efficient File Formats</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#caching">Caching</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#algorithm-optimization">Algorithm Optimization</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#vectorized-operations">Vectorized Operations</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#parallel-processing">Parallel Processing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-monitoring">Performance Monitoring</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#memory-usage">Memory Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#timing">Timing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#common-performance-issues">Common Performance Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#slow-file-discovery">Slow File Discovery</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#high-memory-usage">High Memory Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#slow-parameter-processing">Slow Parameter Processing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#slow-metapulsar-creation">Slow MetaPulsar Creation</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="architecture-overview.html">MetaPulsar - Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="selection_utils_api.html">Selection Utilities API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="enterprise_integration_guide.html">Enterprise Integration Guide for Staggered Selection Utilities</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MetaPulsar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">MetaPulsar Performance Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/performance.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="metapulsar-performance-guide">
+<h1>MetaPulsar Performance Guide<a class="headerlink" href="#metapulsar-performance-guide" title="Link to this heading"></a></h1>
+<section id="performance-optimization">
+<h2>Performance Optimization<a class="headerlink" href="#performance-optimization" title="Link to this heading"></a></h2>
+<section id="file-discovery-optimization">
+<h3>File Discovery Optimization<a class="headerlink" href="#file-discovery-optimization" title="Link to this heading"></a></h3>
+<section id="batch-processing">
+<h4>Batch Processing<a class="headerlink" href="#batch-processing" title="Link to this heading"></a></h4>
+<p>Process multiple PTAs in batches to reduce memory usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Process in batches</span>
+<span class="n">ptas</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;nanograv_15y&quot;</span><span class="p">]</span>
+<span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="p">[</span><span class="n">ptas</span><span class="p">[</span><span class="n">i</span><span class="p">:</span><span class="n">i</span><span class="o">+</span><span class="mi">2</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">ptas</span><span class="p">),</span> <span class="mi">2</span><span class="p">)]:</span>
+    <span class="n">file_data</span> <span class="o">=</span> <span class="n">discovery</span><span class="o">.</span><span class="n">discover_all_files_in_ptas</span><span class="p">(</span><span class="n">batch</span><span class="p">)</span>
+    <span class="c1"># Process batch...</span>
+
+<span class="c1"># Avoid: Process all at once</span>
+<span class="n">file_data</span> <span class="o">=</span> <span class="n">discovery</span><span class="o">.</span><span class="n">discover_all_files_in_ptas</span><span class="p">(</span><span class="n">ptas</span><span class="p">)</span>  <span class="c1"># May use too much memory</span>
+</pre></div>
+</div>
+</section>
+<section id="specific-pta-selection">
+<h4>Specific PTA Selection<a class="headerlink" href="#specific-pta-selection" title="Link to this heading"></a></h4>
+<p>Use specific PTA names instead of discovering all PTAs:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Specific PTAs</span>
+<span class="n">file_data</span> <span class="o">=</span> <span class="n">discovery</span><span class="o">.</span><span class="n">discover_all_files_in_ptas</span><span class="p">([</span><span class="s2">&quot;epta_dr2&quot;</span><span class="p">,</span> <span class="s2">&quot;ppta_dr2&quot;</span><span class="p">])</span>
+
+<span class="c1"># Avoid: All PTAs (slower)</span>
+<span class="n">file_data</span> <span class="o">=</span> <span class="n">discovery</span><span class="o">.</span><span class="n">discover_all_files_in_ptas</span><span class="p">(</span><span class="n">discovery</span><span class="o">.</span><span class="n">list_ptas</span><span class="p">())</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="memory-management">
+<h3>Memory Management<a class="headerlink" href="#memory-management" title="Link to this heading"></a></h3>
+<section id="object-cleanup">
+<h4>Object Cleanup<a class="headerlink" href="#object-cleanup" title="Link to this heading"></a></h4>
+<p>Clean up large objects when no longer needed:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Clean up after use</span>
+<span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span><span class="n">file_data</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s2">&quot;composite&quot;</span><span class="p">)</span>
+<span class="c1"># Use metapulsar...</span>
+<span class="k">del</span> <span class="n">metapulsar</span>  <span class="c1"># Free memory</span>
+
+<span class="c1"># Or use context managers</span>
+<span class="k">with</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span><span class="n">file_data</span><span class="p">,</span> <span class="n">strategy</span><span class="o">=</span><span class="s2">&quot;composite&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">metapulsar</span><span class="p">:</span>
+    <span class="c1"># Use metapulsar...</span>
+    <span class="k">pass</span>  <span class="c1"># Automatically cleaned up</span>
+</pre></div>
+</div>
+</section>
+<section id="data-type-optimization">
+<h4>Data Type Optimization<a class="headerlink" href="#data-type-optimization" title="Link to this heading"></a></h4>
+<p>Use appropriate data types to reduce memory usage:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Use float32 for large arrays when precision allows</span>
+<span class="n">timing_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+<span class="c1"># Avoid: Default float64 for everything</span>
+<span class="n">timing_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>  <span class="c1"># Uses more memory</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="file-i-o-optimization">
+<h3>File I/O Optimization<a class="headerlink" href="#file-i-o-optimization" title="Link to this heading"></a></h3>
+<section id="efficient-file-formats">
+<h4>Efficient File Formats<a class="headerlink" href="#efficient-file-formats" title="Link to this heading"></a></h4>
+<p>Use efficient file formats for large datasets:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Use HDF5 for large datasets</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">h5py</span>
+<span class="k">with</span> <span class="n">h5py</span><span class="o">.</span><span class="n">File</span><span class="p">(</span><span class="s1">&#39;data.h5&#39;</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+    <span class="n">f</span><span class="o">.</span><span class="n">create_dataset</span><span class="p">(</span><span class="s1">&#39;timing_data&#39;</span><span class="p">,</span> <span class="n">data</span><span class="o">=</span><span class="n">timing_data</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s1">&#39;gzip&#39;</span><span class="p">)</span>
+
+<span class="c1"># Avoid: Plain text files for large data</span>
+<span class="n">np</span><span class="o">.</span><span class="n">savetxt</span><span class="p">(</span><span class="s1">&#39;data.txt&#39;</span><span class="p">,</span> <span class="n">timing_data</span><span class="p">)</span>  <span class="c1"># Slow and large</span>
+</pre></div>
+</div>
+</section>
+<section id="caching">
+<h4>Caching<a class="headerlink" href="#caching" title="Link to this heading"></a></h4>
+<p>Cache frequently accessed data:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Cache discovery results</span>
+<span class="nd">@functools</span><span class="o">.</span><span class="n">lru_cache</span><span class="p">(</span><span class="n">maxsize</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">discover_pta_files</span><span class="p">(</span><span class="n">pta_name</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">discovery</span><span class="o">.</span><span class="n">discover_files_in_pta</span><span class="p">(</span><span class="n">pta_name</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="algorithm-optimization">
+<h3>Algorithm Optimization<a class="headerlink" href="#algorithm-optimization" title="Link to this heading"></a></h3>
+<section id="vectorized-operations">
+<h4>Vectorized Operations<a class="headerlink" href="#vectorized-operations" title="Link to this heading"></a></h4>
+<p>Use NumPy vectorized operations instead of loops:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Vectorized operations</span>
+<span class="n">residuals</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">calc_residual</span><span class="p">(</span><span class="n">toa</span><span class="p">)</span> <span class="k">for</span> <span class="n">toa</span> <span class="ow">in</span> <span class="n">toas</span><span class="p">])</span>  <span class="c1"># Slow</span>
+<span class="n">residuals</span> <span class="o">=</span> <span class="n">calc_residuals_vectorized</span><span class="p">(</span><span class="n">toas</span><span class="p">)</span>  <span class="c1"># Fast</span>
+
+<span class="c1"># Avoid: Python loops</span>
+<span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">toa</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">toas</span><span class="p">):</span>
+    <span class="n">residuals</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">calc_residual</span><span class="p">(</span><span class="n">toa</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="parallel-processing">
+<h4>Parallel Processing<a class="headerlink" href="#parallel-processing" title="Link to this heading"></a></h4>
+<p>Use parallel processing for independent operations:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Good: Parallel file discovery</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">discover_pta</span><span class="p">(</span><span class="n">pta_name</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">discovery</span><span class="o">.</span><span class="n">discover_files_in_pta</span><span class="p">(</span><span class="n">pta_name</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">executor</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">discover_pta</span><span class="p">,</span> <span class="n">pta_names</span><span class="p">))</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="performance-monitoring">
+<h2>Performance Monitoring<a class="headerlink" href="#performance-monitoring" title="Link to this heading"></a></h2>
+<section id="memory-usage">
+<h3>Memory Usage<a class="headerlink" href="#memory-usage" title="Link to this heading"></a></h3>
+<p>Monitor memory usage during processing:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">psutil</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">monitor_memory</span><span class="p">():</span>
+    <span class="n">process</span> <span class="o">=</span> <span class="n">psutil</span><span class="o">.</span><span class="n">Process</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">getpid</span><span class="p">())</span>
+    <span class="n">memory_info</span> <span class="o">=</span> <span class="n">process</span><span class="o">.</span><span class="n">memory_info</span><span class="p">()</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Memory usage: </span><span class="si">{</span><span class="n">memory_info</span><span class="o">.</span><span class="n">rss</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="mi">1024</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> MB&quot;</span><span class="p">)</span>
+
+<span class="c1"># Use before and after operations</span>
+<span class="n">monitor_memory</span><span class="p">()</span>
+<span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span><span class="n">file_data</span><span class="p">)</span>
+<span class="n">monitor_memory</span><span class="p">()</span>
+</pre></div>
+</div>
+</section>
+<section id="timing">
+<h3>Timing<a class="headerlink" href="#timing" title="Link to this heading"></a></h3>
+<p>Measure execution time for optimization:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">time</span>
+
+<span class="n">start_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+<span class="n">metapulsar</span> <span class="o">=</span> <span class="n">factory</span><span class="o">.</span><span class="n">create_metapulsar</span><span class="p">(</span><span class="n">file_data</span><span class="p">)</span>
+<span class="n">end_time</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;MetaPulsar creation took: </span><span class="si">{</span><span class="n">end_time</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">start_time</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> seconds&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Profile First</strong>: Use profiling tools to identify bottlenecks</p></li>
+<li><p><strong>Measure Changes</strong>: Always measure performance before and after optimizations</p></li>
+<li><p><strong>Test with Real Data</strong>: Performance characteristics may differ with real data</p></li>
+<li><p><strong>Monitor Resources</strong>: Keep track of memory and CPU usage</p></li>
+<li><p><strong>Use Appropriate Data Types</strong>: Choose data types based on precision requirements</p></li>
+<li><p><strong>Cache When Possible</strong>: Cache expensive operations that are repeated</p></li>
+<li><p><strong>Parallelize Independent Operations</strong>: Use parallel processing for independent tasks</p></li>
+</ol>
+</section>
+<section id="common-performance-issues">
+<h2>Common Performance Issues<a class="headerlink" href="#common-performance-issues" title="Link to this heading"></a></h2>
+<section id="slow-file-discovery">
+<h3>Slow File Discovery<a class="headerlink" href="#slow-file-discovery" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Cause</strong>: Too many files or slow file system</p></li>
+<li><p><strong>Solution</strong>: Use specific PTA names, cache results, or use faster storage</p></li>
+</ul>
+</section>
+<section id="high-memory-usage">
+<h3>High Memory Usage<a class="headerlink" href="#high-memory-usage" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Cause</strong>: Large datasets or inefficient data types</p></li>
+<li><p><strong>Solution</strong>: Use appropriate data types, process in batches, clean up objects</p></li>
+</ul>
+</section>
+<section id="slow-parameter-processing">
+<h3>Slow Parameter Processing<a class="headerlink" href="#slow-parameter-processing" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Cause</strong>: Inefficient parameter mapping or validation</p></li>
+<li><p><strong>Solution</strong>: Use vectorized operations, cache parameter mappings</p></li>
+</ul>
+</section>
+<section id="slow-metapulsar-creation">
+<h3>Slow MetaPulsar Creation<a class="headerlink" href="#slow-metapulsar-creation" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Cause</strong>: Complex parameter consistency checks</p></li>
+<li><p><strong>Solution</strong>: Use composite strategy if consistency not needed, optimize parameter mapping</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="faq.html" class="btn btn-neutral float-left" title="Frequently Asked Questions (FAQ)" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="architecture-overview.html" class="btn btn-neutral float-right" title="MetaPulsar - Architecture Overview" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Rutger van Haasteren, Wang-Wei Yu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

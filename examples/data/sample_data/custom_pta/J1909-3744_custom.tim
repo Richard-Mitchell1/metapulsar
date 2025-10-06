@@ -1,0 +1,24 @@
+# Sample Custom PTA tim file for J1909-3744
+# This is a sample file for educational purposes
+
+FORMAT 1
+MODE 1
+C  J1909-3744 Custom PTA sample data
+C  This is a sample file for educational purposes
+C
+C  Format: MJD  residual  uncertainty  flags
+C
+C  Sample data points (simulated)
+C
+C  Telescope: Custom
+C  Backend: Custom
+C  Frequency: 1400 MHz
+C
+C  MJD      Residual (s)    Uncertainty (s)    Flags
+C  ----     -------------   ----------------   -----
+C
+C  Sample timing data (simulated)
+C  These are not real observations
+C
+C  End of file
+

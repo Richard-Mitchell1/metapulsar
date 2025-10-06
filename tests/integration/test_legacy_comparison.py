@@ -10,13 +10,13 @@ class TestLegacyComparison:
     """Test comparison between legacy and new implementations."""
 
     def _prepare_legacy_input_files(
-        self, pulsar_name, pta_configs, available_data_sets
+        self, pulsar_name, pta_data_releases, available_data_sets
     ):
         """Prepare input files for legacy implementation using the same discovery as new system."""
         discovery_service = FileDiscoveryService()
 
         # Discover files for all PTAs
-        file_data = discovery_service.discover_all_files_in_ptas(pta_configs)
+        file_data = discovery_service.discover_all_files_in_ptas(pta_data_releases)
 
         # Filter file_data to only include files for this pulsar
         filtered_file_data = {}
@@ -35,10 +35,13 @@ class TestLegacyComparison:
         par_files = []
         tim_files = []
 
-        for config_name in pta_configs:
-            if config_name in filtered_file_data and filtered_file_data[config_name]:
+        for data_release_name in pta_data_releases:
+            if (
+                data_release_name in filtered_file_data
+                and filtered_file_data[data_release_name]
+            ):
                 # Get the first matching file for this PTA
-                file_info = filtered_file_data[config_name][0]
+                file_info = filtered_file_data[data_release_name][0]
                 par_file = file_info.get("parfile")
                 tim_file = file_info.get("timfile")
                 par_files.append(str(par_file) if par_file else None)
@@ -59,11 +62,11 @@ class TestLegacyComparison:
         if not available_data_sets:
             pytest.skip("No data available for testing")
 
-        test_pta_configs = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
+        test_pta_data_releases = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
 
         for pulsar in test_pulsars[:2]:  # Test first 2 pulsars
             par_files, tim_files = self._prepare_legacy_input_files(
-                pulsar, test_pta_configs, available_data_sets
+                pulsar, test_pta_data_releases, available_data_sets
             )
 
             # Filter out None values and check if we have any valid files
@@ -81,7 +84,7 @@ class TestLegacyComparison:
                 if par_file is None or tim_file is None:
                     continue  # Skip missing files
 
-                pta_name = test_pta_configs[i]
+                pta_name = test_pta_data_releases[i]
                 # Determine timing package based on PTA
                 package = (
                     "tempo2" if pta_name in ["epta_dr1_v2_2", "ppta_dr2"] else "pint"
@@ -100,7 +103,9 @@ class TestLegacyComparison:
 
             # Create new MetaPulsar using file_data
             discovery_service = FileDiscoveryService()
-            file_data = discovery_service.discover_all_files_in_ptas(test_pta_configs)
+            file_data = discovery_service.discover_all_files_in_ptas(
+                test_pta_data_releases
+            )
 
             # Filter file_data to only include files for this pulsar
             filtered_file_data = {}
@@ -251,11 +256,11 @@ class TestLegacyComparison:
         if not available_data_sets:
             pytest.skip("No data available for testing")
 
-        test_pta_configs = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
+        test_pta_data_releases = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
 
         for pulsar in test_pulsars[:2]:  # Test first 2 pulsars
             par_files, tim_files = self._prepare_legacy_input_files(
-                pulsar, test_pta_configs, available_data_sets
+                pulsar, test_pta_data_releases, available_data_sets
             )
 
             # Filter out None values and check if we have any valid files
@@ -273,7 +278,7 @@ class TestLegacyComparison:
                 if par_file is None or tim_file is None:
                     continue  # Skip missing files
 
-                pta_name = test_pta_configs[i]
+                pta_name = test_pta_data_releases[i]
                 package = (
                     "tempo2" if pta_name in ["epta_dr1_v2_2", "ppta_dr2"] else "pint"
                 )
@@ -292,7 +297,7 @@ class TestLegacyComparison:
                 # Create new MetaPulsar using file_data
                 discovery_service = FileDiscoveryService()
                 file_data = discovery_service.discover_all_files_in_ptas(
-                    test_pta_configs
+                    test_pta_data_releases
                 )
 
                 # Filter file_data to only include files for this pulsar
@@ -350,11 +355,11 @@ class TestLegacyComparison:
         if not available_data_sets:
             pytest.skip("No data available for testing")
 
-        test_pta_configs = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
+        test_pta_data_releases = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
 
         for pulsar in test_pulsars[:2]:  # Test first 2 pulsars
             par_files, tim_files = self._prepare_legacy_input_files(
-                pulsar, test_pta_configs, available_data_sets
+                pulsar, test_pta_data_releases, available_data_sets
             )
 
             if not par_files or not tim_files:
@@ -366,7 +371,7 @@ class TestLegacyComparison:
                 if par_file is None or tim_file is None:
                     continue  # Skip missing files
 
-                pta_name = test_pta_configs[i]
+                pta_name = test_pta_data_releases[i]
                 package = (
                     "tempo2" if pta_name in ["epta_dr1_v2_2", "ppta_dr2"] else "pint"
                 )
@@ -388,7 +393,9 @@ class TestLegacyComparison:
 
             # Create new MetaPulsar using file_data
             discovery_service = FileDiscoveryService()
-            file_data = discovery_service.discover_all_files_in_ptas(test_pta_configs)
+            file_data = discovery_service.discover_all_files_in_ptas(
+                test_pta_data_releases
+            )
 
             # Filter file_data to only include files for this pulsar
             filtered_file_data = {}
@@ -435,12 +442,12 @@ class TestLegacyComparison:
         if not available_data_sets:
             pytest.skip("No data available for testing")
 
-        test_pta_configs = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
+        test_pta_data_releases = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
         key_params = ["F0", "F1", "RAJ", "DECJ", "PMRA", "PMDEC", "PEPOCH"]
 
         for pulsar in test_pulsars[:2]:  # Test first 2 pulsars
             par_files, tim_files = self._prepare_legacy_input_files(
-                pulsar, test_pta_configs, available_data_sets
+                pulsar, test_pta_data_releases, available_data_sets
             )
 
             # Filter out None values and check if we have any valid files
@@ -458,7 +465,7 @@ class TestLegacyComparison:
                 if par_file is None or tim_file is None:
                     continue  # Skip missing files
 
-                pta_name = test_pta_configs[i]
+                pta_name = test_pta_data_releases[i]
                 package = (
                     "tempo2" if pta_name in ["epta_dr1_v2_2", "ppta_dr2"] else "pint"
                 )
@@ -476,7 +483,9 @@ class TestLegacyComparison:
 
             # Create new MetaPulsar using file_data
             discovery_service = FileDiscoveryService()
-            file_data = discovery_service.discover_all_files_in_ptas(test_pta_configs)
+            file_data = discovery_service.discover_all_files_in_ptas(
+                test_pta_data_releases
+            )
 
             # Filter file_data to only include files for this pulsar
             filtered_file_data = {}

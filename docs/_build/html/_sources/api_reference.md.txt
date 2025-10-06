@@ -1,0 +1,164 @@
+# MetaPulsar API Reference
+
+## Core Classes
+
+### MetaPulsar
+Main class for combining pulsar timing data from multiple PTAs.
+
+```python
+class MetaPulsar:
+    def __init__(self, pulsars: Dict[str, Any], combination_strategy: str = "composite"):
+        """Initialize MetaPulsar.
+        
+        Args:
+            pulsars: Dictionary of pulsar data from different PTAs
+            combination_strategy: "composite" or "consistent"
+        """
+```
+
+### MetaPulsarFactory
+Factory for creating MetaPulsars.
+
+```python
+class MetaPulsarFactory:
+    def __init__(self):
+        """Initialize factory."""
+    
+    def create_metapulsar(
+        self,
+        file_data: Dict[str, Dict[str, Any]],
+        combination_strategy: str = "consistent",
+        reference_pta: str = None,
+        combine_components: List[str] = None,
+        add_dm_derivatives: bool = True
+    ) -> MetaPulsar:
+        """Create MetaPulsar from file data."""
+    
+    def list_available_pulsars(self, pta_names: List[str] = None) -> List[str]:
+        """List available pulsars in specified PTAs."""
+```
+
+### FileDiscoveryService
+Handles file discovery and PTA configuration management.
+
+```python
+class FileDiscoveryService:
+    def __init__(self, pta_data_releases: Dict = None):
+        """Initialize file discovery service."""
+
+    def list_ptas(self) -> List[str]:
+        """List all available PTA names."""
+
+    def discover_all_files_in_ptas(
+        self,
+        pta_names: List[str] = None
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Discover all file pairs in selected PTAs."""
+
+    def discover_patterns_in_pta(self, pta_name: str) -> List[str]:
+        """Discover all file patterns in a single PTA."""
+
+    def add_pta(self, name: str, data_release: Dict) -> None:
+        """Add a new PTA configuration."""
+```
+
+### ParameterManager
+Manages parameter consistency across PTAs.
+
+```python
+class ParameterManager:
+    def __init__(
+        self,
+        file_data: Dict[str, Dict[str, Any]],
+        reference_pta: str,
+        combine_components: List[str],
+        add_dm_derivatives: bool = True
+    ):
+        """Initialize parameter manager."""
+
+    def build_parameter_mappings(
+        self,
+        merge_astrometry: bool = True,
+        merge_spin: bool = True,
+        merge_binary: bool = True,
+        merge_dm: bool = True
+    ) -> ParameterMapping:
+        """Build parameter mappings for consistency."""
+```
+
+### MockPulsar
+Creates synthetic pulsar data for testing.
+
+```python
+class MockPulsar:
+    def __init__(
+        self,
+        toas: np.ndarray,
+        residuals: np.ndarray,
+        errors: np.ndarray,
+        freqs: np.ndarray,
+        flags: Dict[str, np.ndarray],
+        telescope: str,
+        name: str
+    ):
+        """Initialize mock pulsar."""
+```
+
+### TimFileAnalyzer
+Analyzes TIM files for metadata.
+
+```python
+class TimFileAnalyzer:
+    def __init__(self, tim_file_path: str):
+        """Initialize analyzer with TIM file path."""
+
+    def analyze(self) -> Dict[str, Any]:
+        """Analyze TIM file and return metadata."""
+```
+
+## Utility Functions
+
+### create_staggered_selection
+Creates Enterprise-compatible selection functions.
+
+```python
+def create_staggered_selection(
+    flags: Dict[str, np.ndarray],
+    freqs: np.ndarray,
+    primary_flag: str,
+    fallback_flags: List[str] = None,
+    freq_bands: Dict[str, Tuple[float, float]] = None
+) -> List[Callable]:
+    """Create staggered selection functions for Enterprise."""
+```
+
+## Exceptions
+
+### PINTDiscoveryError
+Raised when PINT component discovery fails.
+
+```python
+class PINTDiscoveryError(Exception):
+    """Exception raised when PINT component discovery fails."""
+```
+
+### ParameterInconsistencyError
+Raised when parameter consistency checks fail.
+
+```python
+class ParameterInconsistencyError(Exception):
+    """Exception raised when parameter consistency checks fail."""
+```
+
+## Data Structures
+
+### ParameterMapping
+Contains parameter mapping information.
+
+```python
+class ParameterMapping:
+    def __init__(self):
+        self.merged_parameters: List[str]
+        self.pta_specific_parameters: Dict[str, List[str]]
+        self.fitparameters: Dict[str, Any]
+```

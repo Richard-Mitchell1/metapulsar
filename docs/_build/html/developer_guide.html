@@ -1,0 +1,710 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MetaPulsar Developer Guide &mdash; MetaPulsar 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="MetaPulsar Troubleshooting Guide" href="troubleshooting.html" />
+    <link rel="prev" title="MetaPulsar API Reference" href="api_reference.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            MetaPulsar
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="installation.html">MetaPulsar Installation Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_guide.html">MetaPulsar User Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api_reference.html">MetaPulsar API Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">MetaPulsar Developer Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#development-setup">Development Setup</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#installation-for-development">Installation for Development</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#development-dependencies">Development Dependencies</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#project-structure">Project Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#architecture-overview">Architecture Overview</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#core-classes">Core Classes</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#metapulsar">MetaPulsar</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#metapulsarfactory">MetaPulsarFactory</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#filediscoveryservice">FileDiscoveryService</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#parametermanager">ParameterManager</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#design-patterns">Design Patterns</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#factory-pattern">Factory Pattern</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#strategy-pattern">Strategy Pattern</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#service-pattern">Service Pattern</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#development-workflow">Development Workflow</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#setting-up-development-environment">1. Setting Up Development Environment</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#making-changes">2. Making Changes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#testing">3. Testing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#documentation">4. Documentation</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#coding-standards">Coding Standards</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#python-style">Python Style</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#code-organization">Code Organization</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Testing</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#adding-new-features">Adding New Features</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#core-package-changes">1. Core Package Changes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#example-changes">2. Example Changes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#documentation-changes">3. Documentation Changes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#testing-guidelines">Testing Guidelines</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#unit-tests">Unit Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#integration-tests">Integration Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-data">Test Data</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-considerations">Performance Considerations</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#memory-usage">Memory Usage</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#speed">Speed</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#scalability">Scalability</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#debugging">Debugging</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#common-issues">Common Issues</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#debugging-tools">Debugging Tools</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#contributing">Contributing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#pull-request-process">Pull Request Process</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pull-request-requirements">Pull Request Requirements</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#code-review">Code Review</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#release-process">Release Process</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#version-numbering">Version Numbering</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#release-checklist">Release Checklist</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting-development-issues">Troubleshooting Development Issues</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#common-development-problems">Common Development Problems</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#import-errors">Import Errors</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#test-failures">Test Failures</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#documentation-build-issues">Documentation Build Issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#getting-help">Getting Help</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#resources">Resources</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#contact">Contact</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#best-practices">Best Practices</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#code-quality">Code Quality</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id2">Testing</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id3">Documentation</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#performance">Performance</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">MetaPulsar Troubleshooting Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions (FAQ)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">MetaPulsar Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture-overview.html">MetaPulsar - Architecture Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="selection_utils_api.html">Selection Utilities API Documentation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="enterprise_integration_guide.html">Enterprise Integration Guide for Staggered Selection Utilities</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">MetaPulsar</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">MetaPulsar Developer Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/developer_guide.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section class="tex2jax_ignore mathjax_ignore" id="metapulsar-developer-guide">
+<h1>MetaPulsar Developer Guide<a class="headerlink" href="#metapulsar-developer-guide" title="Link to this heading"></a></h1>
+<p>This guide is for developers who want to contribute to MetaPulsar or understand its internal architecture.</p>
+<section id="development-setup">
+<h2>Development Setup<a class="headerlink" href="#development-setup" title="Link to this heading"></a></h2>
+<section id="prerequisites">
+<h3>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Python 3.8 or higher</p></li>
+<li><p>Git</p></li>
+<li><p>Basic understanding of pulsar timing analysis</p></li>
+</ul>
+</section>
+<section id="installation-for-development">
+<h3>Installation for Development<a class="headerlink" href="#installation-for-development" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Clone the repository</span>
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/vhaasteren/metapulsar.git
+<span class="nb">cd</span><span class="w"> </span>metapulsar
+
+<span class="c1"># Install in development mode with all dependencies</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev,libstempo,analysis,docs]&quot;</span>
+
+<span class="c1"># Install pre-commit hooks (optional but recommended)</span>
+pre-commit<span class="w"> </span>install
+</pre></div>
+</div>
+</section>
+<section id="development-dependencies">
+<h3>Development Dependencies<a class="headerlink" href="#development-dependencies" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Install development tools</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
+
+<span class="c1"># Install documentation tools</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[docs]&quot;</span>
+
+<span class="c1"># Install analysis tools</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[analysis]&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="project-structure">
+<h2>Project Structure<a class="headerlink" href="#project-structure" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>metapulsar/
+├── src/metapulsar/           # Main package source
+│   ├── __init__.py          # Package exports
+│   ├── metapulsar.py        # Core MetaPulsar class
+│   ├── metapulsar_factory.py # Factory for creating MetaPulsar objects
+│   ├── file_discovery_service.py # File discovery and PTA management
+│   ├── parameter_manager.py # Parameter consistency management
+│   ├── mockpulsar.py        # Mock data generation
+│   ├── tim_file_analyzer.py # TIM file analysis utilities
+│   ├── selection_utils.py   # Staggered selection utilities
+│   └── pint_helpers.py      # PINT integration helpers
+├── tests/                   # Test suite
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   └── test_*.py           # Test files
+├── examples/               # Usage examples
+│   ├── notebooks/          # Interactive tutorials
+│   ├── *.py               # Python examples
+│   └── data/              # Sample data
+├── docs/                  # Documentation
+│   ├── conf.py            # Sphinx configuration
+│   ├── *.md              # Documentation files
+│   └── *.rst             # ReStructuredText files
+└── pyproject.toml         # Project configuration
+</pre></div>
+</div>
+</section>
+<section id="architecture-overview">
+<h2>Architecture Overview<a class="headerlink" href="#architecture-overview" title="Link to this heading"></a></h2>
+<section id="core-classes">
+<h3>Core Classes<a class="headerlink" href="#core-classes" title="Link to this heading"></a></h3>
+<section id="metapulsar">
+<h4>MetaPulsar<a class="headerlink" href="#metapulsar" title="Link to this heading"></a></h4>
+<p>The main class that represents a combined pulsar timing dataset from multiple PTAs.</p>
+<p><strong>Key Responsibilities:</strong></p>
+<ul class="simple">
+<li><p>Store pulsar data from multiple PTAs</p></li>
+<li><p>Provide unified interface for analysis</p></li>
+<li><p>Handle parameter consistency</p></li>
+</ul>
+</section>
+<section id="metapulsarfactory">
+<h4>MetaPulsarFactory<a class="headerlink" href="#metapulsarfactory" title="Link to this heading"></a></h4>
+<p>Factory class for creating MetaPulsar objects.</p>
+<p><strong>Key Responsibilities:</strong></p>
+<ul class="simple">
+<li><p>Orchestrate MetaPulsar creation</p></li>
+<li><p>Handle different combination strategies</p></li>
+<li><p>Manage PTA data integration</p></li>
+</ul>
+</section>
+<section id="filediscoveryservice">
+<h4>FileDiscoveryService<a class="headerlink" href="#filediscoveryservice" title="Link to this heading"></a></h4>
+<p>Service for discovering and managing PTA data files.</p>
+<p><strong>Key Responsibilities:</strong></p>
+<ul class="simple">
+<li><p>Discover par/tim files from PTAs</p></li>
+<li><p>Manage PTA configurations</p></li>
+<li><p>Handle file pattern matching</p></li>
+</ul>
+</section>
+<section id="parametermanager">
+<h4>ParameterManager<a class="headerlink" href="#parametermanager" title="Link to this heading"></a></h4>
+<p>Manages parameter consistency across PTAs.</p>
+<p><strong>Key Responsibilities:</strong></p>
+<ul class="simple">
+<li><p>Build parameter mappings</p></li>
+<li><p>Handle parameter inconsistencies</p></li>
+<li><p>Ensure astrophysical consistency</p></li>
+</ul>
+</section>
+</section>
+<section id="design-patterns">
+<h3>Design Patterns<a class="headerlink" href="#design-patterns" title="Link to this heading"></a></h3>
+<section id="factory-pattern">
+<h4>Factory Pattern<a class="headerlink" href="#factory-pattern" title="Link to this heading"></a></h4>
+<p>Used in <code class="docutils literal notranslate"><span class="pre">MetaPulsarFactory</span></code> to create MetaPulsar objects with different strategies.</p>
+</section>
+<section id="strategy-pattern">
+<h4>Strategy Pattern<a class="headerlink" href="#strategy-pattern" title="Link to this heading"></a></h4>
+<p>Used for different combination strategies (composite vs consistent).</p>
+</section>
+<section id="service-pattern">
+<h4>Service Pattern<a class="headerlink" href="#service-pattern" title="Link to this heading"></a></h4>
+<p>Used in <code class="docutils literal notranslate"><span class="pre">FileDiscoveryService</span></code> for file discovery operations.</p>
+</section>
+</section>
+</section>
+<section id="development-workflow">
+<h2>Development Workflow<a class="headerlink" href="#development-workflow" title="Link to this heading"></a></h2>
+<section id="setting-up-development-environment">
+<h3>1. Setting Up Development Environment<a class="headerlink" href="#setting-up-development-environment" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Create feature branch</span>
+git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feature/your-feature-name
+
+<span class="c1"># Install development dependencies</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
+
+<span class="c1"># Run tests to ensure everything works</span>
+pytest
+</pre></div>
+</div>
+</section>
+<section id="making-changes">
+<h3>2. Making Changes<a class="headerlink" href="#making-changes" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Make your changes</span>
+<span class="c1"># ...</span>
+
+<span class="c1"># Run tests</span>
+pytest
+
+<span class="c1"># Run linting</span>
+black<span class="w"> </span>src/<span class="w"> </span>tests/
+flake8<span class="w"> </span>src/<span class="w"> </span>tests/
+mypy<span class="w"> </span>src/
+
+<span class="c1"># Update documentation if needed</span>
+<span class="nb">cd</span><span class="w"> </span>docs
+make<span class="w"> </span>html
+</pre></div>
+</div>
+</section>
+<section id="testing">
+<h3>3. Testing<a class="headerlink" href="#testing" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run all tests</span>
+pytest
+
+<span class="c1"># Run specific test file</span>
+pytest<span class="w"> </span>tests/test_metapulsar_factory.py
+
+<span class="c1"># Run with coverage</span>
+pytest<span class="w"> </span>--cov<span class="o">=</span>metapulsar
+
+<span class="c1"># Run integration tests</span>
+pytest<span class="w"> </span>tests/integration/
+</pre></div>
+</div>
+</section>
+<section id="documentation">
+<h3>4. Documentation<a class="headerlink" href="#documentation" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Build documentation</span>
+<span class="nb">cd</span><span class="w"> </span>docs
+make<span class="w"> </span>html
+
+<span class="c1"># Check for broken links</span>
+make<span class="w"> </span>linkcheck
+</pre></div>
+</div>
+</section>
+</section>
+<section id="coding-standards">
+<h2>Coding Standards<a class="headerlink" href="#coding-standards" title="Link to this heading"></a></h2>
+<section id="python-style">
+<h3>Python Style<a class="headerlink" href="#python-style" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Follow PEP 8</p></li>
+<li><p>Use Black for code formatting</p></li>
+<li><p>Use type hints where appropriate</p></li>
+<li><p>Write docstrings for all public functions</p></li>
+</ul>
+</section>
+<section id="code-organization">
+<h3>Code Organization<a class="headerlink" href="#code-organization" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Keep functions small and focused</p></li>
+<li><p>Use meaningful variable names</p></li>
+<li><p>Add comments for complex logic</p></li>
+<li><p>Follow the existing code structure</p></li>
+</ul>
+</section>
+<section id="id1">
+<h3>Testing<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Write tests for all new functionality</p></li>
+<li><p>Aim for &gt;90% test coverage</p></li>
+<li><p>Test both success and error cases</p></li>
+<li><p>Use descriptive test names</p></li>
+</ul>
+</section>
+</section>
+<section id="adding-new-features">
+<h2>Adding New Features<a class="headerlink" href="#adding-new-features" title="Link to this heading"></a></h2>
+<section id="core-package-changes">
+<h3>1. Core Package Changes<a class="headerlink" href="#core-package-changes" title="Link to this heading"></a></h3>
+<p>If adding new classes or functions to the core package:</p>
+<ol class="arabic simple">
+<li><p><strong>Add to <code class="docutils literal notranslate"><span class="pre">src/metapulsar/</span></code></strong></p></li>
+<li><p><strong>Update <code class="docutils literal notranslate"><span class="pre">src/metapulsar/__init__.py</span></code></strong> to export new classes</p></li>
+<li><p><strong>Add comprehensive tests</strong></p></li>
+<li><p><strong>Update API documentation</strong></p></li>
+<li><p><strong>Add examples if appropriate</strong></p></li>
+</ol>
+</section>
+<section id="example-changes">
+<h3>2. Example Changes<a class="headerlink" href="#example-changes" title="Link to this heading"></a></h3>
+<p>If adding new examples:</p>
+<ol class="arabic simple">
+<li><p><strong>Add to <code class="docutils literal notranslate"><span class="pre">examples/</span></code> directory</strong></p></li>
+<li><p><strong>Follow naming convention</strong>: <code class="docutils literal notranslate"><span class="pre">descriptive_name.py</span></code></p></li>
+<li><p><strong>Include comprehensive docstring</strong></p></li>
+<li><p><strong>Test the example works</strong></p></li>
+<li><p><strong>Update <code class="docutils literal notranslate"><span class="pre">examples/README.md</span></code></strong></p></li>
+</ol>
+</section>
+<section id="documentation-changes">
+<h3>3. Documentation Changes<a class="headerlink" href="#documentation-changes" title="Link to this heading"></a></h3>
+<p>If updating documentation:</p>
+<ol class="arabic simple">
+<li><p><strong>Update relevant <code class="docutils literal notranslate"><span class="pre">.md</span></code> files in <code class="docutils literal notranslate"><span class="pre">docs/</span></code></strong></p></li>
+<li><p><strong>Update Sphinx index if needed</strong></p></li>
+<li><p><strong>Test documentation builds</strong></p></li>
+<li><p><strong>Check for broken links</strong></p></li>
+</ol>
+</section>
+</section>
+<section id="testing-guidelines">
+<h2>Testing Guidelines<a class="headerlink" href="#testing-guidelines" title="Link to this heading"></a></h2>
+<section id="unit-tests">
+<h3>Unit Tests<a class="headerlink" href="#unit-tests" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Test individual functions and methods</p></li>
+<li><p>Mock external dependencies</p></li>
+<li><p>Test edge cases and error conditions</p></li>
+<li><p>Keep tests fast and isolated</p></li>
+</ul>
+</section>
+<section id="integration-tests">
+<h3>Integration Tests<a class="headerlink" href="#integration-tests" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Test complete workflows</p></li>
+<li><p>Use real data when possible</p></li>
+<li><p>Test error handling</p></li>
+<li><p>Test performance characteristics</p></li>
+</ul>
+</section>
+<section id="test-data">
+<h3>Test Data<a class="headerlink" href="#test-data" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Use mock data for unit tests</p></li>
+<li><p>Use sample data for integration tests</p></li>
+<li><p>Keep test data minimal but representative</p></li>
+<li><p>Document test data sources</p></li>
+</ul>
+</section>
+</section>
+<section id="performance-considerations">
+<h2>Performance Considerations<a class="headerlink" href="#performance-considerations" title="Link to this heading"></a></h2>
+<section id="memory-usage">
+<h3>Memory Usage<a class="headerlink" href="#memory-usage" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Use appropriate data types</p></li>
+<li><p>Clean up large objects</p></li>
+<li><p>Process data in chunks when possible</p></li>
+<li><p>Monitor memory usage in tests</p></li>
+</ul>
+</section>
+<section id="speed">
+<h3>Speed<a class="headerlink" href="#speed" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Use vectorized operations (NumPy)</p></li>
+<li><p>Avoid nested loops</p></li>
+<li><p>Cache expensive operations</p></li>
+<li><p>Profile performance-critical code</p></li>
+</ul>
+</section>
+<section id="scalability">
+<h3>Scalability<a class="headerlink" href="#scalability" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Design for large datasets</p></li>
+<li><p>Use generators for large data</p></li>
+<li><p>Implement efficient algorithms</p></li>
+<li><p>Test with realistic data sizes</p></li>
+</ul>
+</section>
+</section>
+<section id="debugging">
+<h2>Debugging<a class="headerlink" href="#debugging" title="Link to this heading"></a></h2>
+<section id="common-issues">
+<h3>Common Issues<a class="headerlink" href="#common-issues" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Import errors</strong>: Check Python path and package installation</p></li>
+<li><p><strong>File not found</strong>: Verify file patterns and base directories</p></li>
+<li><p><strong>Parameter errors</strong>: Check parameter names and units</p></li>
+<li><p><strong>Memory issues</strong>: Monitor memory usage and clean up objects</p></li>
+</ol>
+</section>
+<section id="debugging-tools">
+<h3>Debugging Tools<a class="headerlink" href="#debugging-tools" title="Link to this heading"></a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># Enable debug logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="n">logging</span><span class="o">.</span><span class="n">basicConfig</span><span class="p">(</span><span class="n">level</span><span class="o">=</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+<span class="c1"># Use debugger</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pdb</span>
+<span class="n">pdb</span><span class="o">.</span><span class="n">set_trace</span><span class="p">()</span>
+
+<span class="c1"># Profile performance</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">cProfile</span>
+<span class="n">cProfile</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="s1">&#39;your_function()&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="contributing">
+<h2>Contributing<a class="headerlink" href="#contributing" title="Link to this heading"></a></h2>
+<section id="pull-request-process">
+<h3>Pull Request Process<a class="headerlink" href="#pull-request-process" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p><strong>Fork the repository</strong></p></li>
+<li><p><strong>Create feature branch</strong></p></li>
+<li><p><strong>Make changes with tests</strong></p></li>
+<li><p><strong>Update documentation</strong></p></li>
+<li><p><strong>Submit pull request</strong></p></li>
+</ol>
+</section>
+<section id="pull-request-requirements">
+<h3>Pull Request Requirements<a class="headerlink" href="#pull-request-requirements" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>All tests must pass</p></li>
+<li><p>Code must be formatted with Black</p></li>
+<li><p>Documentation must be updated</p></li>
+<li><p>New features must have tests</p></li>
+<li><p>Breaking changes must be documented</p></li>
+</ul>
+</section>
+<section id="code-review">
+<h3>Code Review<a class="headerlink" href="#code-review" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>All pull requests require review</p></li>
+<li><p>Address review comments promptly</p></li>
+<li><p>Keep pull requests focused and small</p></li>
+<li><p>Provide clear descriptions</p></li>
+</ul>
+</section>
+</section>
+<section id="release-process">
+<h2>Release Process<a class="headerlink" href="#release-process" title="Link to this heading"></a></h2>
+<section id="version-numbering">
+<h3>Version Numbering<a class="headerlink" href="#version-numbering" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Use semantic versioning (MAJOR.MINOR.PATCH)</p></li>
+<li><p>Update version in <code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></p></li>
+<li><p>Update changelog</p></li>
+<li><p>Tag release in Git</p></li>
+</ul>
+</section>
+<section id="release-checklist">
+<h3>Release Checklist<a class="headerlink" href="#release-checklist" title="Link to this heading"></a></h3>
+<ul class="contains-task-list simple">
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox"> All tests pass</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox"> Documentation is up to date</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox"> Version number updated</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox"> Changelog updated</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox"> Release notes written</p></li>
+<li class="task-list-item"><p><input class="task-list-item-checkbox" disabled="disabled" type="checkbox"> Tagged in Git</p></li>
+</ul>
+</section>
+</section>
+<section id="troubleshooting-development-issues">
+<h2>Troubleshooting Development Issues<a class="headerlink" href="#troubleshooting-development-issues" title="Link to this heading"></a></h2>
+<section id="common-development-problems">
+<h3>Common Development Problems<a class="headerlink" href="#common-development-problems" title="Link to this heading"></a></h3>
+<section id="import-errors">
+<h4>Import Errors<a class="headerlink" href="#import-errors" title="Link to this heading"></a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check Python path</span>
+python<span class="w"> </span>-c<span class="w"> </span><span class="s2">&quot;import sys; print(sys.path)&quot;</span>
+
+<span class="c1"># Reinstall package</span>
+pip<span class="w"> </span>uninstall<span class="w"> </span>metapulsar
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+<section id="test-failures">
+<h4>Test Failures<a class="headerlink" href="#test-failures" title="Link to this heading"></a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run tests with verbose output</span>
+pytest<span class="w"> </span>-v
+
+<span class="c1"># Run specific test</span>
+pytest<span class="w"> </span>tests/test_specific.py::test_function<span class="w"> </span>-v
+
+<span class="c1"># Run with debug output</span>
+pytest<span class="w"> </span>--log-cli-level<span class="o">=</span>DEBUG
+</pre></div>
+</div>
+</section>
+<section id="documentation-build-issues">
+<h4>Documentation Build Issues<a class="headerlink" href="#documentation-build-issues" title="Link to this heading"></a></h4>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Check Sphinx configuration</span>
+<span class="nb">cd</span><span class="w"> </span>docs
+sphinx-build<span class="w"> </span>-W<span class="w"> </span>.<span class="w"> </span>_build/html
+
+<span class="c1"># Check for missing dependencies</span>
+pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[docs]&quot;</span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+<section id="getting-help">
+<h2>Getting Help<a class="headerlink" href="#getting-help" title="Link to this heading"></a></h2>
+<section id="resources">
+<h3>Resources<a class="headerlink" href="#resources" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Documentation</strong>: Check <code class="docutils literal notranslate"><span class="pre">docs/</span></code> directory</p></li>
+<li><p><strong>Examples</strong>: Check <code class="docutils literal notranslate"><span class="pre">examples/</span></code> directory</p></li>
+<li><p><strong>Tests</strong>: Check <code class="docutils literal notranslate"><span class="pre">tests/</span></code> directory for usage examples</p></li>
+<li><p><strong>Issues</strong>: Check GitHub issues for known problems</p></li>
+</ul>
+</section>
+<section id="contact">
+<h3>Contact<a class="headerlink" href="#contact" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>GitHub Issues</strong>: Report bugs and request features</p></li>
+<li><p><strong>Discussions</strong>: Ask questions and share ideas</p></li>
+<li><p><strong>Email</strong>: Contact maintainers directly</p></li>
+</ul>
+</section>
+</section>
+<section id="best-practices">
+<h2>Best Practices<a class="headerlink" href="#best-practices" title="Link to this heading"></a></h2>
+<section id="code-quality">
+<h3>Code Quality<a class="headerlink" href="#code-quality" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Write clean, readable code</p></li>
+<li><p>Use meaningful names</p></li>
+<li><p>Add comprehensive docstrings</p></li>
+<li><p>Follow existing patterns</p></li>
+</ul>
+</section>
+<section id="id2">
+<h3>Testing<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Write tests first (TDD)</p></li>
+<li><p>Test edge cases</p></li>
+<li><p>Keep tests fast</p></li>
+<li><p>Use descriptive test names</p></li>
+</ul>
+</section>
+<section id="id3">
+<h3>Documentation<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Keep documentation up to date</p></li>
+<li><p>Write for your audience</p></li>
+<li><p>Use examples liberally</p></li>
+<li><p>Test documentation examples</p></li>
+</ul>
+</section>
+<section id="performance">
+<h3>Performance<a class="headerlink" href="#performance" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Profile before optimizing</p></li>
+<li><p>Use appropriate data structures</p></li>
+<li><p>Avoid premature optimization</p></li>
+<li><p>Monitor memory usage</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="api_reference.html" class="btn btn-neutral float-left" title="MetaPulsar API Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="troubleshooting.html" class="btn btn-neutral float-right" title="MetaPulsar Troubleshooting Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, Rutger van Haasteren, Wang-Wei Yu.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,392 @@
+# MetaPulsar Developer Guide
+
+This guide is for developers who want to contribute to MetaPulsar or understand its internal architecture.
+
+## Development Setup
+
+### Prerequisites
+- Python 3.8 or higher
+- Git
+- Basic understanding of pulsar timing analysis
+
+### Installation for Development
+```bash
+# Clone the repository
+git clone https://github.com/vhaasteren/metapulsar.git
+cd metapulsar
+
+# Install in development mode with all dependencies
+pip install -e ".[dev,libstempo,analysis,docs]"
+
+# Install pre-commit hooks (optional but recommended)
+pre-commit install
+```
+
+### Development Dependencies
+```bash
+# Install development tools
+pip install -e ".[dev]"
+
+# Install documentation tools
+pip install -e ".[docs]"
+
+# Install analysis tools
+pip install -e ".[analysis]"
+```
+
+## Project Structure
+
+```
+metapulsar/
+├── src/metapulsar/           # Main package source
+│   ├── __init__.py          # Package exports
+│   ├── metapulsar.py        # Core MetaPulsar class
+│   ├── metapulsar_factory.py # Factory for creating MetaPulsar objects
+│   ├── file_discovery_service.py # File discovery and PTA management
+│   ├── parameter_manager.py # Parameter consistency management
+│   ├── mockpulsar.py        # Mock data generation
+│   ├── tim_file_analyzer.py # TIM file analysis utilities
+│   ├── selection_utils.py   # Staggered selection utilities
+│   └── pint_helpers.py      # PINT integration helpers
+├── tests/                   # Test suite
+│   ├── unit/               # Unit tests
+│   ├── integration/        # Integration tests
+│   └── test_*.py           # Test files
+├── examples/               # Usage examples
+│   ├── notebooks/          # Interactive tutorials
+│   ├── *.py               # Python examples
+│   └── data/              # Sample data
+├── docs/                  # Documentation
+│   ├── conf.py            # Sphinx configuration
+│   ├── *.md              # Documentation files
+│   └── *.rst             # ReStructuredText files
+└── pyproject.toml         # Project configuration
+```
+
+## Architecture Overview
+
+### Core Classes
+
+#### MetaPulsar
+The main class that represents a combined pulsar timing dataset from multiple PTAs.
+
+**Key Responsibilities:**
+- Store pulsar data from multiple PTAs
+- Provide unified interface for analysis
+- Handle parameter consistency
+
+#### MetaPulsarFactory
+Factory class for creating MetaPulsar objects.
+
+**Key Responsibilities:**
+- Orchestrate MetaPulsar creation
+- Handle different combination strategies
+- Manage PTA data integration
+
+#### FileDiscoveryService
+Service for discovering and managing PTA data files.
+
+**Key Responsibilities:**
+- Discover par/tim files from PTAs
+- Manage PTA configurations
+- Handle file pattern matching
+
+#### ParameterManager
+Manages parameter consistency across PTAs.
+
+**Key Responsibilities:**
+- Build parameter mappings
+- Handle parameter inconsistencies
+- Ensure astrophysical consistency
+
+### Design Patterns
+
+#### Factory Pattern
+Used in `MetaPulsarFactory` to create MetaPulsar objects with different strategies.
+
+#### Strategy Pattern
+Used for different combination strategies (composite vs consistent).
+
+#### Service Pattern
+Used in `FileDiscoveryService` for file discovery operations.
+
+## Development Workflow
+
+### 1. Setting Up Development Environment
+```bash
+# Create feature branch
+git checkout -b feature/your-feature-name
+
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Run tests to ensure everything works
+pytest
+```
+
+### 2. Making Changes
+```bash
+# Make your changes
+# ...
+
+# Run tests
+pytest
+
+# Run linting
+black src/ tests/
+flake8 src/ tests/
+mypy src/
+
+# Update documentation if needed
+cd docs
+make html
+```
+
+### 3. Testing
+```bash
+# Run all tests
+pytest
+
+# Run specific test file
+pytest tests/test_metapulsar_factory.py
+
+# Run with coverage
+pytest --cov=metapulsar
+
+# Run integration tests
+pytest tests/integration/
+```
+
+### 4. Documentation
+```bash
+# Build documentation
+cd docs
+make html
+
+# Check for broken links
+make linkcheck
+```
+
+## Coding Standards
+
+### Python Style
+- Follow PEP 8
+- Use Black for code formatting
+- Use type hints where appropriate
+- Write docstrings for all public functions
+
+### Code Organization
+- Keep functions small and focused
+- Use meaningful variable names
+- Add comments for complex logic
+- Follow the existing code structure
+
+### Testing
+- Write tests for all new functionality
+- Aim for >90% test coverage
+- Test both success and error cases
+- Use descriptive test names
+
+## Adding New Features
+
+### 1. Core Package Changes
+If adding new classes or functions to the core package:
+
+1. **Add to `src/metapulsar/`**
+2. **Update `src/metapulsar/__init__.py`** to export new classes
+3. **Add comprehensive tests**
+4. **Update API documentation**
+5. **Add examples if appropriate**
+
+### 2. Example Changes
+If adding new examples:
+
+1. **Add to `examples/` directory**
+2. **Follow naming convention**: `descriptive_name.py`
+3. **Include comprehensive docstring**
+4. **Test the example works**
+5. **Update `examples/README.md`**
+
+### 3. Documentation Changes
+If updating documentation:
+
+1. **Update relevant `.md` files in `docs/`**
+2. **Update Sphinx index if needed**
+3. **Test documentation builds**
+4. **Check for broken links**
+
+## Testing Guidelines
+
+### Unit Tests
+- Test individual functions and methods
+- Mock external dependencies
+- Test edge cases and error conditions
+- Keep tests fast and isolated
+
+### Integration Tests
+- Test complete workflows
+- Use real data when possible
+- Test error handling
+- Test performance characteristics
+
+### Test Data
+- Use mock data for unit tests
+- Use sample data for integration tests
+- Keep test data minimal but representative
+- Document test data sources
+
+## Performance Considerations
+
+### Memory Usage
+- Use appropriate data types
+- Clean up large objects
+- Process data in chunks when possible
+- Monitor memory usage in tests
+
+### Speed
+- Use vectorized operations (NumPy)
+- Avoid nested loops
+- Cache expensive operations
+- Profile performance-critical code
+
+### Scalability
+- Design for large datasets
+- Use generators for large data
+- Implement efficient algorithms
+- Test with realistic data sizes
+
+## Debugging
+
+### Common Issues
+1. **Import errors**: Check Python path and package installation
+2. **File not found**: Verify file patterns and base directories
+3. **Parameter errors**: Check parameter names and units
+4. **Memory issues**: Monitor memory usage and clean up objects
+
+### Debugging Tools
+```python
+# Enable debug logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Use debugger
+import pdb
+pdb.set_trace()
+
+# Profile performance
+import cProfile
+cProfile.run('your_function()')
+```
+
+## Contributing
+
+### Pull Request Process
+1. **Fork the repository**
+2. **Create feature branch**
+3. **Make changes with tests**
+4. **Update documentation**
+5. **Submit pull request**
+
+### Pull Request Requirements
+- All tests must pass
+- Code must be formatted with Black
+- Documentation must be updated
+- New features must have tests
+- Breaking changes must be documented
+
+### Code Review
+- All pull requests require review
+- Address review comments promptly
+- Keep pull requests focused and small
+- Provide clear descriptions
+
+## Release Process
+
+### Version Numbering
+- Use semantic versioning (MAJOR.MINOR.PATCH)
+- Update version in `pyproject.toml`
+- Update changelog
+- Tag release in Git
+
+### Release Checklist
+- [ ] All tests pass
+- [ ] Documentation is up to date
+- [ ] Version number updated
+- [ ] Changelog updated
+- [ ] Release notes written
+- [ ] Tagged in Git
+
+## Troubleshooting Development Issues
+
+### Common Development Problems
+
+#### Import Errors
+```bash
+# Check Python path
+python -c "import sys; print(sys.path)"
+
+# Reinstall package
+pip uninstall metapulsar
+pip install -e .
+```
+
+#### Test Failures
+```bash
+# Run tests with verbose output
+pytest -v
+
+# Run specific test
+pytest tests/test_specific.py::test_function -v
+
+# Run with debug output
+pytest --log-cli-level=DEBUG
+```
+
+#### Documentation Build Issues
+```bash
+# Check Sphinx configuration
+cd docs
+sphinx-build -W . _build/html
+
+# Check for missing dependencies
+pip install -e ".[docs]"
+```
+
+## Getting Help
+
+### Resources
+- **Documentation**: Check `docs/` directory
+- **Examples**: Check `examples/` directory
+- **Tests**: Check `tests/` directory for usage examples
+- **Issues**: Check GitHub issues for known problems
+
+### Contact
+- **GitHub Issues**: Report bugs and request features
+- **Discussions**: Ask questions and share ideas
+- **Email**: Contact maintainers directly
+
+## Best Practices
+
+### Code Quality
+- Write clean, readable code
+- Use meaningful names
+- Add comprehensive docstrings
+- Follow existing patterns
+
+### Testing
+- Write tests first (TDD)
+- Test edge cases
+- Keep tests fast
+- Use descriptive test names
+
+### Documentation
+- Keep documentation up to date
+- Write for your audience
+- Use examples liberally
+- Test documentation examples
+
+### Performance
+- Profile before optimizing
+- Use appropriate data structures
+- Avoid premature optimization
+- Monitor memory usage

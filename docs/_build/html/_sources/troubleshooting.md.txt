@@ -1,0 +1,98 @@
+# MetaPulsar Troubleshooting Guide
+
+## Common Issues
+
+### Installation Issues
+
+#### Import Errors
+**Problem**: `ModuleNotFoundError: No module named 'metapulsar'`
+
+**Solutions**:
+1. Check Python path:
+   ```python
+   import sys
+   print(sys.path)
+   ```
+
+2. Reinstall package:
+   ```bash
+   pip uninstall metapulsar
+   pip install -e .
+   ```
+
+3. Check virtual environment:
+   ```bash
+   which python
+   pip list | grep metapulsar
+   ```
+
+#### Missing Dependencies
+**Problem**: `ImportError: No module named 'enterprise'`
+
+**Solutions**:
+1. Install all dependencies:
+   ```bash
+   pip install -e ".[dev,libstempo,analysis]"
+   ```
+
+2. Check specific dependency:
+   ```python
+   import enterprise
+   print(enterprise.__version__)
+   ```
+
+### Runtime Issues
+
+#### File Not Found
+**Problem**: `FileNotFoundError` when discovering files
+
+**Solutions**:
+1. Check PTA registry configuration
+2. Verify file patterns match actual files
+3. Ensure base directories exist
+
+#### Parameter Consistency Errors
+**Problem**: `ParameterInconsistencyError`
+
+**Solutions**:
+1. Check parameter names across PTAs
+2. Verify parameter units
+3. Use composite strategy if consistency not needed
+
+### Performance Issues
+
+#### Slow File Discovery
+**Solutions**:
+1. Use specific PTA names instead of all PTAs
+2. Pre-filter data when possible
+3. Cache frequently used objects
+
+#### Memory Issues
+**Solutions**:
+1. Use appropriate data types
+2. Clean up large objects
+3. Process data in chunks
+
+## Getting Help
+
+1. Check this troubleshooting guide
+2. Review examples in `examples/` directory
+3. Check API documentation
+4. Report issues on GitHub
+
+## FAQ
+
+### Q: What's the difference between composite and consistent strategies?
+A: Composite strategy preserves PTA-specific parameter differences, while consistent strategy aligns parameters to a reference PTA for astrophysical consistency.
+
+### Q: How do I add a custom PTA?
+A: Use the `FileDiscoveryService.add_pta()` method with a configuration dictionary containing file patterns and settings.
+
+### Q: Can I use MetaPulsar without Enterprise?
+A: Yes, MetaPulsar is a standalone package. Enterprise integration is optional but recommended for gravitational wave analysis.
+
+### Q: How do I handle missing data files?
+A: MetaPulsar gracefully handles missing files by filtering out PTAs with no data before creating MetaPulsar objects.
+
+### Q: What timing packages are supported?
+A: MetaPulsar supports both PINT and TEMPO2 timing packages through the `timing_package` configuration option.
