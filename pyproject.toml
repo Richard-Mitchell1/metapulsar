@@ -123,6 +123,16 @@ addopts = [
     "--ignore=legacy",
     "--ignore=data/ipta-dr2",
     "--ignore=examples",
+    "--disable-warnings",
+]
+filterwarnings = [
+    "ignore::UserWarning:pkg_resources",
+    "ignore::DeprecationWarning:pkg_resources",
+    "ignore::UserWarning:enterprise",
+    "ignore::DeprecationWarning:setuptools",
+    "ignore:.*pkg_resources.*:UserWarning",
+    "ignore:.*pkg_resources.*:DeprecationWarning",
+    "ignore:.*declare_namespace.*:DeprecationWarning",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
