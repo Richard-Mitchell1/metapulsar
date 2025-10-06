@@ -1,6 +1,6 @@
 """File Discovery Service for PTA data files.
 
-This service handles all file discovery operations and PTA configuration management.
+This service handles all file discovery operations and PTA directory layout management.
 It is completely independent - NO external dependencies on PINT, libstempo, or other components.
 Uses only regex patterns for file matching and pattern extraction.
 """
@@ -107,7 +107,7 @@ def extract_pulsar_name_from_path(
 
 
 class FileDiscoveryService:
-    """Independent service for discovering PTA data files and managing PTA configurations.
+    """Independent service for discovering PTA data files and managing PTA directory layouts.
 
     This service handles all PTA-related operations and can be used
     independently of MetaPulsarFactory and ParFileManager.
@@ -140,7 +140,7 @@ class FileDiscoveryService:
             List of regex-extracted patterns (NOT validated pulsar names)
 
         Raises:
-            KeyError: If PTA not found in configurations
+            KeyError: If PTA not found in directory layouts
         """
         if pta_name not in self.pta_data_releases:
             raise KeyError(f"PTA '{pta_name}' not found in data releases")
@@ -162,7 +162,7 @@ class FileDiscoveryService:
             try:
                 result[pta_name] = self.discover_patterns_in_pta(pta_name)
             except KeyError as e:
-                self.logger.error(f"PTA '{pta_name}' not found in configurations")
+                self.logger.error(f"PTA '{pta_name}' not found in directory layouts")
                 raise e
         return result
 
@@ -195,7 +195,7 @@ class FileDiscoveryService:
         return result
 
     def list_ptas(self) -> List[str]:
-        """Get list of all PTA names in the configurations.
+        """Get list of all PTA names in the directory layouts.
 
         Returns:
             List of PTA names, sorted alphabetically
