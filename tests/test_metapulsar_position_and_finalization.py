@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 from src.metapulsar.metapulsar import MetaPulsar
 from src.metapulsar.mockpulsar import MockPulsar, create_libstempo_adapter
-from src.metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
+from src.metapulsar.mockpulsar import create_mock_timing_data, create_mock_flags
 
 
 class TestMetaPulsarPositionAndFinalization:

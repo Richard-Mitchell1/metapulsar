@@ -265,7 +265,7 @@ class TestCoordinateBasedDiscovery:
         """Test MetaPulsar creation includes canonical name."""
         # Create MockPulsar objects directly instead of going through factory
         from metapulsar.mockpulsar import MockPulsar
-        from metapulsar.mock_utils import (
+        from metapulsar.mockpulsar import (
             create_mock_timing_data,
             create_mock_flags,
         )

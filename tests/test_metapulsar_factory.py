@@ -86,7 +86,7 @@ class TestMetaPulsarFactory:
         mock_bj_name.return_value = "J1857+0943"
         # Create MockPulsar objects directly instead of going through factory
         from metapulsar.mockpulsar import MockPulsar
-        from metapulsar.mock_utils import (
+        from metapulsar.mockpulsar import (
             create_mock_timing_data,
             create_mock_flags,
         )

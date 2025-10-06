@@ -132,7 +132,7 @@ Use MockPulsar for testing when possible:
 
 ```python
 from metapulsar.mockpulsar import MockPulsar
-from metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
+from metapulsar.mockpulsar import create_mock_timing_data, create_mock_flags
 
 def test_metapulsar_creation():
     """Test MetaPulsar creation with MockPulsar."""

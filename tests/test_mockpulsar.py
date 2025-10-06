@@ -13,7 +13,7 @@ import numpy as np
 from unittest.mock import patch
 
 from metapulsar.mockpulsar import MockPulsar, create_mock_pulsar
-from metapulsar.mock_utils import (
+from metapulsar.mockpulsar import (
     create_astrometry_model,
     convert_astrometry_units,
     create_mock_flags,

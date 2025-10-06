@@ -12,7 +12,7 @@ import pytest
 
 from metapulsar.metapulsar import MetaPulsar
 from metapulsar.mockpulsar import MockPulsar, create_libstempo_adapter
-from metapulsar.mock_utils import create_mock_timing_data, create_mock_flags
+from metapulsar.mockpulsar import create_mock_timing_data, create_mock_flags
 
 
 class TestMetaPulsarDataCombination:
