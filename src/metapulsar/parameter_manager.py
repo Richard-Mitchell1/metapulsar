@@ -747,10 +747,6 @@ class ParameterManager:
         """Get parfile dictionaries for all PTAs."""
         return self._parse_parfiles()
 
-    def build_parameter_mapping(self) -> "ParameterMapping":
-        """Alias for build_parameter_mappings for backward compatibility."""
-        return self.build_parameter_mappings()
-
 
 class ParameterMapping:
     """Data class for parameter mapping results."""

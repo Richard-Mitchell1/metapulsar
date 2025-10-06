@@ -405,9 +405,8 @@ When contributing to the selection utilities:
 
 1. **Add tests** for new functionality
 2. **Update documentation** for API changes
-3. **Maintain backward compatibility** when possible
-4. **Follow type hints** for better IDE support
-5. **Test with Enterprise** to ensure compatibility
+3. **Follow type hints** for better IDE support
+4. **Test with Enterprise** to ensure compatibility
 
 ## License
 
