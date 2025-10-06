@@ -4,7 +4,7 @@ This module provides a factory class that creates MetaPulsars by discovering fil
 creating Enterprise Pulsars, and wrapping them with metadata.
 """
 
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Any
 from pathlib import Path
 import re
 from datetime import datetime
@@ -172,17 +172,6 @@ class MetaPulsarFactory:
         )
 
         return pulsar_groups
-
-    def list_available_pulsars(self, pta_names: List[str] = None) -> List[str]:
-        """List all available pulsars across specified PTAs.
-
-        Args:
-            pta_names: List of PTA names to search. If None, searches all PTAs.
-
-        Returns:
-            List of pulsar names found across all specified PTAs
-        """
-        return self.discover_available_pulsars(pta_names)
 
     def create_metapulsar_from_file_data(
         self,
@@ -392,17 +381,6 @@ class MetaPulsarFactory:
         except Exception as e:
             raise ValueError(f"Cannot extract pulsar name from {parfile_path}: {e}")
 
-    def _find_timfile_by_name(self, pulsar_name: str, config: Dict) -> Optional[Path]:
-        """Find corresponding tim file using simple string matching (like legacy system)."""
-        base_dir = Path(config["base_dir"])
-
-        # Find all tim files that contain the pulsar name (simple string matching)
-        for timfile_path in base_dir.rglob("*.tim"):
-            if pulsar_name in str(timfile_path):
-                return timfile_path
-
-        return None
-
     def _create_raw_pulsars(
         self,
         file_pairs: Dict[str, Tuple[Path, Path]],
@@ -472,28 +450,6 @@ class MetaPulsarFactory:
         return temp_manager._create_minimal_parfile_for_component(
             parfile_dict, "astrometry"
         )
-
-    def _discover_parfiles_in_pta(self, config: Dict) -> List[Path]:
-        """Discover par files in a single PTA configuration."""
-        import re
-
-        base_dir = Path(config["base_dir"])
-        pattern = config["par_pattern"]
-
-        parfiles = []
-        for file_path in base_dir.rglob("*.par"):
-            if re.search(pattern, str(file_path)):
-                parfiles.append(file_path)
-
-        return parfiles
-
-    def _find_timfile(self, parfile_path: Path, config: Dict) -> Path:
-        """Find corresponding tim file for a par file using PINT-based approach."""
-        # Extract pulsar name from PINT model
-        pulsar_name = self._extract_pulsar_name_from_pint_model(parfile_path)
-
-        # Find tim file using simple string matching
-        return self._find_timfile_by_name(pulsar_name, config)
 
     def _build_metadata(
         self,
