@@ -357,9 +357,7 @@ class TestMetaPulsarFactory:
         # First discover files using the service
         try:
             # Discover all files in test PTAs
-            file_data = self.discovery_service.discover_all_files_in_data_releases(
-                ["epta_dr2"]
-            )
+            file_data = self.discovery_service.discover_files(["epta_dr2"])
 
             # Create MetaPulsars from discovered files
             self.factory.create_metapulsars_from_file_data(file_data)
@@ -373,7 +371,7 @@ class TestMetaPulsarFactory:
         """Test integration with FileDiscoveryService."""
         # Test that FileDiscoveryService can be used independently
         assert self.discovery_service is not None
-        assert hasattr(self.discovery_service, "discover_all_files_in_data_releases")
+        assert hasattr(self.discovery_service, "discover_files")
         assert hasattr(self.discovery_service, "list_data_releases")
 
         # Test listing PTAs
@@ -581,3 +579,251 @@ class TestMetaPulsarFactory:
                     assert "J1857+0943" in result
                     assert "epta_dr2" in result["J1857+0943"]
                     assert len(result["J1857+0943"]["epta_dr2"]) == 1
+
+
+class TestPerPulsarOrdering:
+    """Test cases for per-pulsar reference PTA ordering functionality."""
+
+    def test_group_files_by_pulsar_with_ordering_auto_selection(self):
+        """Test automatic reference PTA selection by timespan."""
+        factory = MetaPulsarFactory()
+
+        # Mock file data with different timespans
+        file_data = {
+            "epta_dr2": [
+                {
+                    "par": Path("test1.par"),
+                    "tim": Path("test1.tim"),
+                    "timespan_days": 1000.0,
+                }
+            ],
+            "ppta_dr2": [
+                {
+                    "par": Path("test2.par"),
+                    "tim": Path("test2.tim"),
+                    "timespan_days": 2000.0,
+                }
+            ],
+        }
+
+        # Mock the coordinate-based discovery to return grouped data
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized"
+        ) as mock_discover:
+            mock_discover.return_value = {
+                "J1857+0943": {
+                    "epta_dr2": file_data["epta_dr2"],
+                    "ppta_dr2": file_data["ppta_dr2"],
+                }
+            }
+
+            result = factory._group_files_by_pulsar_with_ordering(
+                file_data, reference_pta=None
+            )
+
+            # PPTA should be first (longer timespan)
+            assert list(result["J1857+0943"].keys())[0] == "ppta_dr2"
+
+    def test_group_files_by_pulsar_with_ordering_specified_reference(self):
+        """Test specified reference PTA ordering."""
+        factory = MetaPulsarFactory()
+
+        file_data = {
+            "epta_dr2": [
+                {
+                    "par": Path("test1.par"),
+                    "tim": Path("test1.tim"),
+                    "timespan_days": 2000.0,
+                }
+            ],
+            "ppta_dr2": [
+                {
+                    "par": Path("test2.par"),
+                    "tim": Path("test2.tim"),
+                    "timespan_days": 1000.0,
+                }
+            ],
+        }
+
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized"
+        ) as mock_discover:
+            mock_discover.return_value = {
+                "J1857+0943": {
+                    "epta_dr2": file_data["epta_dr2"],
+                    "ppta_dr2": file_data["ppta_dr2"],
+                }
+            }
+
+            result = factory._group_files_by_pulsar_with_ordering(
+                file_data, reference_pta="epta_dr2"
+            )
+
+            # EPTA should be first (specified reference)
+            assert list(result["J1857+0943"].keys())[0] == "epta_dr2"
+
+    def test_group_files_by_pulsar_with_ordering_fallback(self):
+        """Test fallback to auto-selection when specified PTA not available."""
+        factory = MetaPulsarFactory()
+
+        file_data = {
+            "epta_dr2": [
+                {
+                    "par": Path("test1.par"),
+                    "tim": Path("test1.tim"),
+                    "timespan_days": 1000.0,
+                }
+            ],
+            "ppta_dr2": [
+                {
+                    "par": Path("test2.par"),
+                    "tim": Path("test2.tim"),
+                    "timespan_days": 2000.0,
+                }
+            ],
+        }
+
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized"
+        ) as mock_discover:
+            mock_discover.return_value = {
+                "J1857+0943": {
+                    "epta_dr2": file_data["epta_dr2"],
+                    "ppta_dr2": file_data["ppta_dr2"],
+                }
+            }
+
+            # Specify a PTA that doesn't exist for this pulsar
+            result = factory._group_files_by_pulsar_with_ordering(
+                file_data, reference_pta="nanograv_12y"
+            )
+
+            # Should fallback to PPTA (longer timespan)
+            assert list(result["J1857+0943"].keys())[0] == "ppta_dr2"
+
+    def test_find_best_reference_pta_by_timespan(self):
+        """Test finding best reference PTA by timespan."""
+        factory = MetaPulsarFactory()
+
+        pulsar_data = {
+            "epta_dr2": [
+                {
+                    "par": Path("test1.par"),
+                    "tim": Path("test1.tim"),
+                    "timespan_days": 1000.0,
+                }
+            ],
+            "ppta_dr2": [
+                {
+                    "par": Path("test2.par"),
+                    "tim": Path("test2.tim"),
+                    "timespan_days": 2000.0,
+                }
+            ],
+            "nanograv_12y": [
+                {
+                    "par": Path("test3.par"),
+                    "tim": Path("test3.tim"),
+                    "timespan_days": 1500.0,
+                }
+            ],
+        }
+
+        result = factory._find_best_reference_pta_by_timespan(pulsar_data)
+        assert result == "ppta_dr2"  # Longest timespan
+
+    def test_find_best_reference_pta_by_timespan_empty_files(self):
+        """Test finding best reference PTA with empty file lists."""
+        factory = MetaPulsarFactory()
+
+        pulsar_data = {
+            "epta_dr2": [],  # Empty files
+            "ppta_dr2": [
+                {
+                    "par": Path("test2.par"),
+                    "tim": Path("test2.tim"),
+                    "timespan_days": 2000.0,
+                }
+            ],
+        }
+
+        result = factory._find_best_reference_pta_by_timespan(pulsar_data)
+        assert result == "ppta_dr2"  # Only non-empty PTA
+
+    def test_reorder_ptas_for_pulsar(self):
+        """Test reordering PTAs for a specific pulsar."""
+        from metapulsar.metapulsar_factory import reorder_ptas_for_pulsar
+
+        pulsar_data = {
+            "epta_dr2": [{"par": Path("test1.par"), "tim": Path("test1.tim")}],
+            "ppta_dr2": [{"par": Path("test2.par"), "tim": Path("test2.tim")}],
+            "nanograv_12y": [{"par": Path("test3.par"), "tim": Path("test3.tim")}],
+        }
+
+        result = reorder_ptas_for_pulsar(pulsar_data, "ppta_dr2")
+
+        # PPTA should be first
+        assert list(result.keys())[0] == "ppta_dr2"
+        # All PTAs should still be present
+        assert len(result) == 3
+        assert "epta_dr2" in result
+        assert "nanograv_12y" in result
+
+    def test_reorder_ptas_for_pulsar_invalid_reference(self):
+        """Test reordering with invalid reference PTA."""
+        from metapulsar.metapulsar_factory import reorder_ptas_for_pulsar
+
+        pulsar_data = {
+            "epta_dr2": [{"par": Path("test1.par"), "tim": Path("test1.tim")}],
+            "ppta_dr2": [{"par": Path("test2.par"), "tim": Path("test2.tim")}],
+        }
+
+        with pytest.raises(ValueError, match="Reference PTA 'nanograv_12y' not found"):
+            reorder_ptas_for_pulsar(pulsar_data, "nanograv_12y")
+
+    def test_create_all_metapulsars_with_ordering(self):
+        """Test create_all_metapulsars with new ordering logic."""
+        factory = MetaPulsarFactory()
+
+        file_data = {
+            "epta_dr2": [
+                {
+                    "par": Path("test1.par"),
+                    "tim": Path("test1.tim"),
+                    "timespan_days": 1000.0,
+                }
+            ],
+            "ppta_dr2": [
+                {
+                    "par": Path("test2.par"),
+                    "tim": Path("test2.tim"),
+                    "timespan_days": 2000.0,
+                }
+            ],
+        }
+
+        with patch(
+            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized"
+        ) as mock_discover:
+            mock_discover.return_value = {
+                "J1857+0943": {
+                    "epta_dr2": file_data["epta_dr2"],
+                    "ppta_dr2": file_data["ppta_dr2"],
+                }
+            }
+
+            # Mock the MetaPulsar creation to avoid actual file processing
+            with patch.object(
+                factory, "create_metapulsar_from_file_data"
+            ) as mock_create:
+                mock_create.return_value = Mock()
+
+                result = factory.create_all_metapulsars(file_data, reference_pta=None)
+
+                # Should create MetaPulsar for the pulsar
+                assert "J1857+0943" in result
+
+                # Should call create_metapulsar_from_file_data with PPTA as reference (longer timespan)
+                mock_create.assert_called_once()
+                call_args = mock_create.call_args
+                assert call_args[1]["reference_pta"] == "ppta_dr2"

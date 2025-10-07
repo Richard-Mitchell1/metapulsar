@@ -15,11 +15,11 @@ When you encounter a new PTA data release with an unknown directory structure, t
 ## Quick Start
 
 ```python
-from metapulsar import PatternDiscoveryEngine, FileDiscoveryService, PTA_DATA_RELEASES
+from metapulsar import LayoutDiscoveryService, FileDiscoveryService, PTA_DATA_RELEASES
 from pathlib import Path
 
 # Initialize the engine
-engine = PatternDiscoveryEngine()
+engine = LayoutDiscoveryService()
 
 # Analyze new PTA data
 data_dir = Path("/path/to/new/pta/data")
@@ -159,13 +159,13 @@ files = file_service.discover_all_files_in_ptas(["new_pta"])  # Will work!
 ### Complete Integration Workflow
 
 ```python
-from metapulsar import PatternDiscoveryEngine, FileDiscoveryService, PTA_DATA_RELEASES
+from metapulsar import LayoutDiscoveryService, FileDiscoveryService, PTA_DATA_RELEASES
 
 def integrate_new_pta(data_dir: Path, pta_name: str):
     """Complete workflow for integrating a new PTA."""
     
     # 1. Discover patterns
-    engine = PatternDiscoveryEngine()
+    engine = LayoutDiscoveryService()
     structure = engine.analyze_directory_structure(data_dir)
     data_release = engine.generate_pta_data_release(structure)
     
@@ -204,7 +204,7 @@ file_service = integrate_new_pta(Path("/data/nanograv_15yr"), "nanograv_15yr")
 # Complex nested structure example
 data_dir = Path("/data/nanograv-15yr-release")
 
-engine = PatternDiscoveryEngine()
+engine = LayoutDiscoveryService()
 structure = engine.analyze_directory_structure(data_dir)
 data_release = engine.generate_pta_data_release(structure)
 
@@ -222,7 +222,7 @@ data_release = engine.generate_pta_data_release(structure)
 # Simple structure example
 data_dir = Path("/data/simple_pta")
 
-engine = PatternDiscoveryEngine()
+engine = LayoutDiscoveryService()
 structure = engine.analyze_directory_structure(data_dir)
 data_release = engine.generate_pta_data_release(structure)
 
@@ -258,7 +258,7 @@ import logging
 logging.basicConfig(level=logging.DEBUG)
 
 # Run pattern discovery
-engine = PatternDiscoveryEngine()
+engine = LayoutDiscoveryService()
 structure = engine.analyze_directory_structure(data_dir)
 data_release = engine.generate_pta_data_release(structure)
 ```

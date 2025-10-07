@@ -5,7 +5,7 @@ It is completely independent - NO external dependencies on PINT, libstempo, or o
 Uses only regex patterns for file matching and pattern extraction.
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Union
 from pathlib import Path
 import re
 from loguru import logger
@@ -174,10 +174,10 @@ class FileDiscoveryService:
                 raise e
         return result
 
-    def discover_all_files_in_data_releases(
+    def _discover_all_files_in_data_releases(
         self, data_release_names: List[str] = None
     ) -> Dict[str, List[Dict[str, Any]]]:
-        """Discover all file pairs in selected data releases using regex patterns.
+        """Internal method for discovering all file pairs in selected data releases using regex patterns.
 
         Args:
             data_release_names: List of data release names to search. If None, searches all data releases.
@@ -213,6 +213,36 @@ class FileDiscoveryService:
             List of data release names, sorted alphabetically
         """
         return sorted(self.data_releases.keys())
+
+    def discover_files(
+        self,
+        data_release_names: Union[str, List[str], None] = None,
+        verbose: bool = True,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Discover files with user-friendly name and verbose output.
+
+        Args:
+            data_release_names: Single data release name, list of data release names, or None to search all.
+            verbose: If True, prints summary of found files to console.
+
+        Returns:
+            Dictionary mapping data release names to lists of file dictionaries
+        """
+        # Convert single string to list for internal processing
+        if isinstance(data_release_names, str):
+            data_release_names = [data_release_names]
+
+        result = self._discover_all_files_in_data_releases(data_release_names)
+
+        if verbose:
+            print("Found:")
+            for pta_name, files in result.items():
+                if files:
+                    print(f"  - {pta_name}: {len(files)} pulsars")
+                else:
+                    print(f"  (No pulsars for: {pta_name})")
+
+        return result
 
     def add_data_release(self, name: str, data_release: Dict) -> None:
         """Add a data release.
@@ -378,3 +408,25 @@ class FileDiscoveryService:
                 f"Could not calculate timespan for {tim_file_path}: {e}"
             )
             return 0.0
+
+
+# Convenience function for easy access
+def discover_files(
+    working_dir: str = None,
+    pta_data_releases: Dict = None,
+    data_release_names: Union[str, List[str], None] = None,
+    verbose: bool = True,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Convenience function for file discovery.
+
+    Args:
+        working_dir: Working directory for resolving relative paths. If None, uses current working directory.
+        pta_data_releases: Dictionary of data releases. If None, uses default presets.
+        data_release_names: Single data release name, list of data release names, or None to search all.
+        verbose: If True, prints summary of found files to console.
+
+    Returns:
+        Dictionary mapping data release names to lists of file dictionaries
+    """
+    service = FileDiscoveryService(pta_data_releases, working_dir)
+    return service.discover_files(data_release_names, verbose)

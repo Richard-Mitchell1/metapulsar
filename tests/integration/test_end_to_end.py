@@ -25,9 +25,7 @@ class TestEndToEnd:
         # For now, just test that the services can be used
         try:
             # Discover files using FileDiscoveryService
-            file_data = discovery_service.discover_all_files_in_data_releases(
-                dr2_configs
-            )
+            file_data = discovery_service.discover_files(dr2_configs)
 
             # Create MetaPulsars from discovered files
             factory.create_metapulsars_from_file_data(file_data)
@@ -51,9 +49,7 @@ class TestEndToEnd:
             # Test with different primary PTAs
             for primary_pta in test_configs:
                 # Discover files for the pulsar
-                file_data = discovery_service.discover_all_files_in_data_releases(
-                    test_configs
-                )
+                file_data = discovery_service.discover_files(test_configs)
 
                 # Filter file_data to only include files for this pulsar
                 filtered_file_data = {}
@@ -114,9 +110,7 @@ class TestEndToEnd:
                 or config in available_data_sets.get("dr3", {})
                 for config in pint_configs
             ):
-                file_data = discovery_service.discover_all_files_in_data_releases(
-                    pint_configs
-                )
+                file_data = discovery_service.discover_files(pint_configs)
 
                 # Filter file_data to only include files for this pulsar
                 filtered_file_data = {}
@@ -148,9 +142,7 @@ class TestEndToEnd:
                 or config in available_data_sets.get("dr3", {})
                 for config in tempo2_configs
             ):
-                file_data = discovery_service.discover_all_files_in_data_releases(
-                    tempo2_configs
-                )
+                file_data = discovery_service.discover_files(tempo2_configs)
 
                 # Filter file_data to only include files for this pulsar
                 filtered_file_data = {}
@@ -188,9 +180,7 @@ class TestEndToEnd:
 
         for pulsar in test_pulsars[:1]:  # Test first pulsar
             # Discover files for the pulsar
-            file_data = discovery_service.discover_all_files_in_data_releases(
-                test_configs
-            )
+            file_data = discovery_service.discover_files(test_configs)
 
             # Filter file_data to only include files for this pulsar
             filtered_file_data = {}

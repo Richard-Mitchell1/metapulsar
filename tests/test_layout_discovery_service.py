@@ -10,15 +10,15 @@ from pathlib import Path
 from unittest.mock import patch
 import tempfile
 
-from metapulsar.pattern_discovery_engine import PatternDiscoveryEngine
+from metapulsar.layout_discovery_service import LayoutDiscoveryService, combine_layouts
 
 
-class TestPatternDiscoveryEngine:
-    """Test cases for PatternDiscoveryEngine."""
+class TestLayoutDiscoveryService:
+    """Test cases for LayoutDiscoveryService (renamed from PatternDiscoveryEngine)."""
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.engine = PatternDiscoveryEngine()
+        self.engine = LayoutDiscoveryService()
 
     def test_init(self):
         """Test engine initialization."""
@@ -30,7 +30,7 @@ class TestPatternDiscoveryEngine:
     def test_analyze_directory_structure_nonexistent(self):
         """Test analysis of non-existent directory."""
         with pytest.raises(ValueError, match="Directory .* does not exist"):
-            self.engine.analyze_directory_structure(Path("/nonexistent/path"))
+            self.engine._analyze_directory_structure(Path("/nonexistent/path"))
 
     def test_analyze_directory_structure_no_par_files(self):
         """Test analysis of directory with no par files."""
@@ -40,7 +40,7 @@ class TestPatternDiscoveryEngine:
             (temp_path / "empty").mkdir()
 
             with pytest.raises(ValueError, match="No .par files found"):
-                self.engine.analyze_directory_structure(temp_path)
+                self.engine._analyze_directory_structure(temp_path)
 
     def test_analyze_directory_structure_with_files(self):
         """Test analysis of directory with par and tim files."""
@@ -59,7 +59,7 @@ class TestPatternDiscoveryEngine:
             (temp_path / "tim" / "J1909-3744.tim").write_text("test tim content")
             (temp_path / "tim" / "J1713+0747.tim").write_text("test tim content")
 
-            structure = self.engine.analyze_directory_structure(temp_path)
+            structure = self.engine._analyze_directory_structure(temp_path)
 
             assert structure["base_path"] == str(temp_path)
             assert len(structure["par_files"]) == 2
@@ -217,7 +217,7 @@ class TestPatternDiscoveryEngine:
         }
 
         with patch.object(self.engine, "_detect_timing_package", return_value="tempo2"):
-            data_release = self.engine.generate_pta_data_release(structure)
+            data_release = self.engine._generate_pta_data_release(structure)
 
             assert "base_dir" in data_release
             assert "par_pattern" in data_release
@@ -241,17 +241,82 @@ class TestPatternDiscoveryEngine:
             },
         }
 
-        data_release = self.engine.generate_pta_data_release(
+        data_release = self.engine._generate_pta_data_release(
             structure, timing_package="pint"
         )
         assert data_release["timing_package"] == "pint"
+
+    def test_discover_layout(self, capsys):
+        """Test discover_layout method with verbose output."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
+            # Create test structure
+            (temp_path / "par").mkdir()
+            (temp_path / "tim").mkdir()
+
+            # Create par files
+            (temp_path / "par" / "J1909-3744.par").write_text(
+                "PSR J1909-3744\nRAJ 19:09:47.8\nDECJ -37:44:14.6\n"
+            )
+            (temp_path / "par" / "J1713+0747.par").write_text(
+                "PSR J1713+0747\nRAJ 17:13:49.5\nDECJ 07:47:37.4\n"
+            )
+
+            # Create tim files
+            (temp_path / "tim" / "J1909-3744.tim").write_text("test tim content")
+            (temp_path / "tim" / "J1713+0747.tim").write_text("test tim content")
+
+            with patch.object(
+                self.engine, "_detect_timing_package", return_value="tempo2"
+            ):
+                result = self.engine.discover_layout(
+                    working_dir=str(temp_path), verbose=True
+                )
+
+                captured = capsys.readouterr()
+                assert f"Discovered layout in {temp_path}:" in captured.out
+                assert "base_dir" in captured.out
+                assert "par_pattern" in captured.out
+                assert "tim_pattern" in captured.out
+                assert "timing_package" in captured.out
+
+                assert f"discovered_{temp_path.name}" in result
+                assert "base_dir" in result[f"discovered_{temp_path.name}"]
+
+    def test_discover_layout_no_verbose(self):
+        """Test discover_layout method without verbose output."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
+            # Create test structure
+            (temp_path / "par").mkdir()
+            (temp_path / "tim").mkdir()
+
+            # Create par files
+            (temp_path / "par" / "J1909-3744.par").write_text(
+                "PSR J1909-3744\nRAJ 19:09:47.8\nDECJ -37:44:14.6\n"
+            )
+
+            # Create tim files
+            (temp_path / "tim" / "J1909-3744.tim").write_text("test tim content")
+
+            with patch.object(
+                self.engine, "_detect_timing_package", return_value="tempo2"
+            ):
+                result = self.engine.discover_layout(
+                    working_dir=str(temp_path), verbose=False
+                )
+
+                assert f"discovered_{temp_path.name}" in result
+                assert "base_dir" in result[f"discovered_{temp_path.name}"]
 
 
 def test_pattern_discovery_integration():
     """Integration test for pattern discovery engine on IPTA data."""
     print("=== Pattern Discovery Engine Integration Test ===\n")
 
-    engine = PatternDiscoveryEngine()
+    engine = LayoutDiscoveryService()
     data_root = Path("/workspaces/metapulsar/data/ipta-dr2")
 
     if not data_root.exists():
@@ -277,10 +342,10 @@ def test_pattern_discovery_integration():
         print(f"🔍 Analyzing {pta_dir.name}...")
         try:
             # Analyze structure
-            structure = engine.analyze_directory_structure(pta_dir)
+            structure = engine._analyze_directory_structure(pta_dir)
 
             # Generate config
-            data_release = engine.generate_pta_data_release(structure)
+            data_release = engine._generate_pta_data_release(structure)
 
             results.append(
                 {
@@ -324,6 +389,64 @@ def test_pattern_discovery_integration():
             print(f"  tim_pattern: {result['data_release']['tim_pattern']}")
             print(f"  timing_package: {result['data_release']['timing_package']}")
             print(f"  confidence: {result['data_release']['discovery_confidence']:.2f}")
+
+
+def test_combine_layouts():
+    """Test the combine_layouts function."""
+    # Create mock layouts
+    layout1 = {
+        "discovered_EPTA": {
+            "base_dir": "data/EPTA",
+            "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
+            "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
+            "timing_package": "tempo2",
+        }
+    }
+
+    layout2 = {
+        "discovered_NANOGrav": {
+            "base_dir": "data/NANOGrav",
+            "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})_NANOGrav\.par",
+            "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})_NANOGrav\.tim",
+            "timing_package": "pint",
+        }
+    }
+
+    layout3 = {
+        "discovered_PPTA": {
+            "base_dir": "data/PPTA",
+            "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})_PPTA\.par",
+            "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})_PPTA\.tim",
+            "timing_package": "tempo2",
+        }
+    }
+
+    # Test basic combination
+    combined = combine_layouts(layout1, layout2, layout3)
+
+    assert len(combined) == 3
+    assert "discovered_EPTA" in combined
+    assert "discovered_NANOGrav" in combined
+    assert "discovered_PPTA" in combined
+
+    # Test with include_defaults=True
+    combined_with_defaults = combine_layouts(layout1, layout2, include_defaults=True)
+
+    # Should include both custom layouts and default PTA_DATA_RELEASES
+    assert len(combined_with_defaults) > 2  # More than just the 2 custom layouts
+    assert "discovered_EPTA" in combined_with_defaults
+    assert "discovered_NANOGrav" in combined_with_defaults
+    # Should include some default PTAs
+    assert any(
+        key.startswith(("epta_", "ppta_", "nanograv_", "mpta_"))
+        for key in combined_with_defaults.keys()
+    )
+
+    # Test with include_defaults=False (default)
+    combined_no_defaults = combine_layouts(layout1, layout2, include_defaults=False)
+    assert len(combined_no_defaults) == 2
+    assert "discovered_EPTA" in combined_no_defaults
+    assert "discovered_NANOGrav" in combined_no_defaults
 
 
 if __name__ == "__main__":

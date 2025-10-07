@@ -17,9 +17,7 @@ class TestErrorHandling:
         # Test with non-existent PTA
         discovery_service = FileDiscoveryService()
         with pytest.raises(KeyError):
-            discovery_service.discover_all_files_in_data_releases(
-                ["nonexistent_config"]
-            )
+            discovery_service.discover_files(["nonexistent_config"])
 
     @pytest.mark.slow
     def test_missing_par_files(self, available_data_sets):
@@ -31,7 +29,7 @@ class TestErrorHandling:
         # For now, just test that the service can be used
         discovery_service = FileDiscoveryService()
         try:
-            discovery_service.discover_all_files_in_data_releases(["epta_dr1_v2_2"])
+            discovery_service.discover_files(["epta_dr1_v2_2"])
             # Implementation is stubbed, so this will likely fail
         except Exception:
             # Expected since implementation is not complete

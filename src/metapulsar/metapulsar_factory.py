@@ -173,6 +173,73 @@ class MetaPulsarFactory:
 
         return pulsar_groups
 
+    def _group_files_by_pulsar_with_ordering(
+        self, file_data: Dict[str, List[Dict[str, Any]]], reference_pta: str = None
+    ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+        """Group files by pulsar with reference PTA ordering.
+
+        Args:
+            file_data: File data from FileDiscoveryService (per data release)
+            reference_pta: PTA to use as reference for all pulsars. If None, auto-selects by timespan.
+
+        Returns:
+            Dictionary mapping pulsar names to ordered PTA data:
+            {
+                "J1857+0943": {
+                    "epta_dr2": [...],  # First PTA = reference
+                    "ppta_dr2": [...]
+                }
+            }
+        """
+        # First, group by pulsar using coordinate-based identification
+        pulsar_groups = discover_pulsars_by_coordinates_optimized(file_data)
+
+        if not pulsar_groups:
+            raise ValueError("No valid pulsar files found in file_data")
+
+        # For each pulsar, order its PTAs
+        ordered_pulsar_groups = {}
+
+        for pulsar_name, pulsar_file_data in pulsar_groups.items():
+            # Determine reference PTA for this pulsar
+            ref_pta_timespan = self._find_best_reference_pta_by_timespan(
+                pulsar_file_data
+            )
+
+            # Use specified reference PTA if available, otherwise by timespan
+            ref_pta = (
+                reference_pta if reference_pta in pulsar_file_data else ref_pta_timespan
+            )
+
+            # Order PTAs with reference first
+            ordered_ptas = {ref_pta: pulsar_file_data[ref_pta]}
+            ordered_ptas.update(
+                {k: v for k, v in pulsar_file_data.items() if k != ref_pta}
+            )
+            ordered_pulsar_groups[pulsar_name] = ordered_ptas
+
+        return ordered_pulsar_groups
+
+    def _find_best_reference_pta_by_timespan(
+        self, pulsar_file_data: Dict[str, List[Dict[str, Any]]]
+    ) -> str:
+        """Find the PTA with longest timespan for a specific pulsar."""
+        best_pta = None
+        best_timespan = -1
+
+        for pta_name, files in pulsar_file_data.items():
+            if not files:
+                continue
+
+            # Get timespan for this PTA's files for this pulsar
+            timespan = max(f.get("timespan_days", 0) for f in files)
+
+            if timespan > best_timespan:
+                best_timespan = timespan
+                best_pta = pta_name
+
+        return best_pta or list(pulsar_file_data.keys())[0]
+
     def create_metapulsar_from_file_data(
         self,
         file_data: Dict[str, List[Dict[str, Any]]],  # File data format
@@ -257,17 +324,19 @@ class MetaPulsarFactory:
         """Create MetaPulsars for all available pulsars using file data.
 
         Args:
-            file_data: File data from FileDiscoveryService
+            file_data: File data from FileDiscoveryService (per data release)
             combination_strategy: Strategy for combining PTAs
-            reference_pta: PTA to use as reference (for consistent strategy)
+            reference_pta: PTA to use as reference for all pulsars. If None, auto-selects by timespan.
             combine_components: List of components to make consistent
             add_dm_derivatives: Whether to ensure DM1, DM2 are present
 
         Returns:
             Dictionary mapping pulsar names to MetaPulsar objects
         """
-        # Group files by pulsar using coordinate-based identification
-        pulsar_groups = discover_pulsars_by_coordinates_optimized(file_data)
+        # Group files by pulsar with reference PTA ordering
+        pulsar_groups = self._group_files_by_pulsar_with_ordering(
+            file_data, reference_pta
+        )
 
         metapulsars = {}
 
@@ -275,11 +344,17 @@ class MetaPulsarFactory:
 
         for pulsar_name, pulsar_file_data in pulsar_groups.items():
             try:
+                # Get reference PTA (first in this pulsar's dictionary)
+                reference_pta_for_pulsar = list(pulsar_file_data.keys())[0]
+                self.logger.info(
+                    f"Pulsar {pulsar_name}: Using reference PTA {reference_pta_for_pulsar}"
+                )
+
                 # Create MetaPulsar for this pulsar
                 metapulsar = self.create_metapulsar_from_file_data(
                     file_data=pulsar_file_data,
                     combination_strategy=combination_strategy,
-                    reference_pta=reference_pta,
+                    reference_pta=reference_pta_for_pulsar,
                     combine_components=combine_components,
                     add_dm_derivatives=add_dm_derivatives,
                 )
@@ -512,3 +587,23 @@ class MetaPulsarFactory:
                     )
 
         return list(pulsars)
+
+
+def reorder_ptas_for_pulsar(
+    pulsar_file_data: Dict[str, List[Dict[str, Any]]], reference_pta: str
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Reorder PTAs for a specific pulsar to put specified PTA first as reference.
+
+    Args:
+        pulsar_file_data: PTA data for a specific pulsar
+        reference_pta: PTA name to use as reference (will be first in dict)
+
+    Returns:
+        Reordered pulsar data with reference_pta first
+    """
+    if reference_pta not in pulsar_file_data:
+        raise ValueError(f"Reference PTA '{reference_pta}' not found in pulsar data")
+
+    ordered = {reference_pta: pulsar_file_data[reference_pta]}
+    ordered.update({k: v for k, v in pulsar_file_data.items() if k != reference_pta})
+    return ordered

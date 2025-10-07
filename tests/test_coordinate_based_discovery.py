@@ -315,7 +315,7 @@ class TestCoordinateBasedDiscovery:
     def test_discover_files_coordinate_matching(self, mock_file_discovery_service):
         """Test file discovery with coordinate matching using FileDiscoveryService."""
         # Test that FileDiscoveryService can discover files for a pulsar
-        files = mock_file_discovery_service.discover_all_files_in_data_releases(
+        files = mock_file_discovery_service.discover_files(
             ["test_data_release1", "test_data_release2"]
         )
 
@@ -327,9 +327,7 @@ class TestCoordinateBasedDiscovery:
         """Test file discovery when pulsar not found using FileDiscoveryService."""
         # Test that FileDiscoveryService handles unknown PTAs gracefully
         with pytest.raises(KeyError):
-            mock_file_discovery_service.discover_all_files_in_data_releases(
-                ["unknown_pta"]
-            )
+            mock_file_discovery_service.discover_files(["unknown_pta"])
 
 
 class TestEdgeCases:

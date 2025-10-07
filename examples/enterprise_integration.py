@@ -26,7 +26,7 @@ def main():
 
     # Step 2: Discover files
     print("Step 2: Discovering files for epta_dr2 and ppta_dr2...")
-    file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
+    file_data = discovery.discover_files(["epta_dr2", "ppta_dr2"])
 
     if not file_data:
         print("No files found - this is expected in test environment")

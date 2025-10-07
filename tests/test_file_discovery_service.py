@@ -4,6 +4,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch
 from metapulsar.file_discovery_service import FileDiscoveryService, PTA_DATA_RELEASES
+from metapulsar import discover_files
 
 
 class TestFileDiscoveryService:
@@ -66,8 +67,8 @@ class TestFileDiscoveryService:
                 "ppta_dr2": ["J1857+0943", "B1855+09"],
             }
 
-    def test_discover_all_files_in_data_releases_success(self):
-        """Test discovering all files in data releases."""
+    def test_discover_files_success(self):
+        """Test discovering files in data releases."""
         service = FileDiscoveryService()
 
         with patch.object(
@@ -83,7 +84,7 @@ class TestFileDiscoveryService:
                 }
             ]
 
-            result = service.discover_all_files_in_data_releases(["epta_dr2"])
+            result = service.discover_files(["epta_dr2"])
 
             assert "epta_dr2" in result
             assert len(result["epta_dr2"]) == 1
@@ -92,7 +93,7 @@ class TestFileDiscoveryService:
             assert result["epta_dr2"][0]["timing_package"] == "tempo2"
             # Priority field removed - no longer included in results
 
-    def test_discover_all_files_in_data_releases_all_data_releases(self):
+    def test_discover_files_all_data_releases(self):
         """Test discovering files in all data releases when no specific data releases provided."""
         service = FileDiscoveryService()
 
@@ -104,10 +105,57 @@ class TestFileDiscoveryService:
             ) as mock_discover:
                 mock_discover.return_value = []
 
-                result = service.discover_all_files_in_data_releases()
+                result = service.discover_files()
 
                 assert "epta_dr2" in result
                 assert "ppta_dr2" in result
+
+    def test_discover_files_single_string_input(self):
+        """Test discovering files with single string input."""
+        service = FileDiscoveryService()
+
+        with patch.object(
+            service, "_discover_all_file_pairs_in_data_release"
+        ) as mock_discover:
+            mock_discover.return_value = [
+                {
+                    "par": Path("/test/J1857+0943.par"),
+                    "tim": Path("/test/J1857+0943.tim"),
+                    "timing_package": "tempo2",
+                    "timespan_days": 1000.0,
+                }
+            ]
+
+            result = service.discover_files("epta_dr2")
+
+            assert "epta_dr2" in result
+            assert len(result["epta_dr2"]) == 1
+
+    def test_discover_files_verbose_output(self, capsys):
+        """Test verbose output of discover_files method."""
+        service = FileDiscoveryService()
+
+        with patch.object(
+            service, "_discover_all_files_in_data_releases"
+        ) as mock_discover:
+            mock_discover.return_value = {
+                "epta_dr2": [
+                    {
+                        "par": Path("test1.par"),
+                        "tim": Path("test1.tim"),
+                        "timing_package": "tempo2",
+                        "timespan_days": 1000.0,
+                    }
+                ],
+                "ppta_dr2": [],
+            }
+
+            service.discover_files(["epta_dr2", "ppta_dr2"], verbose=True)
+
+            captured = capsys.readouterr()
+            assert "Found:" in captured.out
+            assert "- epta_dr2: 1 pulsars" in captured.out
+            assert "(No pulsars for: ppta_dr2)" in captured.out
 
     def test_list_data_releases_alphabetical(self):
         """Test listing data releases sorted alphabetically."""
@@ -299,3 +347,41 @@ class TestFileDiscoveryService:
         result = service._discover_all_file_pairs_in_data_release(config)
 
         assert result == []
+
+
+class TestConvenienceFunctions:
+    """Test convenience functions."""
+
+    def test_discover_files_convenience_function(self):
+        """Test discover_files convenience function."""
+        with patch.object(FileDiscoveryService, "discover_files") as mock_discover:
+            mock_discover.return_value = {"epta_dr2": []}
+
+            result = discover_files(working_dir="/test", data_release_names="epta_dr2")
+
+            mock_discover.assert_called_once_with("epta_dr2", True)
+            assert result == {"epta_dr2": []}
+
+    def test_discover_files_convenience_function_with_list(self):
+        """Test discover_files convenience function with list input."""
+        with patch.object(FileDiscoveryService, "discover_files") as mock_discover:
+            mock_discover.return_value = {"epta_dr2": [], "ppta_dr2": []}
+
+            result = discover_files(
+                working_dir="/test", data_release_names=["epta_dr2", "ppta_dr2"]
+            )
+
+            mock_discover.assert_called_once_with(["epta_dr2", "ppta_dr2"], True)
+            assert result == {"epta_dr2": [], "ppta_dr2": []}
+
+    def test_discover_files_convenience_function_verbose_false(self):
+        """Test discover_files convenience function with verbose=False."""
+        with patch.object(FileDiscoveryService, "discover_files") as mock_discover:
+            mock_discover.return_value = {"epta_dr2": []}
+
+            result = discover_files(
+                working_dir="/test", data_release_names="epta_dr2", verbose=False
+            )
+
+            mock_discover.assert_called_once_with("epta_dr2", False)
+            assert result == {"epta_dr2": []}

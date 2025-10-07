@@ -9,7 +9,7 @@ Usage:
     python examples/basic_workflow.py
 """
 
-from metapulsar import MetaPulsarFactory, FileDiscoveryService
+from metapulsar import MetaPulsarFactory, FileDiscoveryService, discover_files
 
 
 def main():
@@ -22,12 +22,12 @@ def main():
 
     # Step 2: List available PTAs
     print("Step 2: Listing available PTAs...")
-    available_ptas = discovery.list_ptas()
+    available_ptas = discovery.list_data_releases()
     print(f"Available PTAs: {available_ptas}")
 
     # Step 3: Discover files for specific PTAs
     print("Step 3: Discovering files for epta_dr2 and ppta_dr2...")
-    file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
+    file_data = discovery.discover_files(["epta_dr2", "ppta_dr2"])
 
     if not file_data:
         print("No files found - this is expected in test environment")
@@ -73,6 +73,16 @@ def main():
     print(
         f"MetaPulsar created with strategy: {metapulsar_consistent.combination_strategy}"
     )
+
+    # Alternative: Using convenience functions
+    print("\n=== Alternative: Using Convenience Functions ===")
+    print("You can also use the convenience functions directly:")
+    print("file_data = discover_files(data_release_names=['epta_dr2', 'ppta_dr2'])")
+
+    # Demonstrate convenience function
+    print("Demonstrating convenience function...")
+    file_data_convenience = discover_files(data_release_names=["epta_dr2", "ppta_dr2"])
+    print(f"Convenience function found files for: {list(file_data_convenience.keys())}")
 
     print("\n=== Workflow Complete ===")
     print(

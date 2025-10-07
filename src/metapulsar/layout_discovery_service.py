@@ -19,8 +19,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 from loguru import logger
 
 
-class PatternDiscoveryEngine:
-    """Heuristic-based pattern discovery for PTA data releases."""
+class LayoutDiscoveryService:
+    """Heuristic-based pattern discovery for PTA data releases (renamed from PatternDiscoveryEngine)."""
 
     def __init__(self):
         self.logger = logger
@@ -41,7 +41,35 @@ class PatternDiscoveryEngine:
             ".t2": "tempo2",
         }
 
-    def analyze_directory_structure(self, base_path: Path) -> Dict[str, Any]:
+    def discover_layout(
+        self, working_dir: str = None, verbose: bool = True
+    ) -> Dict[str, Dict[str, Any]]:
+        """Discover PTA data release layout with user-friendly name.
+
+        Args:
+            working_dir: Directory to analyze. If None, uses current directory.
+            verbose: If True, prints discovered layout to console.
+
+        Returns:
+            Dictionary of data release configurations
+        """
+        if working_dir:
+            base_path = Path(working_dir)
+        else:
+            base_path = Path.cwd()
+
+        structure = self._analyze_directory_structure(base_path)
+        data_release = self._generate_pta_data_release(structure)
+
+        if verbose:
+            print(f"Discovered layout in {base_path}:")
+            for key, value in data_release.items():
+                if key != "discovery_confidence":
+                    print(f"  - {key} = {repr(value)}")
+
+        return {f"discovered_{base_path.name}": data_release}
+
+    def _analyze_directory_structure(self, base_path: Path) -> Dict[str, Any]:
         """Analyze a directory structure and infer PTA patterns."""
         if not base_path.exists():
             raise ValueError(f"Directory {base_path} does not exist")
@@ -76,7 +104,7 @@ class PatternDiscoveryEngine:
 
         return structure
 
-    def generate_pta_data_release(
+    def _generate_pta_data_release(
         self, structure: Dict, timing_package: Optional[str] = None
     ) -> Dict[str, Any]:
         """Generate a complete PTA data release from structure analysis."""
@@ -496,3 +524,53 @@ class PatternDiscoveryEngine:
             confidence += 0.2
 
         return min(confidence, 1.0)
+
+
+# Convenience function for easy access
+def discover_layout(
+    working_dir: str = None, verbose: bool = True
+) -> Dict[str, Dict[str, Any]]:
+    """Convenience function for layout discovery.
+
+    Args:
+        working_dir: Directory to analyze. If None, uses current directory.
+        verbose: If True, prints discovered layout to console.
+
+    Returns:
+        Dictionary of data release configurations
+    """
+    engine = LayoutDiscoveryService()
+    return engine.discover_layout(working_dir, verbose)
+
+
+def combine_layouts(
+    *layouts: Dict[str, Dict[str, Any]], include_defaults: bool = False
+) -> Dict[str, Dict[str, Any]]:
+    """Combine multiple discovered data release layouts into a single dictionary.
+
+    Args:
+        *layouts: Variable number of layout dictionaries from discover_layout()
+        include_defaults: If True, includes default PTA_DATA_RELEASES in the combination
+
+    Returns:
+        Combined dictionary with all data releases
+
+    Example:
+        layout1 = discover_layout("../../data/ipta-dr2/EPTA_v2.2")
+        layout2 = discover_layout("../../data/ipta-dr2/NANOGrav_9y")
+        layout3 = discover_layout("../../data/ipta-dr2/PPTA_dr1dr2")
+        combined = combine_layouts(layout1, layout2, layout3, include_defaults=True)
+    """
+    combined = {}
+
+    # Add default PTA data releases if requested
+    if include_defaults:
+        from .file_discovery_service import PTA_DATA_RELEASES
+
+        combined.update(PTA_DATA_RELEASES)
+
+    # Add custom layouts
+    for layout in layouts:
+        combined.update(layout)
+
+    return combined

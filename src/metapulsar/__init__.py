@@ -7,9 +7,17 @@ objects for gravitational wave detection.
 
 # Core classes
 from .metapulsar import MetaPulsar
-from .metapulsar_factory import MetaPulsarFactory
-from .file_discovery_service import FileDiscoveryService, PTA_DATA_RELEASES
-from .pattern_discovery_engine import PatternDiscoveryEngine
+from .metapulsar_factory import MetaPulsarFactory, reorder_ptas_for_pulsar
+from .file_discovery_service import (
+    FileDiscoveryService,
+    PTA_DATA_RELEASES,
+    discover_files,
+)
+from .layout_discovery_service import (
+    LayoutDiscoveryService,
+    discover_layout,
+    combine_layouts,
+)
 from .parameter_manager import (
     ParameterManager,
     ParameterMapping,
@@ -22,6 +30,7 @@ from .selection_utils import create_staggered_selection
 # Exceptions
 from .pint_helpers import PINTDiscoveryError
 
+
 __version__ = "0.1.0"
 __author__ = "Rutger van Haasteren, Wangwei Yu"
 __email__ = "rutger@vhaasteren.com"
@@ -32,7 +41,7 @@ __all__ = [
     "MetaPulsarFactory",
     "FileDiscoveryService",
     "PTA_DATA_RELEASES",
-    "PatternDiscoveryEngine",
+    "LayoutDiscoveryService",
     "ParameterManager",
     "ParameterMapping",
     "ParameterInconsistencyError",
@@ -40,4 +49,9 @@ __all__ = [
     "TimFileAnalyzer",
     "create_staggered_selection",
     "PINTDiscoveryError",
+    # Convenience functions
+    "discover_files",
+    "discover_layout",
+    "combine_layouts",
+    "reorder_ptas_for_pulsar",
 ]

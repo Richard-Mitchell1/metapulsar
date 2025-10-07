@@ -67,11 +67,11 @@ class FileDiscoveryService:
         """Add a new PTA configuration."""
 ```
 
-### PatternDiscoveryEngine
+### LayoutDiscoveryService
 Heuristic-based pattern discovery for PTA data releases.
 
 ```python
-class PatternDiscoveryEngine:
+class LayoutDiscoveryService:
     def __init__(self):
         """Initialize pattern discovery engine."""
 

@@ -107,10 +107,10 @@ discovery.add_pta("custom_pta", {
 For new PTA data releases with unknown directory structures, use the Pattern Discovery Engine to automatically generate appropriate regex patterns:
 
 ```python
-from metapulsar import PatternDiscoveryEngine, PTA_DATA_RELEASES
+from metapulsar import LayoutDiscoveryService, PTA_DATA_RELEASES
 
-# Initialize pattern discovery engine
-engine = PatternDiscoveryEngine()
+# Initialize layout discovery service
+engine = LayoutDiscoveryService()
 
 # Analyze new PTA data structure
 data_dir = Path("/path/to/new/pta/data")

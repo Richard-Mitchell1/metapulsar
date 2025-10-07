@@ -2,13 +2,17 @@
 """
 Example: Integrating Pattern Discovery Engine with FileDiscoveryService
 
-This example demonstrates how to use the PatternDiscoveryEngine to automatically
+This example demonstrates how to use the LayoutDiscoveryService to automatically
 discover patterns for new PTA data releases and integrate them with the existing
 FileDiscoveryService.
 """
 
 from pathlib import Path
-from metapulsar import PatternDiscoveryEngine, FileDiscoveryService, PTA_DATA_RELEASES
+from metapulsar import (
+    LayoutDiscoveryService,
+    FileDiscoveryService,
+    PTA_DATA_RELEASES,
+)
 
 
 def discover_and_integrate_new_pta(
@@ -24,12 +28,17 @@ def discover_and_integrate_new_pta(
     """
     print(f"🔍 Discovering patterns for {pta_name}...")
 
-    # Initialize pattern discovery engine
-    pattern_engine = PatternDiscoveryEngine()
+    # Initialize layout discovery service
+    layout_service = LayoutDiscoveryService()
 
-    # Step 1: Analyze the directory structure
-    structure = pattern_engine.analyze_directory_structure(data_dir)
-    discovered_data_release = pattern_engine.generate_pta_data_release(structure)
+    # Step 1: Discover layout using new API
+    print("  📁 Discovering layout...")
+    discovered_layouts = layout_service.discover_layout(
+        working_dir=str(data_dir), verbose=False
+    )
+
+    # Extract the configuration from the discovered layout
+    discovered_data_release = list(discovered_layouts.values())[0]
 
     print("✅ Discovered data release:")
     print(f"   Par pattern: {discovered_data_release['par_pattern']}")
@@ -69,11 +78,11 @@ def test_file_discovery_with_new_pta(pta_name: str):
 
     try:
         # Discover patterns
-        patterns = file_service.discover_patterns_in_pta(pta_name)
+        patterns = file_service.discover_patterns_in_data_release(pta_name)
         print(f"✅ Found {len(patterns)} patterns")
 
         # Discover file pairs
-        file_pairs = file_service.discover_all_files_in_ptas([pta_name])
+        file_pairs = file_service.discover_files([pta_name])
         print(f"✅ Found {len(file_pairs)} file pairs")
 
         # Show some examples
@@ -154,7 +163,7 @@ def main():
         """
     The integration workflow is:
     
-    1. 🔍 PatternDiscoveryEngine analyzes new PTA data structure
+    1. 🔍 LayoutDiscoveryService analyzes new PTA data structure
     2. 🎯 Generates appropriate regex patterns automatically  
     3. 🔧 Detects timing package (PINT vs tempo2)
     4. 🚫 Filters out unwanted data (wideband, temp files)
