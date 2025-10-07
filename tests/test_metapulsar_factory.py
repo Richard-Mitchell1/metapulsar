@@ -8,6 +8,95 @@ from metapulsar.file_discovery_service import FileDiscoveryService
 from metapulsar.position_helpers import discover_pulsars_by_coordinates_optimized
 
 
+class TestParfileContentValidation:
+    """Test cases for parfile content validation functionality."""
+
+    def setup_method(self):
+        """Set up test fixtures."""
+        self.factory = MetaPulsarFactory()
+
+    def test_ensure_parfile_content_with_missing_content(self):
+        """Test validation when par_content is missing."""
+        # Create file data without par_content
+        file_data = {
+            "test_pta": [
+                {
+                    "par": "data/ipta-dr2/PPTA_dr1dr2/par/J1857+0943_dr1dr2.par",
+                    "tim": "data/ipta-dr2/PPTA_dr1dr2/tim/J1857+0943_dr1dr2.tim",
+                    "timespan_days": 1000.0,
+                    "timing_package": "tempo2",
+                }
+            ]
+        }
+
+        # Validate should add par_content
+        validated = self.factory._ensure_parfile_content(file_data)
+
+        assert "test_pta" in validated
+        assert "par_content" in validated["test_pta"][0]
+        assert len(validated["test_pta"][0]["par_content"]) > 0
+        assert "PSR" in validated["test_pta"][0]["par_content"]
+
+    def test_ensure_parfile_content_with_existing_content(self):
+        """Test validation when par_content already exists."""
+        # Create file data with existing par_content
+        file_data = {
+            "test_pta": [
+                {
+                    "par": "data/ipta-dr2/PPTA_dr1dr2/par/J1857+0943_dr1dr2.par",
+                    "tim": "data/ipta-dr2/PPTA_dr1dr2/tim/J1857+0943_dr1dr2.tim",
+                    "par_content": "PSR J1857+0943\nF0 186.494081\n",
+                    "timespan_days": 1000.0,
+                    "timing_package": "tempo2",
+                }
+            ]
+        }
+
+        # Validate should not modify existing content
+        validated = self.factory._ensure_parfile_content(file_data)
+
+        assert "test_pta" in validated
+        assert "par_content" in validated["test_pta"][0]
+        assert (
+            validated["test_pta"][0]["par_content"] == "PSR J1857+0943\nF0 186.494081\n"
+        )
+
+    def test_ensure_parfile_content_missing_par_path(self):
+        """Test validation when par file path is missing."""
+        # Create file data without par path
+        file_data = {
+            "test_pta": [
+                {
+                    "tim": "data/ipta-dr2/PPTA_dr1dr2/tim/J1857+0943_dr1dr2.tim",
+                    "timespan_days": 1000.0,
+                    "timing_package": "tempo2",
+                }
+            ]
+        }
+
+        # Should raise ValueError
+        with pytest.raises(ValueError, match="Missing 'par' file path"):
+            self.factory._ensure_parfile_content(file_data)
+
+    def test_ensure_parfile_content_file_not_found(self):
+        """Test validation when par file doesn't exist."""
+        # Create file data with non-existent par file
+        file_data = {
+            "test_pta": [
+                {
+                    "par": "non_existent_file.par",
+                    "tim": "data/ipta-dr2/PPTA_dr1dr2/tim/J1857+0943_dr1dr2.tim",
+                    "timespan_days": 1000.0,
+                    "timing_package": "tempo2",
+                }
+            ]
+        }
+
+        # Should raise ValueError
+        with pytest.raises(ValueError, match="Parfile not found"):
+            self.factory._ensure_parfile_content(file_data)
+
+
 class TestMetaPulsarFactory:
     """Test MetaPulsarFactory class."""
 
@@ -269,53 +358,6 @@ class TestMetaPulsarFactory:
             assert "epta_dr2" in result["J1857+0943"]
             assert "ppta_dr2" in result["J1857+0943"]
 
-    def test_create_metapulsar_with_validation_single_pulsar(self):
-        """Test create_metapulsar with validation for single pulsar."""
-        # Mock file data with single pulsar
-        file_data = {
-            "epta_dr2": [
-                {
-                    "par": Path("/data/epta/J1857+0943.par"),
-                    "tim": Path("/data/epta/J1857+0943.tim"),
-                }
-            ],
-            "ppta_dr2": [
-                {
-                    "par": Path("/data/ppta/J1857+0943.par"),
-                    "tim": Path("/data/ppta/J1857+0943.tim"),
-                }
-            ],
-        }
-
-        # Mock coordinate discovery to return single pulsar
-        mock_pulsar_groups = {
-            "J1857+0943": {
-                "epta_dr2": [file_data["epta_dr2"][0]],
-                "ppta_dr2": [file_data["ppta_dr2"][0]],
-            }
-        }
-
-        with patch(
-            "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized",
-            return_value=mock_pulsar_groups,
-        ):
-            with patch.object(
-                self.factory, "create_metapulsar_from_file_data"
-            ) as mock_create:
-                mock_create.return_value = Mock()
-
-                # Should not raise an exception
-                self.factory.create_metapulsar(file_data)
-
-                # Verify validation was called and create_metapulsar_from_file_data was called
-                mock_create.assert_called_once_with(
-                    file_data,
-                    "consistent",
-                    None,
-                    ["astrometry", "spindown", "binary", "dispersion"],
-                    True,
-                )
-
     def test_create_metapulsar_with_validation_multiple_pulsars(self):
         """Test create_metapulsar with validation fails for multiple pulsars."""
         # Mock file data with multiple pulsars
@@ -344,8 +386,10 @@ class TestMetaPulsarFactory:
             "metapulsar.metapulsar_factory.discover_pulsars_by_coordinates_optimized",
             return_value=mock_pulsar_groups,
         ):
-            with pytest.raises(ValueError, match="Multiple pulsars detected"):
-                self.factory.create_metapulsar(file_data)
+            with patch.object(self.factory, "_ensure_parfile_content") as mock_ensure:
+                mock_ensure.return_value = file_data
+                with pytest.raises(ValueError, match="Multiple pulsars detected"):
+                    self.factory.create_metapulsar(file_data)
 
     # Note: test_create_metapulsar_enterprise_creation_fails removed
     # This test was written for the old regex-based architecture and is no longer relevant
@@ -812,18 +856,20 @@ class TestPerPulsarOrdering:
                 }
             }
 
-            # Mock the MetaPulsar creation to avoid actual file processing
-            with patch.object(
-                factory, "create_metapulsar_from_file_data"
-            ) as mock_create:
-                mock_create.return_value = Mock()
+            # Mock the internal methods to avoid actual file processing
+            with patch.object(factory, "_ensure_parfile_content") as mock_ensure:
+                with patch.object(factory, "create_metapulsar") as mock_create:
+                    mock_ensure.return_value = file_data
+                    mock_create.return_value = Mock()
 
-                result = factory.create_all_metapulsars(file_data, reference_pta=None)
+                    result = factory.create_all_metapulsars(
+                        file_data, reference_pta=None
+                    )
 
-                # Should create MetaPulsar for the pulsar
-                assert "J1857+0943" in result
+                    # Should create MetaPulsar for the pulsar
+                    assert "J1857+0943" in result
 
-                # Should call create_metapulsar_from_file_data with PPTA as reference (longer timespan)
-                mock_create.assert_called_once()
-                call_args = mock_create.call_args
-                assert call_args[1]["reference_pta"] == "ppta_dr2"
+                    # Should call create_metapulsar with PPTA as reference (longer timespan)
+                    mock_create.assert_called_once()
+                    call_args = mock_create.call_args
+                    assert call_args[1]["reference_pta"] == "ppta_dr2"

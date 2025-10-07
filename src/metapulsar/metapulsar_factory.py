@@ -54,11 +54,60 @@ class MetaPulsarFactory:
         self.logger = logger
         # ParameterManager will be instantiated as needed in methods
 
+    def _ensure_parfile_content(
+        self, file_data: Dict[str, List[Dict[str, Any]]]
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """Ensure parfile content is present in file data.
+
+        Args:
+            file_data: File data structure (may be missing par_content)
+
+        Returns:
+            Updated file data with par_content for all PTAs
+
+        Raises:
+            ValueError: If par file path is missing or file cannot be read
+        """
+        validated_file_data = {}
+
+        for pta_name, files in file_data.items():
+            validated_files = []
+
+            for file_info in files:
+                # Create a copy to avoid modifying original
+                validated_file_info = file_info.copy()
+
+                # Check if par_content is missing
+                if "par_content" not in validated_file_info:
+                    # Ensure par file path exists
+                    if "par" not in validated_file_info:
+                        raise ValueError(f"Missing 'par' file path for PTA {pta_name}")
+
+                    par_path = validated_file_info["par"]
+                    if isinstance(par_path, str):
+                        par_path = Path(par_path)
+
+                    # Read parfile content
+                    try:
+                        par_content = par_path.read_text(encoding="utf-8")
+                        validated_file_info["par_content"] = par_content
+                        self.logger.debug(
+                            f"Read parfile content for {pta_name} from {par_path}"
+                        )
+                    except FileNotFoundError:
+                        raise ValueError(f"Parfile not found: {par_path}")
+                    except Exception as e:
+                        raise ValueError(f"Failed to read parfile {par_path}: {e}")
+
+                validated_files.append(validated_file_info)
+
+            validated_file_data[pta_name] = validated_files
+
+        return validated_file_data
+
     def create_metapulsar(
         self,
-        file_data: Dict[
-            str, List[Dict[str, Any]]
-        ],  # Should contain data for single pulsar only
+        file_data: Dict[str, List[Dict[str, Any]]],
         combination_strategy: str = "consistent",
         reference_pta: str = None,
         combine_components: List[str] = [
@@ -90,15 +139,55 @@ class MetaPulsarFactory:
         """
         self.logger.info(f"Creating MetaPulsar using {combination_strategy} strategy")
 
-        # VALIDATION: Check that all files belong to the same pulsar
-        self._validate_single_pulsar_data(file_data)
+        # 1. Ensure parfile content is loaded
+        validated_data = self._ensure_parfile_content(file_data)
 
-        return self.create_metapulsar_from_file_data(
-            file_data,
-            combination_strategy,
-            reference_pta,
-            combine_components,
-            add_dm_derivatives,
+        # 2. Validate all files belong to same pulsar (coordinate-based)
+        self._validate_single_pulsar_data(validated_data)
+
+        # 3. Create MetaPulsar (direct implementation)
+        # Convert file data to single file per PTA format
+        single_file_data = {}
+        for pta_name, file_list in validated_data.items():
+            if not file_list:
+                raise ValueError(f"No files found for PTA {pta_name}")
+            single_file_data[pta_name] = file_list[0]  # Take first file
+
+        # Create file_pairs from the file data
+        file_pairs = {
+            pta: (file_dict["par"], file_dict["tim"])
+            for pta, file_dict in single_file_data.items()
+        }
+
+        # Process par files if consistent strategy
+        if combination_strategy == "consistent":
+            # Create ParameterManager for parfile consistency
+            parameter_manager = ParameterManager(
+                file_data=single_file_data,  # Now guaranteed to have par_content
+                reference_pta=reference_pta,
+                combine_components=combine_components,
+                add_dm_derivatives=add_dm_derivatives,
+            )
+
+            # Make par files consistent
+            consistent_parfiles = parameter_manager.make_parfiles_consistent()
+
+            # Update file_pairs with consistent par files
+            file_pairs = {
+                pta: (consistent_parfiles[pta], single_file_data[pta]["tim"])
+                for pta in single_file_data.keys()
+                if pta in consistent_parfiles
+            }
+
+        # Create PINT/Tempo2 objects from file pairs using file data
+        pulsars = self._create_pulsar_objects(file_pairs, single_file_data)
+
+        # Create MetaPulsar with new constructor pattern
+        return MetaPulsar(
+            pulsars=pulsars,
+            combination_strategy=combination_strategy,
+            combine_components=combine_components,
+            add_dm_derivatives=add_dm_derivatives,
         )
 
     def _validate_single_pulsar_data(
@@ -240,74 +329,6 @@ class MetaPulsarFactory:
 
         return best_pta or list(pulsar_file_data.keys())[0]
 
-    def create_metapulsar_from_file_data(
-        self,
-        file_data: Dict[str, List[Dict[str, Any]]],  # File data format
-        combination_strategy: str = "consistent",
-        reference_pta: str = None,
-        combine_components: List[str] = [
-            "astrometry",
-            "spindown",
-            "binary",
-            "dispersion",
-        ],
-        add_dm_derivatives: bool = True,
-    ) -> MetaPulsar:
-        """Create MetaPulsar using specified combination strategy.
-
-        Args:
-            file_data: File data from FileDiscoveryService
-            combination_strategy: "composite" or "consistent"
-            reference_pta: PTA to use as reference (for consistent strategy)
-            combine_components: List of components to make consistent (for consistent strategy)
-                          Defaults to all components
-            add_dm_derivatives: Whether to ensure DM1, DM2 are present (for consistent strategy)
-        """
-        # Convert file data to single file per PTA format
-        single_file_data = {}
-        for pta_name, file_list in file_data.items():
-            if not file_list:
-                raise ValueError(f"No files found for PTA {pta_name}")
-            single_file_data[pta_name] = file_list[0]  # Take first file
-
-        # Create file_pairs from the file data
-        file_pairs = {
-            pta: (file_dict["par"], file_dict["tim"])
-            for pta, file_dict in single_file_data.items()
-        }
-
-        # Process par files if consistent strategy
-        if combination_strategy == "consistent":
-            # Create ParameterManager for parfile consistency
-            parameter_manager = ParameterManager(
-                file_data=single_file_data,
-                reference_pta=reference_pta,
-                combine_components=combine_components,
-                add_dm_derivatives=add_dm_derivatives,
-            )
-
-            # Make par files consistent
-            consistent_parfiles = parameter_manager.make_parfiles_consistent()
-
-            # Update file_pairs with consistent par files
-            file_pairs = {
-                pta: (consistent_parfiles[pta], single_file_data[pta]["tim"])
-                for pta in single_file_data.keys()
-                if pta in consistent_parfiles
-            }
-
-        # Create PINT/Tempo2 objects from file pairs using file data
-        pulsars = self._create_pulsar_objects(file_pairs, single_file_data)
-
-        # Create MetaPulsar with new constructor pattern
-        # Canonical name is automatically calculated from pulsar data
-        return MetaPulsar(
-            pulsars=pulsars,
-            combination_strategy=combination_strategy,
-            combine_components=combine_components,
-            add_dm_derivatives=add_dm_derivatives,
-        )
-
     def create_all_metapulsars(
         self,
         file_data: Dict[str, List[Dict[str, Any]]],
@@ -333,9 +354,12 @@ class MetaPulsarFactory:
         Returns:
             Dictionary mapping pulsar names to MetaPulsar objects
         """
-        # Group files by pulsar with reference PTA ordering
+        # 1. Ensure parfile content is loaded
+        validated_data = self._ensure_parfile_content(file_data)
+
+        # 2. Group files by pulsar with reference PTA ordering
         pulsar_groups = self._group_files_by_pulsar_with_ordering(
-            file_data, reference_pta
+            validated_data, reference_pta
         )
 
         metapulsars = {}
@@ -351,7 +375,7 @@ class MetaPulsarFactory:
                 )
 
                 # Create MetaPulsar for this pulsar
-                metapulsar = self.create_metapulsar_from_file_data(
+                metapulsar = self.create_metapulsar(
                     file_data=pulsar_file_data,
                     combination_strategy=combination_strategy,
                     reference_pta=reference_pta_for_pulsar,
