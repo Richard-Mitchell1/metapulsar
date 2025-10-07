@@ -98,9 +98,10 @@ class MockPulsar(BasePulsar):
         self.name = name
         self._raj = 0.0  # Default RA in radians
         self.parfile = {
-            "F0": "123.456",
-            "RAJ": "18:57:36.4",
-            "DECJ": "09:43:17.1",
+            "F0": "123.456 1",  # 1 means free parameter
+            "RAJ": "18:57:36.4 1",  # 1 means free parameter
+            "DECJ": "09:43:17.1 1",  # 1 means free parameter
+            "Offset": "0.0 1",  # 1 means free parameter
         }  # Mock parfile data
         self._decj = 0.0  # Default Dec in radians
         self._sort = True  # Enable sorting by default
@@ -150,6 +151,15 @@ class MockPulsar(BasePulsar):
         self._f1 = -1e-15  # Hz/s
         self._f2 = 0.0  # Hz/s^2
 
+        # Add spin parameters to parfile with free flag
+        self.parfile.update(
+            {
+                "F1": "-1e-15 1",  # 1 means free parameter
+                "F2": "0.0 1",  # 1 means free parameter
+                "PEPOCH": "55000.0",  # Reference epoch
+            }
+        )
+
     def _setup_astrometry_parameters(self):
         """Set up astrometry parameters for the mock pulsar."""
         if not ASTROPY_AVAILABLE:
@@ -161,6 +171,16 @@ class MockPulsar(BasePulsar):
 
         # Set default astrometry values (fixed coordinates)
         self._raj = np.pi / 4  # 45 degrees in radians
+
+        # Add astrometry parameters to parfile with free flag
+        self.parfile.update(
+            {
+                "PMRA": "0.0 1",  # 1 means free parameter
+                "PMDEC": "0.0 1",  # 1 means free parameter
+                "PX": "0.0 1",  # 1 means free parameter
+                "POSEPOCH": "55000.0",  # Reference epoch
+            }
+        )
         self._decj = np.pi / 4  # 45 degrees in radians
         self._pmra = 0.0  # rad/yr
         self._pmdec = 0.0  # rad/yr
@@ -413,6 +433,82 @@ class LibstempoMockPulsarAdapter:
     def parfile(self):
         """Return parfile data as dictionary."""
         return getattr(self._mock, "parfile", {})
+
+    def savepar(self, parfile_path):
+        """Save parfile content to file (mock implementation).
+
+        Args:
+            parfile_path: Path where to save the parfile
+
+        This method generates mock parfile content based on the MockPulsar data
+        and writes it to the specified file path.
+        """
+        # Generate mock parfile content based on MockPulsar data
+        parfile_content = self._generate_mock_parfile_content()
+
+        # Write content to file
+        with open(parfile_path, "w") as f:
+            f.write(parfile_content)
+
+    def _generate_mock_parfile_content(self):
+        """Generate mock parfile content based on MockPulsar data.
+
+        Returns:
+            str: Mock parfile content as string
+        """
+        # Use the parfile dictionary from the MockPulsar
+        if hasattr(self._mock, "parfile") and self._mock.parfile:
+            # Convert parfile dictionary to string format
+            parfile_lines = []
+            for key, value in self._mock.parfile.items():
+                parfile_lines.append(f"{key:15} {value}")
+
+            # Add some additional required parameters
+            pulsar_name = getattr(self._mock, "name", "MOCK")
+            parfile_lines.extend(
+                [
+                    f"PSR              {pulsar_name}",
+                    "EPHEM            DE421",
+                    "CLK              TT(BIPM2011)",
+                    "UNITS            TDB",
+                    f"NTOA             {len(self._mock._toas)}",
+                    f"CHI2R            1.0 0 {len(self._mock._toas)}.0",
+                ]
+            )
+        else:
+            # Fallback to old method if parfile is not available
+            pulsar_name = getattr(self._mock, "name", "MOCK")
+            raj = getattr(self._mock, "_raj", 0.0)
+            decj = getattr(self._mock, "_decj", 0.0)
+            f0 = getattr(self._mock, "_f0", 100.0)
+            f1 = getattr(self._mock, "_f1", 0.0)
+            pmra = getattr(self._mock, "_pmra", 0.0)
+            pmdec = getattr(self._mock, "_pmdec", 0.0)
+            px = getattr(self._mock, "_px", 0.0)
+            dm = getattr(self._mock, "_dm", 0.0)
+
+            parfile_lines = [
+                f"PSR              {pulsar_name}",
+                f"RAJ              {raj:.10f}",
+                f"DECJ             {decj:.10f}",
+                f"F0               {f0:.10f}",
+                f"F1               {f1:.10f}",
+                "PEPOCH           55000",
+                f"PMRA             {pmra:.10f}",
+                f"PMDEC            {pmdec:.10f}",
+                f"PX               {px:.10f}",
+                f"DM               {dm:.10f}",
+                "DMEPOCH          55000",
+                "EPHEM            DE421",
+                "CLK              TT(BIPM2011)",
+                "UNITS            TDB",
+                f"NTOA             {len(self._mock._toas)}",
+                f"CHI2R            1.0 0 {len(self._mock._toas)}.0",
+            ]
+
+        # Keep it simple for mock tests - no JUMP parameters
+
+        return "\n".join(parfile_lines) + "\n"
 
     # Planetary data (mock implementations)
     def formbats(self):

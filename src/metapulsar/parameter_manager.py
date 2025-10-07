@@ -24,6 +24,7 @@ from .pint_helpers import (
     check_component_available_in_model,
     get_parameter_identifiability_from_model,
     get_category_mapping_from_pint,
+    dict_to_parfile_string_pint_driven,
 )
 
 logger = logging.getLogger(__name__)
@@ -287,7 +288,9 @@ class ParameterManager:
         consistent_parfiles = {}
         for pta_name, parfile_dict in parfile_dicts.items():
             try:
-                consistent_content = self._dict_to_parfile_string(parfile_dict)
+                consistent_content = self._dict_to_parfile_string(
+                    parfile_dict, format="pint"
+                )
                 consistent_parfiles[pta_name] = consistent_content
                 self.logger.debug(f"Converted PTA {pta_name} par file back to string")
             except Exception as e:
@@ -344,7 +347,7 @@ class ParameterManager:
         """Handle DM-specific special cases: DMX removal, DMEPOCH, DM1/DM2 derivatives."""
 
         # Handle DMEPOCH explicitly - always add to all PTAs
-        reference_dmepoch = reference_dict.get("DMEPOCH", [["55000"]])[0]
+        reference_dmepoch = reference_dict.get("DMEPOCH", ["55000"])[0]
         if isinstance(reference_dmepoch, list):
             reference_dmepoch = reference_dmepoch[0]
         else:
@@ -360,16 +363,16 @@ class ParameterManager:
                 parfile_dict.pop(dmx_param)
                 self.logger.debug(f"PTA {pta_name}: Removed {dmx_param} = {old_value}")
 
-            # Set DMEPOCH for ALL PTAs
-            parfile_dict["DMEPOCH"] = [[f"{reference_dmepoch}", "0"]]  # 0 = frozen
+            # Set DMEPOCH for ALL PTAs (need it for DM1 and DM2)
+            parfile_dict["DMEPOCH"] = [f"{reference_dmepoch} 0"]  # 0 = frozen
             self.logger.debug(
                 f"PTA {pta_name}: Set DMEPOCH = {reference_dmepoch} (frozen)"
             )
 
             # Handle DM derivatives based on add_dm_derivatives flag
             if add_dm_derivatives:
-                parfile_dict["DM1"] = [["0.0", "1"]]
-                parfile_dict["DM2"] = [["0.0", "1"]]
+                parfile_dict["DM1"] = ["0.0 1"]
+                parfile_dict["DM2"] = ["0.0 1"]
                 self.logger.info(f"PTA {pta_name}: Set DM1 = 0.0, DM2 = 0.0")
 
     def _get_dmx_parameters_from_parfile(self, parfile_dict: Dict) -> List[str]:
@@ -386,18 +389,24 @@ class ParameterManager:
 
         return dmx_params
 
-    def _dict_to_parfile_string(self, parfile_dict: Dict) -> str:
-        """Convert par file dictionary back to string format."""
+    def _dict_to_parfile_string(self, parfile_dict: Dict, format: str = "pint") -> str:
+        """Convert par file dictionary to string using PINT's pre-made functions.
+
+        Args:
+            parfile_dict: Dictionary representation of parfile
+            format: Output format ('pint', 'tempo', 'tempo2')
+
+        Returns:
+            Formatted parfile string using PINT's exact formatting
+        """
         try:
-            # Try to use PINT's as_parfile() method
-            temp_content = self._dict_to_parfile_string_custom(parfile_dict)
-
-            # Create PINT model from string
-            model = create_pint_model(temp_content)
-
-            # Use PINT's as_parfile() method
-            return model.as_parfile()
-        except Exception:
+            # Use PINT's pre-made functions for maximum efficiency and consistency
+            return dict_to_parfile_string_pint_driven(parfile_dict, format)
+        except Exception as e:
+            self.logger.warning(
+                f"PINT-driven formatting failed, falling back to custom approach: {e}"
+            )
+            # Fallback to original custom approach if needed
             return self._dict_to_parfile_string_custom(parfile_dict)
 
     def _dict_to_parfile_string_custom(self, parfile_dict: Dict) -> str:
@@ -708,25 +717,6 @@ class ParameterManager:
                     output_file.close()
                     Path(input_file.name).unlink(missing_ok=True)
                     Path(output_file.name).unlink(missing_ok=True)
-
-    def _extract_pulsar_name_from_pint_model(self, parfile_content: str) -> str:
-        """Extract pulsar name from PINT model (PSR parameter)."""
-        from pint.models.model_builder import ModelBuilder
-
-        try:
-            builder = ModelBuilder()
-            model = builder(StringIO(parfile_content), allow_tcb=True, allow_T2=True)
-
-            # Extract pulsar name from PINT model
-            return model.PSR.value
-
-        except Exception as e:
-            raise ValueError(f"Cannot extract pulsar name from parfile content: {e}")
-
-    def _extract_pulsar_name_from_pta(self, pta_name: str) -> str:
-        """Extract pulsar name from PTA using par_content field."""
-        parfile_content = self._get_parfile_content(pta_name)
-        return self._extract_pulsar_name_from_pint_model(parfile_content)
 
     def _is_parameter_for_component(
         self, param_name: str, component_params: List[str]

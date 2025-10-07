@@ -6,7 +6,8 @@ for parameter discovery, alias resolution, and model validation.
 
 from typing import Dict, List
 from pint.models import TimingModel
-from pint.models.model_builder import AllComponents
+from pint.models.timing_model import AllComponents
+from pint.models.parameter import Parameter
 
 
 class PINTDiscoveryError(Exception):
@@ -265,3 +266,63 @@ def create_pint_model(parfile_data) -> TimingModel:
     except Exception as e:
         logger.error(f"Unexpected error creating PINT model: {e}")
         raise PINTDiscoveryError(f"Unexpected error creating PINT model: {e}")
+
+
+def dict_to_parfile_string_pint_driven(parfile_dict: Dict, format: str = "pint") -> str:
+    """Convert parfile dictionary to string using PINT's exact formatting.
+
+    Simple approach that preserves ALL parameters without complex categorization.
+
+    Args:
+        parfile_dict: Dictionary representation of parfile
+        format: Output format ('pint', 'tempo', 'tempo2')
+
+    Returns:
+        Formatted parfile string using PINT's exact formatting
+    """
+    from datetime import datetime
+
+    result = ""
+
+    # Add format headers
+    if format.lower() == "tempo2":
+        result += "MODE 1\n"
+    elif format.lower() == "pint":
+        result += "# Created: " + datetime.now().isoformat() + "\n"
+        result += "# Format: pint\n"
+
+    # Format ALL parameters using PINT's exact formatting
+    for param_name, param_data in parfile_dict.items():
+        if len(param_data) >= 1:
+            # Handle multiple instances of the same parameter (e.g., multiple JUMP parameters)
+            # Multiple instances are detected when we have multiple separate string values
+            if isinstance(param_data[0], str) and len(param_data) > 1:
+                # Multiple string values - iterate through all of them
+                for value in param_data:
+                    # Create Parameter object and use PINT's exact formatting
+                    param = Parameter()
+                    param.name = param_name
+                    param.quantity = value
+                    param.frozen = True  # Default to frozen for multiple instances
+
+                    result += param.as_parfile_line(format=format)
+            else:
+                # Single value or list format
+                value = param_data[0]
+                # Handle different parfile dictionary formats
+                if len(param_data) >= 2:
+                    frozen = param_data[1] == "0"
+                else:
+                    frozen = True  # Default to frozen if not specified
+
+                # Create Parameter object and use PINT's exact formatting
+                param = Parameter()
+                param.name = param_name
+                param.quantity = value
+                param.frozen = frozen
+                # Note: uncertainty cannot be set directly on Parameter object
+                # PINT handles uncertainty formatting in as_parfile_line()
+
+                result += param.as_parfile_line(format=format)
+
+    return result

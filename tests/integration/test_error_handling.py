@@ -117,7 +117,6 @@ C 12345.67890 0.0001
                     "par_content": "PSR J0030+0451\nRAJ 00:30:27.4\nDECJ 04:51:39.7\nF0 327.405\nF1 -1.2e-15\n",
                     "timing_package": "tempo2",
                     "timespan_days": 1000.0,
-                    "priority": 1,
                 }
             ]
         }
@@ -174,7 +173,6 @@ PEPOCH 55000
                             "par_content": minimal_parfile_content,  # Minimal valid content
                             "timing_package": "tempo2",
                             "timespan_days": 1000.0,
-                            "priority": 1,
                         }
                     ]
                 }
@@ -225,7 +223,6 @@ PEPOCH 55000
                             "par_content": valid_parfile_content,  # Valid content for coordinate discovery
                             "timing_package": "tempo2",
                             "timespan_days": 1000.0,
-                            "priority": 1,
                         }
                     ]
                 }

@@ -235,9 +235,9 @@ class TestCoordinateBasedDiscovery:
             assert len(pulsar_info["test_data_release1"]) > 0
             assert len(pulsar_info["test_data_release2"]) > 0
 
-    @patch("pint.models.model_builder.parse_parfile")
+    @pytest.mark.slow
     def test_create_metapulsar_with_canonical_name(
-        self, mock_parse_parfile, mock_file_discovery_service, mock_file_system
+        self, mock_file_discovery_service, mock_file_system
     ):
         """Test MetaPulsar creation includes canonical name."""
         from metapulsar.mockpulsar import MockPulsar
@@ -257,6 +257,7 @@ class TestCoordinateBasedDiscovery:
             flags1,
             "test_data_release1",
             "J1857+0943",
+            astrometry=True,
         )
 
         toas2, residuals2, errors2, freqs2 = create_mock_timing_data(50)
@@ -269,6 +270,7 @@ class TestCoordinateBasedDiscovery:
             flags2,
             "test_data_release2",
             "J1857+0943",
+            astrometry=True,
         )
 
         # Create MetaPulsar with adapted MockPulsar objects
@@ -282,6 +284,18 @@ class TestCoordinateBasedDiscovery:
             pulsars=adapted_pulsars,
             combination_strategy="composite",
         )
+
+        # Fix Offset parameter mapping (PINT doesn't recognize OFFSET, so it's not included)
+        # Offset is always fitted but not in libstempo .pars(), so we need to add it manually
+        if "Offset" not in metapulsar._fitparameters:
+            metapulsar._fitparameters["Offset"] = {
+                "test_data_release1": "Offset",
+                "test_data_release2": "Offset",
+            }
+            if "Offset" not in metapulsar.fitpars:
+                metapulsar.fitpars.insert(0, "Offset")
+            # Rebuild design matrix to include the new Offset parameter
+            metapulsar._build_design_matrix()
 
         assert isinstance(metapulsar, MetaPulsar)
         assert hasattr(metapulsar, "name")

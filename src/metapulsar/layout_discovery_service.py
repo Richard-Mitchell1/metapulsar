@@ -129,7 +129,6 @@ class LayoutDiscoveryService:
             "par_pattern": par_pattern,
             "tim_pattern": tim_pattern,
             "timing_package": detected_timing_package,
-            "priority": 1,  # Default priority
             "description": f"Auto-discovered PTA from {structure['base_path']}",
             "discovery_confidence": self._calculate_confidence(structure),
         }

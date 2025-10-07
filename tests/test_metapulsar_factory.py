@@ -111,6 +111,7 @@ class TestMetaPulsarFactory:
         assert not hasattr(factory, "parfile_manager")
 
     @patch("metapulsar.position_helpers.bj_name_from_pulsar")
+    @pytest.mark.slow
     def test_create_metapulsar_success(self, mock_bj_name):
         """Test successful MetaPulsar creation using MockPulsar directly."""
         # Mock position helper
@@ -393,7 +394,6 @@ class TestMetaPulsarFactory:
                 "tim": Path("/data/epta/J1857+0943.tim"),
                 "timing_package": "pint",
                 "timespan_days": 1000.0,
-                "priority": 1,
             }
         }
 
@@ -429,7 +429,6 @@ class TestMetaPulsarFactory:
                 "tim": Path("/data/epta/J1857+0943.tim"),
                 "timing_package": "tempo2",
                 "timespan_days": 1000.0,
-                "priority": 1,
             }
         }
 

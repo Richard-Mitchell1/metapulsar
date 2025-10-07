@@ -223,7 +223,6 @@ class TestLayoutDiscoveryService:
             assert "par_pattern" in data_release
             assert "tim_pattern" in data_release
             assert "timing_package" in data_release
-            assert "priority" in data_release
             assert "description" in data_release
             assert "discovery_confidence" in data_release
             assert data_release["timing_package"] == "tempo2"

@@ -195,6 +195,36 @@ class MetaPulsar(ep.BasePulsar):
         g = groupby(iterable)
         return next(g, True) and not next(g, False)
 
+    def _get_libstempo_parfile_content(self, lt_psr):
+        """Get parfile content as string from libstempo pulsar object.
+
+        Args:
+            lt_psr: libstempo tempopulsar object
+
+        Returns:
+            str: Parfile content as string
+        """
+        import tempfile
+        import os
+
+        # Create temporary file for libstempo to write to
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".par", delete=False
+        ) as temp_file:
+            temp_parfile = temp_file.name
+
+        try:
+            # Use libstempo's savepar method to write parfile content
+            lt_psr.savepar(temp_parfile)
+
+            # Read the content back
+            with open(temp_parfile, "r") as f:
+                return f.read()
+        finally:
+            # Clean up temporary file
+            if os.path.exists(temp_parfile):
+                os.unlink(temp_parfile)
+
     def _setup_parameters(self):
         """Setup parameter management using existing infrastructure."""
         if self.combination_strategy == "composite":
@@ -206,21 +236,27 @@ class MetaPulsar(ep.BasePulsar):
 
     def _setup_composite_parameters(self):
         """Setup parameters for composite strategy (preserve original PTA parameters)."""
-        # Get PINT models directly from the unpacked data
-        pint_models, _, _ = self._unpack_pulsar_data()
-
-        if not pint_models:
-            # No PINT models available, try to get parameters from Enterprise Pulsars
-            self._setup_parameters_from_enterprise_pulsars()
-            return
+        # Get both PINT models and libstempo pulsars from the unpacked data
+        pint_models, _, lt_pulsars = self._unpack_pulsar_data()
 
         # Create file data for ParameterManager
         file_data = {}
+
+        # Handle PINT models
         for pta_name, model in pint_models.items():
             # Create minimal file data structure for ParameterManager
             file_data[pta_name] = {
                 "par": None,  # Not needed for parameter mapping
                 "par_content": model.as_parfile(),
+            }
+
+        # Handle libstempo pulsars
+        for pta_name, lt_psr in lt_pulsars.items():
+            # Get parfile content using helper method
+            parfile_content = self._get_libstempo_parfile_content(lt_psr)
+            file_data[pta_name] = {
+                "par": None,  # Not needed for parameter mapping
+                "par_content": parfile_content,
             }
 
         # Create ParameterManager for parameter mapping
@@ -238,13 +274,8 @@ class MetaPulsar(ep.BasePulsar):
 
     def _setup_consistent_parameters(self):
         """Setup parameters for consistent strategy (use consistent parameters)."""
-        # Get PINT models directly from the unpacked data
-        pint_models, _, _ = self._unpack_pulsar_data()
-
-        if not pint_models:
-            # No PINT models available, try to get parameters from Enterprise Pulsars
-            self._setup_parameters_from_enterprise_pulsars()
-            return
+        # Get both PINT models and libstempo pulsars from the unpacked data
+        pint_models, _, lt_pulsars = self._unpack_pulsar_data()
 
         # Convert individual merge flags to combine_components list
         # Use combine_components from constructor
@@ -252,11 +283,22 @@ class MetaPulsar(ep.BasePulsar):
 
         # Create file data for ParameterManager
         file_data = {}
+
+        # Handle PINT models
         for pta_name, model in pint_models.items():
             # Create minimal file data structure for ParameterManager
             file_data[pta_name] = {
                 "par": None,  # Not needed for parameter mapping
                 "par_content": model.as_parfile(),
+            }
+
+        # Handle libstempo pulsars
+        for pta_name, lt_psr in lt_pulsars.items():
+            # Get parfile content using helper method
+            parfile_content = self._get_libstempo_parfile_content(lt_psr)
+            file_data[pta_name] = {
+                "par": None,  # Not needed for parameter mapping
+                "par_content": parfile_content,
             }
 
         # Create ParameterManager for parameter mapping
@@ -270,37 +312,6 @@ class MetaPulsar(ep.BasePulsar):
 
         self._fitparameters = mapping.fitparameters
         self._setparameters = mapping.setparameters
-        self.fitpars = list(self._fitparameters.keys())
-        self.setpars = list(self._setparameters.keys())
-
-    def _setup_parameters_from_enterprise_pulsars(self):
-        """Setup parameters from Enterprise Pulsars when no PINT models are available."""
-        # For MockPulsar and other Enterprise Pulsars, collect parameters directly
-        all_fitpars = set()
-        all_setpars = set()
-
-        for pta, psr in self._epulsars.items():
-            if hasattr(psr, "fitpars"):
-                all_fitpars.update(psr.fitpars)
-            if hasattr(psr, "setpars"):
-                all_setpars.update(psr.setpars)
-
-        # Create parameter mappings
-        self._fitparameters = {}
-        self._setparameters = {}
-
-        for parname in all_fitpars:
-            self._fitparameters[parname] = {}
-            for pta, psr in self._epulsars.items():
-                if hasattr(psr, "fitpars") and parname in psr.fitpars:
-                    self._fitparameters[parname][pta] = parname
-
-        for parname in all_setpars:
-            self._setparameters[parname] = {}
-            for pta, psr in self._epulsars.items():
-                if hasattr(psr, "setpars") and parname in psr.setpars:
-                    self._setparameters[parname][pta] = parname
-
         self.fitpars = list(self._fitparameters.keys())
         self.setpars = list(self._setparameters.keys())
 

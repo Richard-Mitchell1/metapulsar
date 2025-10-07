@@ -53,6 +53,7 @@ class TestMetaPulsarPositionAndFinalization:
         }
         self.metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
+    @pytest.mark.slow
     def test_setup_position_and_planets_basic(self):
         """Test basic position and planetary data setup."""
         # Check that position attributes are set
@@ -70,6 +71,7 @@ class TestMetaPulsarPositionAndFinalization:
         assert isinstance(self.metapulsar._pos, np.ndarray)
         assert isinstance(self.metapulsar._pos_t, np.ndarray)
 
+    @pytest.mark.slow
     def test_setup_position_and_planets_shape(self):
         """Test that position arrays have correct shapes."""
         n_toas = len(self.metapulsar._toas)
@@ -78,17 +80,20 @@ class TestMetaPulsarPositionAndFinalization:
         assert self.metapulsar._pos.shape == (n_toas, 3)
         assert self.metapulsar._pos_t.shape == (n_toas, 3)
 
+    @pytest.mark.slow
     def test_setup_position_and_planets_empty_pulsars(self):
         """Test position setup with empty pulsar list."""
         # Empty pulsars should raise an exception
         with pytest.raises(StopIteration):
             MetaPulsar({}, combination_strategy="composite")
 
+    @pytest.mark.slow
     def test_validate_consistency_success(self):
         """Test successful consistency validation."""
         pulsar_name = self.metapulsar.validate_consistency()
         assert pulsar_name == "J1857+0943"
 
+    @pytest.mark.slow
     def test_validate_consistency_different_pulsars(self):
         """Test consistency validation with different pulsars."""
         # Create pulsars with different names
@@ -116,12 +121,14 @@ class TestMetaPulsarPositionAndFinalization:
         with pytest.raises(ValueError, match="Not all the same pulsar"):
             inconsistent_mp.validate_consistency()
 
+    @pytest.mark.slow
     def test_validate_consistency_no_pulsars(self):
         """Test consistency validation with no pulsars."""
         # Empty pulsars should raise an exception during construction
         with pytest.raises(StopIteration):
             MetaPulsar({}, combination_strategy="composite")
 
+    @pytest.mark.slow
     def test_validate_consistency_no_epulsars(self):
         """Test consistency validation before Enterprise Pulsars are created."""
         # Create MetaPulsar but don't initialize it
@@ -131,6 +138,7 @@ class TestMetaPulsarPositionAndFinalization:
         with pytest.raises(ValueError, match="No Enterprise Pulsars created yet"):
             mp.validate_consistency()
 
+    @pytest.mark.slow
     def test_position_attributes_consistency(self):
         """Test that position attributes are consistent across PTAs."""
         # Get position data from individual PTAs
@@ -160,6 +168,7 @@ class TestMetaPulsarPositionAndFinalization:
         np.testing.assert_array_almost_equal(combined_pta1_pos, expected_pta1_pos)
         np.testing.assert_array_almost_equal(combined_pta2_pos, expected_pta2_pos)
 
+    @pytest.mark.slow
     def test_planetary_data_setup(self):
         """Test that planetary data is properly set up."""
         # Planetary data should be copied from reference pulsar
@@ -169,6 +178,7 @@ class TestMetaPulsarPositionAndFinalization:
         assert self.metapulsar._sunssb is ref_psr._sunssb
         assert self.metapulsar._pdist is ref_psr._pdist
 
+    @pytest.mark.slow
     def test_position_coordinates(self):
         """Test that position coordinates are properly set."""
         ref_psr = next(iter(self.metapulsar._epulsars.values()))
@@ -177,6 +187,7 @@ class TestMetaPulsarPositionAndFinalization:
         assert self.metapulsar._raj == ref_psr._raj
         assert self.metapulsar._decj == ref_psr._decj
 
+    @pytest.mark.slow
     def test_bj_name_generation(self):
         """Test that B/J name generation is called."""
         # This test verifies that the bj_name_from_pulsar function is called
@@ -185,6 +196,7 @@ class TestMetaPulsarPositionAndFinalization:
         self.metapulsar._setup_position_and_planets()
         # If we get here without error, the B/J name generation worked
 
+    @pytest.mark.slow
     def test_position_and_finalization_integration(self):
         """Test that all position setup and finalization methods work together."""
         # Test that position setup works with validation
@@ -196,6 +208,7 @@ class TestMetaPulsarPositionAndFinalization:
         assert hasattr(self.metapulsar, "_decj")
         assert hasattr(self.metapulsar, "_pos")
 
+    @pytest.mark.slow
     def test_validate_consistency_with_missing_names(self):
         """Test consistency validation with pulsars missing name attributes."""
         # Create a mock pulsar without name attribute
@@ -217,6 +230,7 @@ class TestMetaPulsarPositionAndFinalization:
         with pytest.raises(AttributeError):
             MetaPulsar({"test_pta": adapted_pulsar}, combination_strategy="composite")
 
+    @pytest.mark.slow
     def test_all_equal_helper_method(self):
         """Test the _all_equal helper method."""
         # Test with equal values

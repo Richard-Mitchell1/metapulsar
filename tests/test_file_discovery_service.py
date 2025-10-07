@@ -175,7 +175,6 @@ class TestFileDiscoveryService:
             "par_pattern": r"test_(\w+)\.par",
             "tim_pattern": r"test_(\w+)\.tim",
             "timing_package": "pint",
-            "priority": 1,
         }
 
         service.add_data_release("test_data_release", new_config)
@@ -211,7 +210,6 @@ class TestFileDiscoveryService:
             "par_pattern": r"test_(\w+)\.par",
             "tim_pattern": r"test_(\w+)\.tim",
             "timing_package": "pint",
-            "priority": 1,
         }
 
         # Should not raise any exception
@@ -238,7 +236,6 @@ class TestFileDiscoveryService:
             "par_pattern": r"test_(\w+)\.par",
             "tim_pattern": r"test_(\w+)\.tim",
             "timing_package": "invalid",
-            "priority": 1,
         }
 
         with pytest.raises(ValueError, match="Invalid timing_package"):
@@ -253,7 +250,6 @@ class TestFileDiscoveryService:
             "par_pattern": r"invalid[regex",  # Invalid regex
             "tim_pattern": r"test_(\w+)\.tim",
             "timing_package": "pint",
-            "priority": 1,
         }
 
         with pytest.raises(ValueError, match="Invalid regex pattern"):
@@ -321,7 +317,6 @@ class TestFileDiscoveryService:
             "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.par",
             "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})\.tim",
             "timing_package": "tempo2",
-            "priority": 1,
         }
 
         result = service._discover_all_file_pairs_in_data_release(config)

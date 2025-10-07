@@ -454,23 +454,6 @@ class MetaPulsarFactory:
 
         return parfile_dicts
 
-    def _extract_pulsar_name_from_pint_model(self, parfile_path: Path) -> str:
-        """Extract pulsar name from PINT model (PSR parameter)."""
-        from pint.models.model_builder import ModelBuilder
-        from io import StringIO
-
-        try:
-            with open(parfile_path, "r") as f:
-                par_content = f.read()
-
-            builder = ModelBuilder()
-            model = builder(StringIO(par_content), allow_tcb=True, allow_T2=True)
-
-            return model.PSR.value
-
-        except Exception as e:
-            raise ValueError(f"Cannot extract pulsar name from {parfile_path}: {e}")
-
     def _create_raw_pulsars(
         self,
         file_pairs: Dict[str, Tuple[Path, Path]],
