@@ -357,7 +357,9 @@ class TestMetaPulsarFactory:
         # First discover files using the service
         try:
             # Discover all files in test PTAs
-            file_data = self.discovery_service.discover_all_files_in_ptas(["epta_dr2"])
+            file_data = self.discovery_service.discover_all_files_in_data_releases(
+                ["epta_dr2"]
+            )
 
             # Create MetaPulsars from discovered files
             self.factory.create_metapulsars_from_file_data(file_data)
@@ -371,13 +373,13 @@ class TestMetaPulsarFactory:
         """Test integration with FileDiscoveryService."""
         # Test that FileDiscoveryService can be used independently
         assert self.discovery_service is not None
-        assert hasattr(self.discovery_service, "discover_all_files_in_ptas")
-        assert hasattr(self.discovery_service, "list_ptas")
+        assert hasattr(self.discovery_service, "discover_all_files_in_data_releases")
+        assert hasattr(self.discovery_service, "list_data_releases")
 
         # Test listing PTAs
-        ptas = self.discovery_service.list_ptas()
-        assert isinstance(ptas, list)
-        assert len(ptas) > 0
+        data_releases = self.discovery_service.list_data_releases()
+        assert isinstance(data_releases, list)
+        assert len(data_releases) > 0
 
     def test_build_metadata(self):
         """Test metadata building."""

@@ -17,7 +17,9 @@ class TestErrorHandling:
         # Test with non-existent PTA
         discovery_service = FileDiscoveryService()
         with pytest.raises(KeyError):
-            discovery_service.discover_all_files_in_ptas(["nonexistent_config"])
+            discovery_service.discover_all_files_in_data_releases(
+                ["nonexistent_config"]
+            )
 
     @pytest.mark.slow
     def test_missing_par_files(self, available_data_sets):
@@ -29,7 +31,7 @@ class TestErrorHandling:
         # For now, just test that the service can be used
         discovery_service = FileDiscoveryService()
         try:
-            discovery_service.discover_all_files_in_ptas(["epta_dr1_v2_2"])
+            discovery_service.discover_all_files_in_data_releases(["epta_dr1_v2_2"])
             # Implementation is stubbed, so this will likely fail
         except Exception:
             # Expected since implementation is not complete
@@ -117,8 +119,8 @@ C 12345.67890 0.0001
                     MetaPulsarFactory().create_metapulsar(file_data)
 
     @pytest.mark.slow
-    def test_invalid_pta_config(self):
-        """Test handling of invalid PTA configurations."""
+    def test_invalid_data_release_config(self):
+        """Test handling of invalid data release configurations."""
         # Test with invalid PTA config name
         with pytest.raises(KeyError):
             PTA_DATA_RELEASES["invalid_config"]

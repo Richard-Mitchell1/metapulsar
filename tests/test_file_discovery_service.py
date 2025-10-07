@@ -12,7 +12,7 @@ class TestFileDiscoveryService:
     def test_init_default_configs(self):
         """Test initialization with default configurations."""
         service = FileDiscoveryService()
-        assert service.pta_data_releases == PTA_DATA_RELEASES
+        assert service.data_releases == PTA_DATA_RELEASES
 
     def test_init_custom_configs(self):
         """Test initialization with custom configurations."""
@@ -25,10 +25,10 @@ class TestFileDiscoveryService:
             }
         }
         service = FileDiscoveryService(custom_data_releases)
-        assert service.pta_data_releases == custom_data_releases
+        assert service.data_releases == custom_data_releases
 
-    def test_discover_patterns_in_pta_success(self):
-        """Test discovering patterns in a single PTA."""
+    def test_discover_patterns_in_data_release_success(self):
+        """Test discovering patterns in a single data release."""
         service = FileDiscoveryService()
 
         with patch.object(
@@ -36,34 +36,38 @@ class TestFileDiscoveryService:
         ) as mock_discover:
             mock_discover.return_value = ["J1857+0943", "B1855+09"]
 
-            result = service.discover_patterns_in_pta("epta_dr2")
+            result = service.discover_patterns_in_data_release("epta_dr2")
 
             assert result == ["J1857+0943", "B1855+09"]
             mock_discover.assert_called_once()
 
-    def test_discover_patterns_in_pta_not_found(self):
-        """Test discovering patterns with non-existent PTA."""
+    def test_discover_patterns_in_data_release_not_found(self):
+        """Test discovering patterns with non-existent data release."""
         service = FileDiscoveryService()
 
-        with pytest.raises(KeyError, match="PTA 'nonexistent' not found"):
-            service.discover_patterns_in_pta("nonexistent")
+        with pytest.raises(KeyError, match="Data release 'nonexistent' not found"):
+            service.discover_patterns_in_data_release("nonexistent")
 
-    def test_discover_patterns_in_ptas_success(self):
-        """Test discovering patterns in multiple PTAs."""
+    def test_discover_patterns_in_data_releases_success(self):
+        """Test discovering patterns in multiple data releases."""
         service = FileDiscoveryService()
 
-        with patch.object(service, "discover_patterns_in_pta") as mock_discover:
+        with patch.object(
+            service, "discover_patterns_in_data_release"
+        ) as mock_discover:
             mock_discover.side_effect = [["J1857+0943"], ["J1857+0943", "B1855+09"]]
 
-            result = service.discover_patterns_in_ptas(["epta_dr2", "ppta_dr2"])
+            result = service.discover_patterns_in_data_releases(
+                ["epta_dr2", "ppta_dr2"]
+            )
 
             assert result == {
                 "epta_dr2": ["J1857+0943"],
                 "ppta_dr2": ["J1857+0943", "B1855+09"],
             }
 
-    def test_discover_all_files_in_ptas_success(self):
-        """Test discovering all files in PTAs."""
+    def test_discover_all_files_in_data_releases_success(self):
+        """Test discovering all files in data releases."""
         service = FileDiscoveryService()
 
         with patch.object(
@@ -79,7 +83,7 @@ class TestFileDiscoveryService:
                 }
             ]
 
-            result = service.discover_all_files_in_ptas(["epta_dr2"])
+            result = service.discover_all_files_in_data_releases(["epta_dr2"])
 
             assert "epta_dr2" in result
             assert len(result["epta_dr2"]) == 1
@@ -88,11 +92,11 @@ class TestFileDiscoveryService:
             assert result["epta_dr2"][0]["timing_package"] == "tempo2"
             # Priority field removed - no longer included in results
 
-    def test_discover_all_files_in_ptas_all_ptas(self):
-        """Test discovering files in all PTAs when no specific PTAs provided."""
+    def test_discover_all_files_in_data_releases_all_data_releases(self):
+        """Test discovering files in all data releases when no specific data releases provided."""
         service = FileDiscoveryService()
 
-        with patch.object(service, "list_ptas") as mock_list:
+        with patch.object(service, "list_data_releases") as mock_list:
             mock_list.return_value = ["epta_dr2", "ppta_dr2"]
 
             with patch.object(
@@ -100,23 +104,23 @@ class TestFileDiscoveryService:
             ) as mock_discover:
                 mock_discover.return_value = []
 
-                result = service.discover_all_files_in_ptas()
+                result = service.discover_all_files_in_data_releases()
 
                 assert "epta_dr2" in result
                 assert "ppta_dr2" in result
 
-    def test_list_ptas_alphabetical(self):
-        """Test listing PTAs sorted alphabetically."""
+    def test_list_data_releases_alphabetical(self):
+        """Test listing data releases sorted alphabetically."""
         service = FileDiscoveryService()
 
-        result = service.list_ptas()
+        result = service.list_data_releases()
 
         # Should be sorted alphabetically
         assert isinstance(result, list)
         assert len(result) > 0
 
-    def test_add_pta_success(self):
-        """Test adding a new PTA configuration."""
+    def test_add_data_release_success(self):
+        """Test adding a new data release configuration."""
         service = FileDiscoveryService()
 
         new_config = {
@@ -127,20 +131,20 @@ class TestFileDiscoveryService:
             "priority": 1,
         }
 
-        service.add_pta("test_pta", new_config)
+        service.add_data_release("test_data_release", new_config)
 
-        assert "test_pta" in service.pta_data_releases
-        assert service.pta_data_releases["test_pta"] == new_config
+        assert "test_data_release" in service.data_releases
+        assert service.data_releases["test_data_release"] == new_config
 
-    def test_add_pta_duplicate(self):
-        """Test adding duplicate PTA configuration."""
+    def test_add_data_release_duplicate(self):
+        """Test adding duplicate data release configuration."""
         service = FileDiscoveryService()
 
-        with pytest.raises(ValueError, match="PTA 'epta_dr2' already exists"):
-            service.add_pta("epta_dr2", {})
+        with pytest.raises(ValueError, match="Data release 'epta_dr2' already exists"):
+            service.add_data_release("epta_dr2", {})
 
-    def test_add_pta_invalid_config(self):
-        """Test adding PTA with invalid configuration."""
+    def test_add_data_release_invalid_config(self):
+        """Test adding data release with invalid configuration."""
         service = FileDiscoveryService()
 
         invalid_config = {
@@ -149,7 +153,7 @@ class TestFileDiscoveryService:
         }
 
         with pytest.raises(ValueError, match="Missing required keys"):
-            service.add_pta("test_pta", invalid_config)
+            service.add_data_release("test_data_release", invalid_config)
 
     def test_validate_config_success(self):
         """Test validating valid configuration."""

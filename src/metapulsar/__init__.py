@@ -39,6 +39,5 @@ __all__ = [
     "MockPulsar",
     "TimFileAnalyzer",
     "create_staggered_selection",
-    # Exceptions
     "PINTDiscoveryError",
 ]

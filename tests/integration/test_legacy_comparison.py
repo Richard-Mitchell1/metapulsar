@@ -16,7 +16,9 @@ class TestLegacyComparison:
         discovery_service = FileDiscoveryService()
 
         # Discover files for all PTAs
-        file_data = discovery_service.discover_all_files_in_ptas(pta_data_releases)
+        file_data = discovery_service.discover_all_files_in_data_releases(
+            pta_data_releases
+        )
 
         # Filter file_data to only include files for this pulsar
         filtered_file_data = {}
@@ -103,7 +105,7 @@ class TestLegacyComparison:
 
             # Create new MetaPulsar using file_data
             discovery_service = FileDiscoveryService()
-            file_data = discovery_service.discover_all_files_in_ptas(
+            file_data = discovery_service.discover_all_files_in_data_releases(
                 test_pta_data_releases
             )
 
@@ -296,7 +298,7 @@ class TestLegacyComparison:
 
                 # Create new MetaPulsar using file_data
                 discovery_service = FileDiscoveryService()
-                file_data = discovery_service.discover_all_files_in_ptas(
+                file_data = discovery_service.discover_all_files_in_data_releases(
                     test_pta_data_releases
                 )
 
@@ -393,7 +395,7 @@ class TestLegacyComparison:
 
             # Create new MetaPulsar using file_data
             discovery_service = FileDiscoveryService()
-            file_data = discovery_service.discover_all_files_in_ptas(
+            file_data = discovery_service.discover_all_files_in_data_releases(
                 test_pta_data_releases
             )
 
@@ -483,7 +485,7 @@ class TestLegacyComparison:
 
             # Create new MetaPulsar using file_data
             discovery_service = FileDiscoveryService()
-            file_data = discovery_service.discover_all_files_in_ptas(
+            file_data = discovery_service.discover_all_files_in_data_releases(
                 test_pta_data_releases
             )
 

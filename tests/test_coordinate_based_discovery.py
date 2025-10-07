@@ -44,8 +44,8 @@ from metapulsar.metapulsar import MetaPulsar
 def mock_file_discovery_service():
     """Mock FileDiscoveryService with test configurations."""
     service = FileDiscoveryService({})  # Start with empty config
-    service.add_pta(
-        "test_pta1",
+    service.add_data_release(
+        "test_data_release1",
         {
             "base_dir": "/test/data1",
             "par_pattern": r"([JB]\d{4}[+-]\d{2,4}[A-Z]?)\.par",
@@ -53,8 +53,8 @@ def mock_file_discovery_service():
             "timing_package": "pint",
         },
     )
-    service.add_pta(
-        "test_pta2",
+    service.add_data_release(
+        "test_data_release2",
         {
             "base_dir": "/test/data2",
             "par_pattern": r"([JB]\d{4}[+-]\d{2,4}[A-Z]?)\.par",
@@ -204,11 +204,11 @@ class TestCoordinateBasedDiscovery:
         mock_model_builder_class.return_value = mock_model_builder
 
         # Update registry with real paths
-        mock_file_discovery_service.pta_data_releases["test_pta1"]["base_dir"] = str(
-            mock_file_system / "data1"
+        mock_file_discovery_service.data_releases["test_data_release1"]["base_dir"] = (
+            str(mock_file_system / "data1")
         )
-        mock_file_discovery_service.pta_data_releases["test_pta2"]["base_dir"] = str(
-            mock_file_system / "data2"
+        mock_file_discovery_service.data_releases["test_data_release2"]["base_dir"] = (
+            str(mock_file_system / "data2")
         )
 
         # factory = MetaPulsarFactory()
@@ -221,7 +221,7 @@ class TestCoordinateBasedDiscovery:
 
             # Create file_data format expected by the method
             file_data = {
-                "test_pta1": [
+                "test_data_release1": [
                     {
                         "par": mock_file_system / "data1" / "J1857+0943.par",
                         "tim": mock_file_system / "data1" / "J1857+0943.tim",
@@ -230,7 +230,7 @@ class TestCoordinateBasedDiscovery:
                         "timespan_days": 1000.0,
                     }
                 ],
-                "test_pta2": [
+                "test_data_release2": [
                     {
                         "par": mock_file_system / "data2" / "J1857+0943.par",
                         "tim": mock_file_system / "data2" / "J1857+0943.tim",
@@ -245,11 +245,11 @@ class TestCoordinateBasedDiscovery:
             # Should find both PTAs have the same pulsar
             assert "J1857+0943" in coordinate_map
             pulsar_info = coordinate_map["J1857+0943"]
-            assert "test_pta1" in pulsar_info
-            assert "test_pta2" in pulsar_info
+            assert "test_data_release1" in pulsar_info
+            assert "test_data_release2" in pulsar_info
             # Check that both PTAs have file data
-            assert len(pulsar_info["test_pta1"]) > 0
-            assert len(pulsar_info["test_pta2"]) > 0
+            assert len(pulsar_info["test_data_release1"]) > 0
+            assert len(pulsar_info["test_data_release2"]) > 0
 
     # Note: _extract_suffix_from_filename and _find_file methods were removed in refactor
     # These tests are no longer applicable as the functionality was replaced with PINT-based approach
@@ -271,23 +271,35 @@ class TestCoordinateBasedDiscovery:
 
         # Create mock timing data for two PTAs
         toas1, residuals1, errors1, freqs1 = create_mock_timing_data(50)
-        flags1 = create_mock_flags(50, telescope="test_pta1")
+        flags1 = create_mock_flags(50, telescope="test_data_release1")
         mock_psr1 = MockPulsar(
-            toas1, residuals1, errors1, freqs1, flags1, "test_pta1", "J1857+0943"
+            toas1,
+            residuals1,
+            errors1,
+            freqs1,
+            flags1,
+            "test_data_release1",
+            "J1857+0943",
         )
 
         toas2, residuals2, errors2, freqs2 = create_mock_timing_data(50)
-        flags2 = create_mock_flags(50, telescope="test_pta2")
+        flags2 = create_mock_flags(50, telescope="test_data_release2")
         mock_psr2 = MockPulsar(
-            toas2, residuals2, errors2, freqs2, flags2, "test_pta2", "J1857+0943"
+            toas2,
+            residuals2,
+            errors2,
+            freqs2,
+            flags2,
+            "test_data_release2",
+            "J1857+0943",
         )
 
         # Create MetaPulsar with adapted MockPulsar objects
         from metapulsar.mockpulsar import create_libstempo_adapter
 
         adapted_pulsars = {
-            "test_pta1": create_libstempo_adapter(mock_psr1),
-            "test_pta2": create_libstempo_adapter(mock_psr2),
+            "test_data_release1": create_libstempo_adapter(mock_psr1),
+            "test_data_release2": create_libstempo_adapter(mock_psr2),
         }
         metapulsar = MetaPulsar(
             pulsars=adapted_pulsars,
@@ -303,19 +315,21 @@ class TestCoordinateBasedDiscovery:
     def test_discover_files_coordinate_matching(self, mock_file_discovery_service):
         """Test file discovery with coordinate matching using FileDiscoveryService."""
         # Test that FileDiscoveryService can discover files for a pulsar
-        files = mock_file_discovery_service.discover_all_files_in_ptas(
-            ["test_pta1", "test_pta2"]
+        files = mock_file_discovery_service.discover_all_files_in_data_releases(
+            ["test_data_release1", "test_data_release2"]
         )
 
         # Should return file data for both PTAs
-        assert "test_pta1" in files
-        assert "test_pta2" in files
+        assert "test_data_release1" in files
+        assert "test_data_release2" in files
 
     def test_discover_files_pulsar_not_found(self, mock_file_discovery_service):
         """Test file discovery when pulsar not found using FileDiscoveryService."""
         # Test that FileDiscoveryService handles unknown PTAs gracefully
         with pytest.raises(KeyError):
-            mock_file_discovery_service.discover_all_files_in_ptas(["unknown_pta"])
+            mock_file_discovery_service.discover_all_files_in_data_releases(
+                ["unknown_pta"]
+            )
 
 
 class TestEdgeCases:
@@ -330,8 +344,8 @@ class TestEdgeCases:
         malformed_par.write_text("This is not a valid parfile")
 
         # Update the mock service with the test directory
-        mock_file_discovery_service.pta_data_releases["test_pta1"]["base_dir"] = str(
-            mock_file_system / "data1"
+        mock_file_discovery_service.data_releases["test_data_release1"]["base_dir"] = (
+            str(mock_file_system / "data1")
         )
 
         # factory = MetaPulsarFactory()
@@ -341,7 +355,7 @@ class TestEdgeCases:
 
             # Create file_data format expected by the method
             file_data = {
-                "test_pta1": [
+                "test_data_release1": [
                     {
                         "par": mock_file_system / "data1" / "malformed.par",
                         "tim": mock_file_system / "data1" / "malformed.tim",

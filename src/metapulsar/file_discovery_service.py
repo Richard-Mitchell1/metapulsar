@@ -1,6 +1,6 @@
 """File Discovery Service for PTA data files.
 
-This service handles all file discovery operations and PTA directory layout management.
+This service handles all file discovery operations and data release directory layout management.
 It is completely independent - NO external dependencies on PINT, libstempo, or other components.
 Uses only regex patterns for file matching and pattern extraction.
 """
@@ -107,9 +107,9 @@ def extract_pulsar_name_from_path(
 
 
 class FileDiscoveryService:
-    """Independent service for discovering PTA data files and managing PTA directory layouts.
+    """Independent service for discovering PTA data files and managing data release directory layouts.
 
-    This service handles all PTA-related operations and can be used
+    This service handles all data release-related operations and can be used
     independently of MetaPulsarFactory and ParFileManager.
 
     Key Features:
@@ -123,104 +123,116 @@ class FileDiscoveryService:
         """Initialize the file discovery service.
 
         Args:
-            pta_data_releases: Dictionary of PTA data releases. If None, uses default presets.
+            pta_data_releases: Dictionary of data releases. If None, uses default presets.
             working_dir: Working directory for resolving relative paths. If None, uses current working directory.
         """
         self.working_dir = Path(working_dir) if working_dir else Path.cwd()
-        self.pta_data_releases = pta_data_releases or PTA_DATA_RELEASES.copy()
+        self.data_releases = pta_data_releases or PTA_DATA_RELEASES.copy()
         self.logger = logger
 
-    def discover_patterns_in_pta(self, pta_name: str) -> List[str]:
-        """Discover all file patterns in a single PTA using regex.
+    def discover_patterns_in_data_release(self, data_release_name: str) -> List[str]:
+        """Discover all file patterns in a single data release using regex.
 
         Args:
-            pta_name: Name of the PTA to search
+            data_release_name: Name of the data release to search
 
         Returns:
             List of regex-extracted patterns (NOT validated pulsar names)
 
         Raises:
-            KeyError: If PTA not found in directory layouts
+            KeyError: If data release not found in directory layouts
         """
-        if pta_name not in self.pta_data_releases:
-            raise KeyError(f"PTA '{pta_name}' not found in data releases")
+        if data_release_name not in self.data_releases:
+            raise KeyError(
+                f"Data release '{data_release_name}' not found in data releases"
+            )
 
-        data_release = self.pta_data_releases[pta_name]
+        data_release = self.data_releases[data_release_name]
         return self._discover_patterns_in_data_release(data_release)
 
-    def discover_patterns_in_ptas(self, pta_names: List[str]) -> Dict[str, List[str]]:
-        """Discover all file patterns in multiple PTAs using regex.
+    def discover_patterns_in_data_releases(
+        self, data_release_names: List[str]
+    ) -> Dict[str, List[str]]:
+        """Discover all file patterns in multiple data releases using regex.
 
         Args:
-            pta_names: List of PTA names to search
+            data_release_names: List of data release names to search
 
         Returns:
-            Dictionary mapping PTA names to lists of regex-extracted patterns
+            Dictionary mapping data release names to lists of regex-extracted patterns
         """
         result = {}
-        for pta_name in pta_names:
+        for data_release_name in data_release_names:
             try:
-                result[pta_name] = self.discover_patterns_in_pta(pta_name)
+                result[data_release_name] = self.discover_patterns_in_data_release(
+                    data_release_name
+                )
             except KeyError as e:
-                self.logger.error(f"PTA '{pta_name}' not found in directory layouts")
+                self.logger.error(
+                    f"Data release '{data_release_name}' not found in directory layouts"
+                )
                 raise e
         return result
 
-    def discover_all_files_in_ptas(
-        self, pta_names: List[str] = None
+    def discover_all_files_in_data_releases(
+        self, data_release_names: List[str] = None
     ) -> Dict[str, List[Dict[str, Any]]]:
-        """Discover all file pairs in selected PTAs using regex patterns.
+        """Discover all file pairs in selected data releases using regex patterns.
 
         Args:
-            pta_names: List of PTA names to search. If None, searches all PTAs.
+            data_release_names: List of data release names to search. If None, searches all data releases.
 
         Returns:
-            Dictionary mapping PTA names to lists of enriched file dictionaries
-            Format: {pta_name: [{'par': parfile_path, 'tim': timfile_path, 'timing_package': 'pint', 'timespan_days': 1000.0}, ...]}
+            Dictionary mapping data release names to lists of enriched file dictionaries
+            Format: {data_release_name: [{'par': parfile_path, 'tim': timfile_path, 'timing_package': 'pint', 'timespan_days': 1000.0}, ...]}
         """
-        if pta_names is None:
-            pta_names = self.list_ptas()
+        if data_release_names is None:
+            data_release_names = self.list_data_releases()
 
         result = {}
 
-        for pta_name in pta_names:
-            if pta_name not in self.pta_data_releases:
-                self.logger.error(f"PTA '{pta_name}' not found in data releases")
-                raise KeyError(f"PTA '{pta_name}' not found in data releases")
+        for data_release_name in data_release_names:
+            if data_release_name not in self.data_releases:
+                self.logger.error(
+                    f"Data release '{data_release_name}' not found in data releases"
+                )
+                raise KeyError(
+                    f"Data release '{data_release_name}' not found in data releases"
+                )
 
-            result[pta_name] = self._discover_all_file_pairs_in_data_release(
-                self.pta_data_releases[pta_name]
+            result[data_release_name] = self._discover_all_file_pairs_in_data_release(
+                self.data_releases[data_release_name]
             )
 
         return result
 
-    def list_ptas(self) -> List[str]:
-        """Get list of all PTA names in the directory layouts.
+    def list_data_releases(self) -> List[str]:
+        """Get list of all data release names in the directory layouts.
 
         Returns:
-            List of PTA names, sorted alphabetically
+            List of data release names, sorted alphabetically
         """
-        return sorted(self.pta_data_releases.keys())
+        return sorted(self.data_releases.keys())
 
-    def add_pta(self, name: str, data_release: Dict) -> None:
-        """Add a PTA data release.
+    def add_data_release(self, name: str, data_release: Dict) -> None:
+        """Add a data release.
 
         Args:
-            name: Name of the PTA data release
-            data_release: Dictionary containing PTA data release specification
+            name: Name of the data release
+            data_release: Dictionary containing data release specification
 
         Raises:
-            ValueError: If PTA with same name already exists or data_release is invalid
+            ValueError: If data release with same name already exists or data_release is invalid
         """
-        if name in self.pta_data_releases:
-            raise ValueError(f"PTA '{name}' already exists in data releases")
+        if name in self.data_releases:
+            raise ValueError(f"Data release '{name}' already exists in data releases")
 
         self._validate_data_release(data_release)
-        self.pta_data_releases[name] = data_release
-        self.logger.debug(f"Added PTA data release: {name}")
+        self.data_releases[name] = data_release
+        self.logger.debug(f"Added data release: {name}")
 
     def _validate_data_release(self, data_release: Dict) -> None:
-        """Validate a PTA data release dictionary.
+        """Validate a data release dictionary.
 
         Args:
             data_release: Data release dictionary to validate
@@ -252,10 +264,10 @@ class FileDiscoveryService:
             raise ValueError(f"Invalid regex pattern: {e}")
 
     def _discover_patterns_in_data_release(self, data_release: Dict) -> List[str]:
-        """Discover all file patterns in a single PTA data release using regex.
+        """Discover all file patterns in a single data release using regex.
 
         Args:
-            data_release: PTA data release dictionary
+            data_release: Data release dictionary
 
         Returns:
             List of regex-extracted patterns (NOT validated pulsar names)
@@ -287,7 +299,7 @@ class FileDiscoveryService:
     def _discover_all_file_pairs_in_data_release(
         self, data_release: Dict
     ) -> List[Dict[str, Path]]:
-        """Discover all par/tim file pairs in a PTA data release.
+        """Discover all par/tim file pairs in a data release.
 
         Files are matched by their canonical pulsar name (e.g., J1857+0943, B1855+09A).
         """
@@ -328,7 +340,7 @@ class FileDiscoveryService:
         # Step 3: Match par and tim files by canonical pulsar name
         for pulsar_name in par_files_by_pulsar:
             if pulsar_name in tim_files_by_pulsar:
-                # Calculate timespan for this PTA/pulsar combination
+                # Calculate timespan for this data release/pulsar combination
                 timespan = self._calculate_timespan_from_tim_file(
                     tim_files_by_pulsar[pulsar_name]
                 )
