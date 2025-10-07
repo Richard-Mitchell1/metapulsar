@@ -12,6 +12,8 @@ from .file_discovery_service import (
     FileDiscoveryService,
     PTA_DATA_RELEASES,
     discover_files,
+    get_pulsar_names_from_file_data,
+    filter_file_data_by_pulsars,
 )
 from .layout_discovery_service import (
     LayoutDiscoveryService,
@@ -54,4 +56,6 @@ __all__ = [
     "discover_layout",
     "combine_layouts",
     "reorder_ptas_for_pulsar",
+    "get_pulsar_names_from_file_data",
+    "filter_file_data_by_pulsars",
 ]

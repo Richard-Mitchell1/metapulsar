@@ -18,6 +18,8 @@ from metapulsar import (
     discover_files,
     discover_layout,
     combine_layouts,
+    get_pulsar_names_from_file_data,
+    filter_file_data_by_pulsars,
 )
 
 # Suppress debug output for cleaner example
@@ -264,13 +266,24 @@ file_data = discover_files(
 
 print(f"   Found files for {len(file_data)} data releases")
 
-# Create MetaPulsars for all discovered pulsars
+# Create MetaPulsars for all discovered pulsars (limited to 3 for performance)
 print("\n3. Creating MetaPulsars for all pulsars...")
+
+# Use coordinate-based discovery to get actual pulsar names
+print("   Using coordinate-based discovery to identify actual pulsars...")
+pulsar_names = get_pulsar_names_from_file_data(file_data)
+limited_pulsar_names = pulsar_names[:3]
+print(
+    f"   Found {len(pulsar_names)} pulsars, limiting to first {len(limited_pulsar_names)} for performance: {limited_pulsar_names}"
+)
+
+# Filter file_data to only include the limited pulsars using coordinate-based grouping
+limited_file_data = filter_file_data_by_pulsars(file_data, limited_pulsar_names)
 
 # Option 1: Auto-select reference PTA by timespan for each pulsar
 print("   Option 1: Auto-select reference PTA by timespan (per pulsar)")
 metapulsars_auto = factory.create_all_metapulsars(
-    file_data=file_data,
+    file_data=limited_file_data,
     combination_strategy="consistent",
     reference_pta=None,  # Auto-select by longest timespan
     combine_components=["astrometry", "spindown", "binary", "dispersion"],
@@ -284,9 +297,9 @@ print(
 # Option 2: Use specific reference PTA for all pulsars
 print("\n   Option 2: Use specific reference PTA for all pulsars")
 metapulsars_epta = factory.create_all_metapulsars(
-    file_data=file_data,
+    file_data=limited_file_data,
     combination_strategy="consistent",
-    # reference_pta="epta_dr2",  # EPTA as reference for all pulsars
+    reference_pta="EPTA_v2.2",  # EPTA as reference for all pulsars
     combine_components=["astrometry", "spindown", "binary", "dispersion"],
     add_dm_derivatives=True,
 )
@@ -295,16 +308,15 @@ print(f"   Created {len(metapulsars_epta)} MetaPulsars with EPTA as reference PT
 
 # Show results (limited to 3 pulsars for demonstration)
 print("\nResults (showing first 3 pulsars):")
-all_pulsars = list(metapulsars_auto.keys())
-print(f"  Total pulsars found: {len(all_pulsars)}")
-for pulsar_name in all_pulsars[:3]:  # Show first 3
+print(f"  Total pulsars found: {len(limited_pulsar_names)}")
+for pulsar_name in limited_pulsar_names:  # Show first 3
     auto_ref = list(metapulsars_auto[pulsar_name].pulsars.keys())[0]
     epta_ref = list(metapulsars_epta[pulsar_name].pulsars.keys())[0]
     print(f"    {pulsar_name}: auto={auto_ref}, epta={epta_ref}")
 
 print("\nReference PTA selection:")
 print("  - reference_pta=None: Auto-select by longest timespan per pulsar")
-print("  - reference_pta='epta_dr2': Use EPTA as reference for all pulsars")
+print("  - reference_pta='EPTA_v2.2': Use EPTA as reference for all pulsars")
 print("  - Manual: Use reorder_ptas_for_pulsar() for specific pulsars")
 
 print("\n" + "=" * 80)

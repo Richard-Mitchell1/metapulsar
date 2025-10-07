@@ -519,3 +519,144 @@ class TestLegacyComparison:
                                 atol=1e-12,
                                 err_msg=f"Parameter {param} mismatch",
                             )
+
+    @pytest.mark.slow
+    @pytest.mark.legacy_comparison
+    def test_fitpars_equivalence(
+        self, legacy_module, new_module, available_data_sets, test_pulsars
+    ):
+        """Test that fitpars (fit parameters) are equivalent between legacy and new implementations.
+
+        This is a critical test to ensure parameter merging logic works correctly.
+        """
+        if not available_data_sets:
+            pytest.skip("No data available for testing")
+
+        test_pta_data_releases = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
+
+        for pulsar in test_pulsars[:2]:  # Test first 2 pulsars
+            par_files, tim_files = self._prepare_legacy_input_files(
+                pulsar, test_pta_data_releases, available_data_sets
+            )
+
+            # Filter out None values and check if we have any valid files
+            valid_files = [
+                (p, t)
+                for p, t in zip(par_files, tim_files)
+                if p is not None and t is not None
+            ]
+            if not valid_files:
+                continue
+
+            # Prepare input files in the format expected by legacy create_metapulsar
+            input_files = []
+            for i, (par_file, tim_file) in enumerate(zip(par_files, tim_files)):
+                if par_file is None or tim_file is None:
+                    continue  # Skip missing files
+
+                pta_name = test_pta_data_releases[i]
+                package = (
+                    "tempo2" if pta_name in ["epta_dr1_v2_2", "ppta_dr2"] else "pint"
+                )
+                input_files.append(
+                    {
+                        "pta": pta_name,
+                        "parfile": par_file,
+                        "timfile": tim_file,
+                        "package": package,
+                    }
+                )
+
+            # Skip if no valid input files found
+            if not input_files:
+                continue
+
+            # Create both implementations
+            legacy_mp = legacy_module.create_metapulsar(input_files)
+
+            discovery_service = FileDiscoveryService()
+            file_data = discovery_service.discover_files(test_pta_data_releases)
+
+            # Filter file_data to only include files for this pulsar
+            filtered_file_data = {}
+            for pta_name, files in file_data.items():
+                if files:  # Check if files exist for this PTA
+                    matching_files = []
+                    for file_info in files:
+                        if pulsar in str(file_info.get("parfile", "")) or pulsar in str(
+                            file_info.get("timfile", "")
+                        ):
+                            matching_files.append(file_info)
+                    if matching_files:
+                        filtered_file_data[pta_name] = matching_files
+
+            if not filtered_file_data:
+                continue  # Skip if no files found for this pulsar
+
+            new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
+                file_data=filtered_file_data
+            )
+
+            # Get fitpars from both implementations
+            legacy_fitpars = set(legacy_mp.fitpars)
+            new_fitpars = set(new_mp.fitpars)
+
+            # Compare the sets of fit parameters
+            assert legacy_fitpars == new_fitpars, (
+                f"Fit parameters do not match between legacy and new implementations for pulsar {pulsar}:\n"
+                f"Legacy fitpars ({len(legacy_fitpars)}): {sorted(legacy_fitpars)}\n"
+                f"New fitpars ({len(new_fitpars)}): {sorted(new_fitpars)}\n"
+                f"Missing in new: {legacy_fitpars - new_fitpars}\n"
+                f"Extra in new: {new_fitpars - legacy_fitpars}"
+            )
+
+            # Additional detailed analysis for debugging
+            print(f"\n=== Fitpars Analysis for {pulsar} ===")
+            print(f"Legacy fitpars count: {len(legacy_fitpars)}")
+            print(f"New fitpars count: {len(new_fitpars)}")
+
+            # Analyze parameter types
+            legacy_merged = {
+                p
+                for p in legacy_fitpars
+                if not any(
+                    suffix in p
+                    for suffix in ["_epta_dr1_v2_2", "_ppta_dr2", "_nanograv_9y"]
+                )
+            }
+            new_merged = {
+                p
+                for p in new_fitpars
+                if not any(
+                    suffix in p
+                    for suffix in ["_epta_dr1_v2_2", "_ppta_dr2", "_nanograv_9y"]
+                )
+            }
+
+            legacy_pta_specific = legacy_fitpars - legacy_merged
+            new_pta_specific = new_fitpars - new_merged
+
+            print(
+                f"Legacy merged parameters: {len(legacy_merged)} - {sorted(legacy_merged)}"
+            )
+            print(f"New merged parameters: {len(new_merged)} - {sorted(new_merged)}")
+            print(
+                f"Legacy PTA-specific parameters: {len(legacy_pta_specific)} - {sorted(legacy_pta_specific)}"
+            )
+            print(
+                f"New PTA-specific parameters: {len(new_pta_specific)} - {sorted(new_pta_specific)}"
+            )
+
+            # Test that the number of parameters is reasonable (not too small)
+            assert len(new_fitpars) > 10, (
+                f"New implementation has suspiciously few fit parameters ({len(new_fitpars)}). "
+                f"This suggests parameter merging logic may be broken."
+            )
+
+            # Test that we have both merged and PTA-specific parameters
+            assert (
+                len(new_merged) > 0
+            ), "No merged parameters found - parameter merging may be broken"
+            assert (
+                len(new_pta_specific) > 0
+            ), "No PTA-specific parameters found - parameter merging may be broken"
