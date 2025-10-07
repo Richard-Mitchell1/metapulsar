@@ -119,7 +119,6 @@ class TestMockPulsar:
 
         psr = MockPulsar(toas, residuals, errors, freqs, flags, "mock")
 
-        # Set new residuals
         new_residuals = np.random.normal(0, 2e-6, n_toas)
         psr.set_residuals(new_residuals)
 
@@ -136,7 +135,6 @@ class TestMockPulsar:
 
         psr = MockPulsar(toas, residuals, errors, freqs, flags, "mock")
 
-        # Set new position
         ra = np.pi / 4  # 45 degrees
         dec = np.pi / 6  # 30 degrees
         psr.set_position(ra, dec)
@@ -350,7 +348,6 @@ class TestMockPulsarIntegration:
         # Check that sort_data method works
         psr.sort_data()
 
-        # Check that TOAs are sorted after calling sort_data
         assert np.all(np.diff(psr._toas) >= 0)
 
     def test_enterprise_signals_compatibility(self):

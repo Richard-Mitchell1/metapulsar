@@ -115,7 +115,6 @@ class MetaPulsar(ep.BasePulsar):
         self._epulsars = {}
         pint_models, pint_toas, lt_pulsars = self._unpack_pulsar_data()
 
-        # Create new Enterprise Pulsars from raw data
         if pint_models or lt_pulsars:
             self.name = self._validate_pulsar_consistency(pint_models, lt_pulsars)
 
@@ -263,7 +262,6 @@ class MetaPulsar(ep.BasePulsar):
         # Create ParameterManager for parameter mapping
         parameter_manager = ParameterManager(
             file_data=file_data,
-            reference_pta="unknown",  # Dummy string - not used in build_parameter_mappings
             combine_components=combine_components,
             add_dm_derivatives=self.add_dm_derivatives,
         )
@@ -356,7 +354,6 @@ class MetaPulsar(ep.BasePulsar):
                         ]
                         flag_pta = True
             else:
-                # Structured array format (MockPulsar and newer Enterprise Pulsars)
                 if hasattr(psr._flags, "dtype") and psr._flags.dtype.names:
                     # Structured array with fields
                     for field_name in psr._flags.dtype.names:
@@ -603,5 +600,4 @@ class MetaPulsar(ep.BasePulsar):
         return pulsar_names
 
 
-# Note: Sorting is handled by BasePulsar.sort_data() method
 # We don't need to implement custom sorting since we inherit from BasePulsar

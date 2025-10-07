@@ -352,7 +352,6 @@ DM 10.0
 
     def test_bj_name_from_coordinates_optimized_j_name(self):
         """Test optimized J-name generation from coordinates."""
-        # Test with known coordinates
         ra_hours = 18.9601  # 18:57:36.4
         dec_deg = 9.7214  # +09:43:17.1
 
@@ -365,7 +364,6 @@ DM 10.0
 
     def test_bj_name_from_coordinates_optimized_b_name(self):
         """Test optimized B-name generation from coordinates."""
-        # Test with known coordinates
         ra_hours = 18.9601  # 18:57:36.4
         dec_deg = 9.7214  # +09:43:17.1
 

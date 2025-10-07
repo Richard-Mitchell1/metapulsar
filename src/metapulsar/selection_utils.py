@@ -48,7 +48,7 @@ Migration from Legacy:
     >>> from legacy.metapulsar import create_selection_stag
     >>> legacy_sel = create_selection_stag("efac", {"group": None}, lowfreq=400, highfreq=1000)
     >>> 
-    >>> # New API
+    >>>
     >>> from metapulsar.selection_utils import create_staggered_selection
     >>> new_sel = create_staggered_selection("efac", {"group": None}, freq_range=(400, 1000))
 

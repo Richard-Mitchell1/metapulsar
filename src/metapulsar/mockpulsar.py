@@ -328,7 +328,6 @@ class LibstempoMockPulsarAdapter:
 
     def designmatrix(self):
         """Return design matrix for parameter fitting (libstempo includes Offset column)."""
-        # MockPulsar now has Offset as first column, but libstempo quirk:
         # - designmatrix() includes Offset column (first column)
         # - pars() does NOT include Offset in parameter list
         # So we need to return the design matrix as-is (with Offset column)
@@ -485,7 +484,6 @@ def create_libstempo_adapter(mock_pulsar: MockPulsar) -> LibstempoMockPulsarAdap
 
 # Utility functions for MockPulsar support (moved from mock_utils.py)
 # These functions are copied exactly from Enterprise PR #361.
-# Once the PR is accepted upstream, this module can be removed and replaced with
 # imports from enterprise.signals.utils.
 
 

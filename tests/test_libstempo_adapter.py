@@ -246,7 +246,6 @@ class TestAdapterIntegration:
 
     def test_unit_conversions(self):
         """Test that unit conversions are correct."""
-        # Create mock data with known values
         toas_sec = np.array([50000.0, 50001.0, 50002.0]) * 86400  # 3 days in seconds
         residuals = np.array([1e-6, 2e-6, 3e-6])  # 1-3 microseconds
         errors = np.array([1e-7, 2e-7, 3e-7])  # 0.1-0.3 microseconds
@@ -265,17 +264,14 @@ class TestAdapterIntegration:
         )
         adapter = LibstempoMockPulsarAdapter(mock_psr)
 
-        # Test TOAs conversion (seconds to days)
         toas_days = adapter.toas()
         expected_days = np.array([50000.0, 50001.0, 50002.0])
         np.testing.assert_array_almost_equal(toas_days, expected_days, decimal=10)
 
-        # Test TOA errors conversion (seconds to microseconds)
         toaerrs_us = adapter.toaerrs
         expected_us = np.array([0.1, 0.2, 0.3])
         np.testing.assert_array_almost_equal(toaerrs_us, expected_us, decimal=10)
 
-        # Test frequencies conversion (MHz to Hz)
         freqs_hz = adapter.ssbfreqs()
         expected_hz = np.array([100000000.0, 200000000.0, 300000000.0])
         np.testing.assert_array_almost_equal(freqs_hz, expected_hz, decimal=10)

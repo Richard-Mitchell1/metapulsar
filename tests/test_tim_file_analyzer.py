@@ -134,10 +134,6 @@ class TestTimFileAnalyzer:
         # Lines that don't match any pattern should be unknown
         assert _toa_format("!@#$%^&*()") == "Unknown"
 
-    # Note: Individual line parsing tests removed as we now use PINT's read_toa_file
-    # which handles all parsing complexity internally. The integration tests below
-    # verify that the full parsing pipeline works correctly.
-
     # INCLUDE Statement Tests
 
     def test_include_single_file(self):

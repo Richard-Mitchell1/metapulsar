@@ -48,7 +48,6 @@ def mock_astrometry_components():
     return mock_instance
 
 
-# Note: get_parameters_by_type_from_pint function has not been implemented yet
 # These tests are commented out until the function is implemented as part of the refactor
 #
 # class TestGetParametersByTypeFromPint:
@@ -148,7 +147,7 @@ class TestGetParameterAliasesFromPint:
             assert result["STIG"] == "STIGMA"
             assert "RAJ" not in result  # Coordinate alias filtered out
             assert "DECJ" not in result  # Coordinate alias filtered out
-            assert result["EDOT"] == "ECCDOT"  # Added manually
+            assert result["EDOT"] == "ECCDOT"
 
     def test_pint_discovery_failure_raises_error(self):
         """Test that PINT discovery failure raises PINTDiscoveryError."""

@@ -42,7 +42,6 @@ class ParameterManager:
     def __init__(
         self,
         file_data: Dict[str, Dict[str, Any]],  # pta_name -> file data
-        reference_pta: str = None,
         combine_components: List[str] = [
             "astrometry",
             "spindown",
@@ -56,7 +55,6 @@ class ParameterManager:
 
         Args:
             file_data: File data from FileDiscoveryService
-            reference_pta: PTA to use as reference. If None, auto-selects based on timespan
             combine_components: List of components to make consistent
             add_dm_derivatives: Whether to add DM1, DM2 parameters
             output_dir: Directory for output files
@@ -66,15 +64,12 @@ class ParameterManager:
         self.add_dm_derivatives = add_dm_derivatives
         self.output_dir = output_dir
 
-        # Choose reference PTA if not provided
-        if reference_pta is None:
-            self.reference_pta = self._choose_reference_pta(file_data)
-        else:
-            self.reference_pta = reference_pta
+        # Use first dictionary key as reference (consistent with MetaPulsarFactory)
+        self.reference_pta = next(iter(file_data.keys()))
 
         self.logger = logger
         self._aliases = get_parameter_aliases_from_pint()
-        # Build reverse aliases inline (no separate method needed)
+        # Build reverse aliases inline
         self._reverse_aliases = {}
         for alias, canonical in self._aliases.items():
             if canonical not in self._reverse_aliases:
@@ -671,10 +666,6 @@ class ParameterManager:
     def _get_timing_package(self, pta_name: str) -> str:
         """Get timing package for a specific PTA from file data."""
         return self.file_data[pta_name]["timing_package"]
-
-    def _choose_reference_pta(self, file_data: Dict[str, Dict[str, Any]]) -> str:
-        """Choose reference PTA based on longest timespan."""
-        return max(file_data.keys(), key=lambda pta: file_data[pta]["timespan_days"])
 
     def _convert_tempo2_to_tdb(self, parfile_content: str) -> str:
         """Convert par file from TCB to TDB using tempo2 subprocess."""

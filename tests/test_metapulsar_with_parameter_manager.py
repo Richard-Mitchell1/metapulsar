@@ -74,11 +74,10 @@ class TestMetaPulsarWithParameterManager:
             file_data=mock_file_data, combine_components=[]
         )
 
-        # Verify ParameterManager was initialized correctly
         assert param_manager.combine_components == []
         assert (
-            param_manager.reference_pta == "ppta_dr2"
-        )  # Should be the one with longer timespan
+            param_manager.reference_pta == "epta_dr2"
+        )  # Should be the first dictionary key
 
     @pytest.mark.slow
     def test_consistent_strategy_parameter_setup(self):
@@ -100,11 +99,10 @@ class TestMetaPulsarWithParameterManager:
             file_data=mock_file_data, combine_components=["astrometry", "spindown"]
         )
 
-        # Verify ParameterManager was initialized correctly
         assert param_manager.combine_components == ["astrometry", "spindown"]
         assert (
-            param_manager.reference_pta == "ppta_dr2"
-        )  # Should be the one with longer timespan
+            param_manager.reference_pta == "epta_dr2"
+        )  # Should be the first dictionary key
 
     def test_get_parfile_data_pint(self):
         """Test _get_parfile_data with PINT objects."""

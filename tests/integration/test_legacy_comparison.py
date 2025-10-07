@@ -101,7 +101,6 @@ class TestLegacyComparison:
             # Create legacy MetaPulsar
             legacy_mp = legacy_module.create_metapulsar(input_files)
 
-            # Create new MetaPulsar using file_data
             discovery_service = FileDiscoveryService()
             file_data = discovery_service.discover_files(test_pta_data_releases)
 
@@ -292,7 +291,6 @@ class TestLegacyComparison:
                 # Create both implementations
                 legacy_mp = legacy_module.create_metapulsar(input_files)
 
-                # Create new MetaPulsar using file_data
                 discovery_service = FileDiscoveryService()
                 file_data = discovery_service.discover_files(test_pta_data_releases)
 
@@ -387,7 +385,6 @@ class TestLegacyComparison:
             # Create both implementations
             legacy_mp = legacy_module.create_metapulsar(input_files)
 
-            # Create new MetaPulsar using file_data
             discovery_service = FileDiscoveryService()
             file_data = discovery_service.discover_files(test_pta_data_releases)
 
@@ -475,7 +472,6 @@ class TestLegacyComparison:
             # Create both implementations
             legacy_mp = legacy_module.create_metapulsar(input_files)
 
-            # Create new MetaPulsar using file_data
             discovery_service = FileDiscoveryService()
             file_data = discovery_service.discover_files(test_pta_data_releases)
 

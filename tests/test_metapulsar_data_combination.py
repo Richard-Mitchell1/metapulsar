@@ -236,7 +236,6 @@ class TestMetaPulsarDataCombination:
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
         metapulsar = MetaPulsar(adapted_pulsars, combination_strategy="composite")
 
-        # MockPulsar doesn't have _pint_model or _lt_pulsar, so should return "unknown"
         for pta, psr in mock_pulsars.items():
             package = metapulsar._get_timing_package(psr)
             assert package == "unknown"

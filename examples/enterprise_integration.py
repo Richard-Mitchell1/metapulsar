@@ -80,8 +80,6 @@ def main():
         freq_range=(50, 2000),  # Frequency range
     )
 
-    # TODO: Add actual enterprise integration here
-
     print(f"Staggered selection function created: {selection_func.__name__}")
 
     # Step 5: Demonstrate Enterprise integration

@@ -91,7 +91,6 @@ class TestFileDiscoveryService:
             assert result["epta_dr2"][0]["par"] == Path("/test/J1857+0943.par")
             assert result["epta_dr2"][0]["tim"] == Path("/test/J1857+0943.tim")
             assert result["epta_dr2"][0]["timing_package"] == "tempo2"
-            # Priority field removed - no longer included in results
 
     def test_discover_files_all_data_releases(self):
         """Test discovering files in all data releases when no specific data releases provided."""

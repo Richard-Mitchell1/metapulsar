@@ -80,7 +80,6 @@ UNITS TDB
 
             yield ParameterManager(
                 file_data=sample_file_data,
-                reference_pta="PPTA",
                 combine_components=["astrometry", "spindown"],
                 add_dm_derivatives=True,
                 output_dir=Path(temp_dir) / "output",
@@ -88,27 +87,13 @@ UNITS TDB
 
     # ===== CONSTRUCTOR TESTS =====
 
-    def test_init_with_reference_pta(self, sample_file_data):
-        """Test initialization with explicit reference PTA."""
-        pm = ParameterManager(
-            file_data=sample_file_data,
-            reference_pta="EPTA",
-            combine_components=["astrometry"],
-            add_dm_derivatives=False,
-        )
-
-        assert pm.reference_pta == "EPTA"
-        assert pm.combine_components == ["astrometry"]
-        assert pm.add_dm_derivatives is False
-        assert pm.file_data == sample_file_data
-
-    @pytest.mark.slow
-    def test_init_auto_select_reference_pta(self, sample_file_data):
-        """Test automatic reference PTA selection based on timespan."""
+    def test_init_uses_first_dictionary_key(self, sample_file_data):
+        """Test ParameterManager uses first dictionary key as reference PTA."""
         pm = ParameterManager(file_data=sample_file_data)
 
-        # PPTA has longest timespan (4200.3 days)
-        assert pm.reference_pta == "PPTA"
+        # Should use first key from sample_file_data
+        first_key = list(sample_file_data.keys())[0]
+        assert pm.reference_pta == first_key
 
     # ===== HELPER METHOD TESTS =====
 
@@ -124,15 +109,6 @@ UNITS TDB
         assert parameter_manager._get_timing_package("EPTA") == "pint"
         assert parameter_manager._get_timing_package("PPTA") == "tempo2"
         assert parameter_manager._get_timing_package("NANOGrav") == "pint"
-
-    @pytest.mark.slow
-    def test_choose_reference_pta(self, sample_file_data):
-        """Test reference PTA selection logic."""
-        pm = ParameterManager(file_data=sample_file_data)
-        reference_pta = pm._choose_reference_pta(sample_file_data)
-
-        # PPTA has longest timespan
-        assert reference_pta == "PPTA"
 
     def test_get_output_filename(self, parameter_manager):
         """Test output filename generation."""

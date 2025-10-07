@@ -6,8 +6,6 @@ creating Enterprise Pulsars, and wrapping them with metadata.
 
 from typing import Dict, List, Tuple, Any
 from pathlib import Path
-import re
-from datetime import datetime
 from loguru import logger
 
 # Import Enterprise Pulsar classes
@@ -33,8 +31,6 @@ try:
     import libstempo as t2
 except ImportError:
     t2 = None
-
-# PTARegistry removed - file discovery handled by FileDiscoveryService
 
 
 class MetaPulsarFactory:
@@ -163,8 +159,7 @@ class MetaPulsarFactory:
         if combination_strategy == "consistent":
             # Create ParameterManager for parfile consistency
             parameter_manager = ParameterManager(
-                file_data=single_file_data,  # Now guaranteed to have par_content
-                reference_pta=reference_pta,
+                file_data=single_file_data,
                 combine_components=combine_components,
                 add_dm_derivatives=add_dm_derivatives,
             )
@@ -182,7 +177,6 @@ class MetaPulsarFactory:
         # Create PINT/Tempo2 objects from file pairs using file data
         pulsars = self._create_pulsar_objects(file_pairs, single_file_data)
 
-        # Create MetaPulsar with new constructor pattern
         return MetaPulsar(
             pulsars=pulsars,
             combination_strategy=combination_strategy,
@@ -422,7 +416,7 @@ class MetaPulsarFactory:
                         raise RuntimeError("PINT not available for PINT creation")
 
                     model, toas = get_model_and_toas(
-                        str(parfile), str(timfile), planets=True
+                        str(parfile), str(timfile), planets=True, allow_T2=True
                     )
                     pulsar_objects[pta_name] = (model, toas)
 
@@ -454,9 +448,8 @@ class MetaPulsarFactory:
         for pta_name, parfile_path in parfile_files.items():
             with open(parfile_path, "r") as f:
                 parfile_content = f.read()
-            # Use our consolidated function that handles string content properly
+
             model = create_pint_model(parfile_content)
-            # Convert model back to dictionary format
             parfile_dicts[pta_name] = model.get_params_dict()
 
         return parfile_dicts
@@ -467,14 +460,12 @@ class MetaPulsarFactory:
         from io import StringIO
 
         try:
-            # Read par file with PINT
             with open(parfile_path, "r") as f:
                 par_content = f.read()
 
             builder = ModelBuilder()
             model = builder(StringIO(par_content), allow_tcb=True, allow_T2=True)
 
-            # Extract pulsar name from PINT model
             return model.PSR.value
 
         except Exception as e:
@@ -504,15 +495,15 @@ class MetaPulsarFactory:
 
             try:
                 if data_release["timing_package"] == "pint":
-                    # Create raw PINT objects
                     if get_model_and_toas is None:
                         raise RuntimeError("PINT not available for raw PINT creation")
 
-                    model, toas = get_model_and_toas(str(parfile), str(timfile))
+                    model, toas = get_model_and_toas(
+                        str(parfile), str(timfile), planets=True, allow_T2=True
+                    )
                     raw_pulsars[pta_name] = (model, toas)
 
                 else:  # tempo2
-                    # Create raw Tempo2 object
                     if t2 is None:
                         raise RuntimeError(
                             "libstempo not available for raw Tempo2 creation"
@@ -530,87 +521,6 @@ class MetaPulsarFactory:
                 raise RuntimeError(f"Failed to create raw pulsar for {pta_name}: {e}")
 
         return raw_pulsars
-
-    def _create_minimal_parfile_for_coordinates(self, parfile_content: str) -> str:
-        """Create minimal parfile for coordinate discovery using ParameterManager."""
-        # Parse into dictionary using PINT
-        from pint.models.model_builder import parse_parfile
-        from io import StringIO
-
-        parfile_dict = parse_parfile(StringIO(parfile_content))
-
-        # Create ParameterManager with pre-read content (no temp files needed!)
-        temp_file_data = {
-            "temp": {"par_content": parfile_content, "timespan_days": 1000.0}
-        }
-        temp_manager = ParameterManager(temp_file_data)
-
-        # Use ParameterManager's component extraction method
-        return temp_manager._create_minimal_parfile_for_component(
-            parfile_dict, "astrometry"
-        )
-
-    def _build_metadata(
-        self,
-        file_pairs: Dict[str, Tuple[Path, Path]],
-        pta_data_releases: Dict[str, Dict],
-    ) -> Dict[str, Any]:
-        """Build metadata for the MetaPulsar.
-
-        Args:
-            file_pairs: Dictionary mapping PTA names to (parfile, timfile) tuples
-            pta_data_releases: Dictionary of PTA data releases
-
-        Returns:
-            Dictionary containing metadata
-        """
-        return {
-            "file_pairs": {
-                pta: (str(par), str(tim)) for pta, (par, tim) in file_pairs.items()
-            },
-            "timing_packages": {
-                pta: data_release["timing_package"]
-                for pta, data_release in pta_data_releases.items()
-            },
-            "creation_timestamp": datetime.now().isoformat(),
-        }
-
-    def _discover_pulsars_in_pta(self, data_release: Dict) -> List[str]:
-        """Discover all pulsars in a single PTA using PINT models.
-
-        Args:
-            data_release: PTA data release to search
-
-        Returns:
-            List of pulsar names found in the PTA
-        """
-        base_path = Path(data_release["base_dir"])
-        if not base_path.exists():
-            return []
-
-        pulsars = set()
-
-        # Use regex only for initial file discovery (this is the ONLY place regex should be used)
-        try:
-            regex = re.compile(data_release["par_pattern"])
-        except re.error as e:
-            self.logger.error(
-                f"Invalid regex pattern '{data_release['par_pattern']}': {e}"
-            )
-            return []
-
-        for file_path in base_path.rglob("*.par"):
-            if regex.search(str(file_path)):  # Only check if file matches pattern
-                try:
-                    # Extract pulsar name from PINT model (no regex!)
-                    pulsar_name = self._extract_pulsar_name_from_pint_model(file_path)
-                    pulsars.add(pulsar_name)
-                except Exception as e:
-                    self.logger.warning(
-                        f"Failed to extract pulsar name from {file_path}: {e}"
-                    )
-
-        return list(pulsars)
 
 
 def reorder_ptas_for_pulsar(

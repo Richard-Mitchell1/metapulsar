@@ -131,21 +131,6 @@ class TestMetaPulsarPositionAndFinalization:
         with pytest.raises(ValueError, match="No Enterprise Pulsars created yet"):
             mp.validate_consistency()
 
-    def test_from_files_class_method_exists(self):
-        """Test that from_files class method exists and is callable."""
-        # from_files method was removed - MetaPulsar is stateful and should be called through constructor
-        assert not hasattr(MetaPulsar, "from_files")
-
-    def test_from_files_signature(self):
-        """Test that from_files has correct signature."""
-        # from_files method was removed - MetaPulsar is stateful and should be called through constructor
-        assert not hasattr(MetaPulsar, "from_files")
-
-    def test_from_files_docstring(self):
-        """Test that from_files has proper docstring."""
-        # from_files method was removed - MetaPulsar is stateful and should be called through constructor
-        assert not hasattr(MetaPulsar, "from_files")
-
     def test_position_attributes_consistency(self):
         """Test that position attributes are consistent across PTAs."""
         # Get position data from individual PTAs
@@ -158,7 +143,6 @@ class TestMetaPulsarPositionAndFinalization:
         combined_pta2_pos = self.metapulsar._pos[pta_slices["test_pta2"], :]
 
         # MockPulsar has single position vector, MetaPulsar tiles it across all TOAs
-        # So we need to compare the tiled version
         expected_pta1_pos = np.tile(
             pta1_pos, (len(pta1_pos) if pta1_pos.ndim > 1 else 1, 1)
         )
@@ -211,9 +195,6 @@ class TestMetaPulsarPositionAndFinalization:
         assert hasattr(self.metapulsar, "_raj")
         assert hasattr(self.metapulsar, "_decj")
         assert hasattr(self.metapulsar, "_pos")
-
-        # from_files method was removed - MetaPulsar is stateful and should be called through constructor
-        assert not hasattr(MetaPulsar, "from_files")
 
     def test_validate_consistency_with_missing_names(self):
         """Test consistency validation with pulsars missing name attributes."""

@@ -1,24 +1,8 @@
 """
 Comprehensive tests for coordinate-based pulsar discovery system.
 
-Tests the new coordinate-based pulsar identification, B/J name generation,
+Tests the coordinate-based pulsar identification, B/J name generation,
 canonical naming, and MetaPulsarFactory integration.
-
-TODO: INTEGRATION TESTS PENDING
-===============================
-
-These tests currently use extensive mocking because the MetaPulsar class
-is not fully implemented yet. Once MetaPulsar is complete, the following
-integration tests MUST be added:
-
-1. Real file I/O tests with actual par/tim files
-2. Real PINT model creation and coordinate extraction
-3. Real Enterprise Pulsar creation and functionality
-4. End-to-end workflow tests with real data
-5. Performance tests with multiple PTAs and pulsars
-6. Error handling tests with malformed files
-
-See MetaPulsar class docstring for detailed integration test requirements.
 """
 
 import pytest
@@ -251,18 +235,11 @@ class TestCoordinateBasedDiscovery:
             assert len(pulsar_info["test_data_release1"]) > 0
             assert len(pulsar_info["test_data_release2"]) > 0
 
-    # Note: _extract_suffix_from_filename and _find_file methods were removed in refactor
-    # These tests are no longer applicable as the functionality was replaced with PINT-based approach
-
-    # Note: Over-mocked tests removed - they tested mock behavior rather than actual functionality
-    # Real coordinate-based discovery is tested in integration tests with actual data
-
     @patch("pint.models.model_builder.parse_parfile")
     def test_create_metapulsar_with_canonical_name(
         self, mock_parse_parfile, mock_file_discovery_service, mock_file_system
     ):
         """Test MetaPulsar creation includes canonical name."""
-        # Create MockPulsar objects directly instead of going through factory
         from metapulsar.mockpulsar import MockPulsar
         from metapulsar.mockpulsar import (
             create_mock_timing_data,
@@ -368,8 +345,6 @@ class TestEdgeCases:
             coordinate_map = discover_pulsars_by_coordinates_optimized(file_data)
             assert coordinate_map == {}
 
-    # Note: _extract_suffix_from_filename method was removed in refactor
-
     def test_bj_name_from_pulsar_with_invalid_object(self):
         """Test bj_name_from_pulsar with invalid object."""
         invalid_obj = "not a pulsar object"
@@ -379,7 +354,3 @@ class TestEdgeCases:
 
 
 # === INTEGRATION TESTS ===
-
-
-# Note: Over-mocked end-to-end test removed - it tested mock behavior rather than actual workflow
-# Real end-to-end functionality is tested in integration tests with actual data

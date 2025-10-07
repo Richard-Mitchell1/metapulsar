@@ -11,32 +11,6 @@ class TestEndToEnd:
 
     @pytest.mark.slow
     @pytest.mark.real_data
-    def test_metapulsar_creation_with_dr2_data(self, available_data_sets, test_pulsars):
-        """Test MetaPulsar creation with DR2 submodule data."""
-        if "dr2" not in available_data_sets:
-            pytest.skip("DR2 data not available")
-
-        # Test with DR2 configurations using FileDiscoveryService
-        dr2_configs = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
-        discovery_service = FileDiscoveryService()
-        factory = MetaPulsarFactory()
-
-        # This test will need to be updated once the implementation is complete
-        # For now, just test that the services can be used
-        try:
-            # Discover files using FileDiscoveryService
-            file_data = discovery_service.discover_files(dr2_configs)
-
-            # Create MetaPulsars from discovered files
-            factory.create_metapulsars_from_file_data(file_data)
-
-            # This test will need to be updated once the implementation is complete
-        except Exception:
-            # Expected since implementation is not complete
-            pass
-
-    @pytest.mark.slow
-    @pytest.mark.real_data
     def test_parameter_merging_strategies(self, available_data_sets, test_pulsars):
         """Test different parameter merging strategies."""
         if not available_data_sets:

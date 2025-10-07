@@ -36,7 +36,6 @@ class TimFileAnalyzer:
             Timespan in days (max(mjd) - min(mjd))
         """
         try:
-            # Reset processed files for each new calculation
             self._processed_files.clear()
             mjd_values = self._extract_mjd_values_recursive(tim_file_path)
 

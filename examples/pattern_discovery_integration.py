@@ -31,7 +31,6 @@ def discover_and_integrate_new_pta(
     # Initialize layout discovery service
     layout_service = LayoutDiscoveryService()
 
-    # Step 1: Discover layout using new API
     print("  📁 Discovering layout...")
     discovered_layouts = layout_service.discover_layout(
         working_dir=str(data_dir), verbose=False
@@ -72,7 +71,6 @@ def test_file_discovery_with_new_pta(pta_name: str):
     """
     print(f"\n🧪 Testing FileDiscoveryService with {pta_name}...")
 
-    # IMPORTANT: Create a NEW FileDiscoveryService instance after modifying PTA_DATA_RELEASES
     # because FileDiscoveryService uses .copy() of PTA_DATA_RELEASES in its constructor
     file_service = FileDiscoveryService()
 

@@ -498,7 +498,6 @@ class LayoutDiscoveryService:
 
     def _determine_base_dir(self, structure: Dict) -> str:
         """Determine the base directory for the PTA."""
-        # For now, just return the analyzed path
         # In practice, this might need to be relative to some data root
         return structure["base_path"]
 
