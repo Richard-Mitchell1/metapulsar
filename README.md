@@ -50,8 +50,8 @@ metapulsar = factory.create_metapulsar(
 
 # Access combined timing data
 print(f"Strategy: {metapulsar.combination_strategy}")
-print(f"Number of PTAs: {len(metapulsar.pulsars)}")
-print(f"PTA names: {list(metapulsar.pulsars.keys())}")
+print(f"Number of PTAs: {len(metapulsar._pulsars)}")
+print(f"PTA names: {list(metapulsar._pulsars.keys())}")
 ```
 
 ## 📖 Documentation

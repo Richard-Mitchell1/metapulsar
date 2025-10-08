@@ -100,13 +100,29 @@ class TestMetaPulsarPositionAndFinalization:
         toas1, residuals1, errors1, freqs1 = create_mock_timing_data(10)
         flags1 = create_mock_flags(10, telescope="test_pta1")
         mock_psr1 = MockPulsar(
-            toas1, residuals1, errors1, freqs1, flags1, "test_pta1", "J1857+0943"
+            toas1,
+            residuals1,
+            errors1,
+            freqs1,
+            flags1,
+            "test_pta1",
+            "J1857+0943",
+            astrometry=True,
+            spin=True,
         )
 
         toas2, residuals2, errors2, freqs2 = create_mock_timing_data(10)
         flags2 = create_mock_flags(10, telescope="test_pta2")
         mock_psr2 = MockPulsar(
-            toas2, residuals2, errors2, freqs2, flags2, "test_pta2", "J1900+0000"
+            toas2,
+            residuals2,
+            errors2,
+            freqs2,
+            flags2,
+            "test_pta2",
+            "J1900+0000",
+            astrometry=True,
+            spin=True,
         )
 
         # Use adapters for MetaPulsar creation
@@ -215,7 +231,15 @@ class TestMetaPulsarPositionAndFinalization:
         toas, residuals, errors, freqs = create_mock_timing_data(10)
         flags = create_mock_flags(10, telescope="test_pta")
         mock_psr = MockPulsar(
-            toas, residuals, errors, freqs, flags, "test_pta", "J1857+0943"
+            toas,
+            residuals,
+            errors,
+            freqs,
+            flags,
+            "test_pta",
+            "J1857+0943",
+            astrometry=True,
+            spin=True,
         )
 
         # Remove name attribute (MockPulsar uses self.name, not a separate name attribute)

@@ -300,8 +300,8 @@ class TestCoordinateBasedDiscovery:
         assert isinstance(metapulsar, MetaPulsar)
         assert hasattr(metapulsar, "name")
         # The name will be determined from the pulsar data, not from a parameter
-        assert hasattr(metapulsar, "pulsars")
-        assert len(metapulsar.pulsars) == 2
+        assert hasattr(metapulsar, "_pulsars")
+        assert len(metapulsar._pulsars) == 2
 
     def test_discover_files_coordinate_matching(self, mock_file_discovery_service):
         """Test file discovery with coordinate matching using FileDiscoveryService."""

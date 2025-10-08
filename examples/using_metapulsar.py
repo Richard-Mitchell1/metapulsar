@@ -43,7 +43,6 @@ pulsar_data = {
         {
             "par": "../data/ipta-dr2/NANOGrav_9y/par/J0613-0200_NANOGrav_9yv1.gls.par",
             "tim": "../data/ipta-dr2/NANOGrav_9y/tim/J0613-0200_NANOGrav_9yv1.tim",
-            "timespan_days": 3285.0,  # 9 years
             "timing_package": "pint",
         }
     ],
@@ -51,7 +50,6 @@ pulsar_data = {
         {
             "par": "../data/ipta-dr2/EPTA_v2.2/J0613-0200/J0613-0200.par",
             "tim": "../data/ipta-dr2/EPTA_v2.2/J0613-0200/J0613-0200_all.tim",
-            "timespan_days": 3650.0,  # Data span in days
             "timing_package": "tempo2",  # Timing package used
         }
     ],
@@ -60,7 +58,6 @@ pulsar_data = {
         {
             "par": "../data/ipta-dr2/PPTA_dr1dr2/par/J0613-0200_dr1dr2.par",
             "tim": "../data/ipta-dr2/PPTA_dr1dr2/tim/J0613-0200_dr1dr2.tim",
-            "timespan_days": 4200.0,
             "timing_package": "tempo2",
         }
     ],
@@ -117,8 +114,8 @@ print("=" * 80)
 # The resulting MetaPulsar is an Enterprise pulsar with all standard attributes
 print("MetaPulsar Enterprise attributes:")
 print(f"  Name: {metapulsar.name}")
-print(f"  Number of pulsars: {len(metapulsar.pulsars)}")
-print(f"  PTA names: {list(metapulsar.pulsars.keys())}")
+print(f"  Number of pulsars: {len(metapulsar._pulsars)}")
+print(f"  PTA names: {list(metapulsar._pulsars.keys())}")
 print(f"  Combination strategy: {metapulsar.combination_strategy}")
 print(f"  Components merged: {metapulsar.combine_components}")
 
@@ -310,8 +307,8 @@ print(f"   Created {len(metapulsars_epta)} MetaPulsars with EPTA as reference PT
 print("\nResults (showing first 3 pulsars):")
 print(f"  Total pulsars found: {len(limited_pulsar_names)}")
 for pulsar_name in limited_pulsar_names:  # Show first 3
-    auto_ref = list(metapulsars_auto[pulsar_name].pulsars.keys())[0]
-    epta_ref = list(metapulsars_epta[pulsar_name].pulsars.keys())[0]
+    auto_ref = list(metapulsars_auto[pulsar_name]._pulsars.keys())[0]
+    epta_ref = list(metapulsars_epta[pulsar_name]._pulsars.keys())[0]
     print(f"    {pulsar_name}: auto={auto_ref}, epta={epta_ref}")
 
 print("\nReference PTA selection:")

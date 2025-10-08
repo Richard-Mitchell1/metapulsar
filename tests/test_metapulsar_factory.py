@@ -146,8 +146,8 @@ class TestMetaPulsarFactory:
         metapulsar = MetaPulsar(pulsars=pulsars, combination_strategy="composite")
 
         assert metapulsar is not None
-        assert hasattr(metapulsar, "pulsars")
-        assert len(metapulsar.pulsars) == 1
+        assert hasattr(metapulsar, "_pulsars")
+        assert len(metapulsar._pulsars) == 1
         assert metapulsar.name == "J1857+0943"
 
     def test_validate_single_pulsar_data_empty(self):

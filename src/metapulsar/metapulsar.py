@@ -64,8 +64,7 @@ class MetaPulsar(ep.BasePulsar):
             sort: Whether to sort data by time
         """
         self._pulsars = pulsars
-        self.pulsars = pulsars  # Public attribute for compatibility
-        # Extract parfile data from objects (unified approach)
+        # Extract parfile data from objects
         self._parfile_dicts = self._get_parfile_data(pulsars)
         self.combination_strategy = combination_strategy
         self.combine_components = combine_components

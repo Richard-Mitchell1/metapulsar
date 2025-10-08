@@ -203,7 +203,7 @@ factory = MetaPulsarFactory()
 metapulsar = factory.create_metapulsar("J1857+0943")
 
 # Access the underlying pulsar data
-print(f"Available PTAs: {list(metapulsar.pulsars.keys())}")
+print(f"Available PTAs: {list(metapulsar._pulsars.keys())}")
 print(f"Parameter merging config: astrometry={metapulsar._merge_astrometry}")
 ```
 
