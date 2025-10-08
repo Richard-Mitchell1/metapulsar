@@ -37,35 +37,42 @@ def get_category_mapping_from_pint() -> Dict[str, str]:
     return KeyReturningDict(mapping)
 
 
+# Cache for parameter aliases to avoid repeated AllComponents() creation
+_parameter_aliases_cache = None
+
+
 def get_parameter_aliases_from_pint() -> Dict[str, str]:
-    """Get simple parameter aliases from PINT.
+    """Get parameter aliases from PINT.
 
     Returns:
         Dictionary mapping aliases to canonical parameter names
-        Excludes coordinate system aliases (handled at component level)
 
     Raises:
         PINTDiscoveryError: If PINT alias discovery fails
     """
     from loguru import logger
 
+    global _parameter_aliases_cache
+
+    # Return cached result if available
+    if _parameter_aliases_cache is not None:
+        return _parameter_aliases_cache
+
     try:
         all_components = AllComponents()
         alias_map = all_components._param_alias_map
 
-        # Filter out coordinate-related aliases (RAJ/ELONG, etc.)
-        # Keep only simple parameter aliases
-        simple_aliases = {}
-        for alias, canonical in alias_map.items():
-            # Skip coordinate system aliases (astrometry parameters)
-            if not _is_astrometry_parameter(alias):
-                simple_aliases[alias] = canonical
+        # Use all aliases - component-level discovery handles parameter types correctly
+        aliases = dict(alias_map)
 
         # Add missing aliases that PINT doesn't have but legacy expects
-        simple_aliases["EDOT"] = "ECCDOT"
+        aliases["EDOT"] = "ECCDOT"
 
-        logger.debug(f"Discovered {len(simple_aliases)} parameter aliases from PINT")
-        return simple_aliases
+        # Cache the result
+        _parameter_aliases_cache = aliases
+
+        logger.debug(f"Discovered {len(aliases)} parameter aliases from PINT")
+        return aliases
     except Exception as e:
         logger.error(f"PINT alias discovery failed: {e}")
         # NO FALLBACK - fail gracefully as per SSOT principle
@@ -131,44 +138,20 @@ def get_parameter_identifiability_from_model(
     return True
 
 
-def _is_astrometry_parameter(param_name: str) -> bool:
-    """Check if parameter is astrometry-related by discovering from PINT components."""
-    from pint.models.model_builder import AllComponents
-
-    all_components = AllComponents()
-
-    # Get all astrometry components from PINT
-    astrometry_components = all_components.category_component_map.get("astrometry", [])
-
-    # Collect all parameters from astrometry components
-    astrometry_params = set()
-    for component_name in astrometry_components:
-        try:
-            # Access component from the components dictionary
-            component_instance = all_components.components[component_name]
-            if hasattr(component_instance, "params"):
-                astrometry_params.update(component_instance.params)
-        except (KeyError, AttributeError, TypeError, Exception):
-            # Component not available or can't be instantiated, continue
-            continue
-
-    return param_name in astrometry_params
-
-
-def get_parameters_by_type_from_parfiles(
-    param_type: str, parfile_dicts: Dict[str, Dict]
+def get_parameters_by_type_from_models(
+    param_type: str, pint_models: Dict[str, TimingModel]
 ) -> List[str]:
-    """Get parameters by type from parfile dictionaries using PINT, including dynamic derivatives and aliases.
+    """Get parameters by type from PINT models, including dynamic derivatives and aliases.
 
     Args:
         param_type: Type of parameters to discover ('astrometry', 'spindown', etc.)
-        parfile_dicts: Dictionary mapping PTA names to parfile dictionaries
+        pint_models: Dictionary mapping PTA names to PINT TimingModel instances
 
     Returns:
-        List of parameter names discovered from actual parfiles, including all aliases
+        List of parameter names discovered from actual models, including all aliases
 
     Raises:
-        PINTDiscoveryError: If PINT model creation fails
+        PINTDiscoveryError: If parameter extraction fails
     """
     from loguru import logger
 
@@ -178,12 +161,9 @@ def get_parameters_by_type_from_parfiles(
     category_mapping = get_category_mapping_from_pint()
     target_category = category_mapping[param_type]
 
-    # Discover parameters from each PTA's actual parfile
-    for pta_name, parfile_dict in parfile_dicts.items():
+    # Discover parameters from each PTA's actual model
+    for pta_name, model in pint_models.items():
         try:
-            # Create PINT model from parfile data using consolidated function
-            model = create_pint_model(parfile_dict)
-
             # Extract parameters for the specific component
             for comp in model.components.values():
                 if hasattr(comp, "category") and comp.category == target_category:
@@ -191,7 +171,9 @@ def get_parameters_by_type_from_parfiles(
                         all_params.update(comp.params)  # Includes dynamic derivatives!
 
         except Exception as e:
-            logger.warning(f"Failed to parse parfile for PTA {pta_name}: {e}")
+            logger.warning(
+                f"Failed to extract parameters from model for PTA {pta_name}: {e}"
+            )
             continue
 
     # Get parameter aliases from PINT
@@ -217,6 +199,36 @@ def get_parameters_by_type_from_parfiles(
         f"Component {param_type}: Found {len(all_params)} canonical parameters, {len(all_params_with_aliases)} total with aliases"
     )
     return list(all_params_with_aliases)
+
+
+def get_parameters_by_type_from_parfiles(
+    param_type: str, parfile_dicts: Dict[str, Dict]
+) -> List[str]:
+    """Get parameters by type from parfile dictionaries using PINT, including dynamic derivatives and aliases.
+
+    Args:
+        param_type: Type of parameters to discover ('astrometry', 'spindown', etc.)
+        parfile_dicts: Dictionary mapping PTA names to parfile dictionaries
+
+    Returns:
+        List of parameter names discovered from actual parfiles, including all aliases
+
+    Raises:
+        PINTDiscoveryError: If PINT model creation fails
+    """
+    from loguru import logger
+
+    # Create PINT models from parfile dictionaries
+    pint_models = {}
+    for pta_name, parfile_dict in parfile_dicts.items():
+        try:
+            pint_models[pta_name] = create_pint_model(parfile_dict)
+        except Exception as e:
+            logger.warning(f"Failed to create PINT model for PTA {pta_name}: {e}")
+            continue
+
+    # Delegate to the models-based function
+    return get_parameters_by_type_from_models(param_type, pint_models)
 
 
 def create_pint_model(parfile_data) -> TimingModel:

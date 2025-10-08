@@ -20,7 +20,7 @@ from pint.models.timing_model import TimingModel
 from .pint_helpers import (
     get_parameter_aliases_from_pint,
     create_pint_model,
-    get_parameters_by_type_from_parfiles,
+    get_parameters_by_type_from_models,
     check_component_available_in_model,
     get_parameter_identifiability_from_model,
     get_category_mapping_from_pint,
@@ -80,6 +80,27 @@ class ParameterManager:
                 self._reverse_aliases[canonical] = []
             self._reverse_aliases[canonical].append(alias)
 
+        # Cache for PINT models
+        self._pint_models_cache = None
+
+    @property
+    def pint_models(self) -> Dict[str, TimingModel]:
+        """Get cached PINT models, creating them if needed.
+
+        Returns:
+            Dictionary mapping PTA names to PINT TimingModel instances
+        """
+        if self._pint_models_cache is None:
+            self._pint_models_cache = {}
+            for pta_name in self.file_data.keys():
+                parfile_content = self._get_parfile_content(pta_name)
+                self._pint_models_cache[pta_name] = create_pint_model(parfile_content)
+        return self._pint_models_cache
+
+    def _clear_pint_models_cache(self):
+        """Clear the PINT models cache."""
+        self._pint_models_cache = None
+
     # ===== MAIN PUBLIC METHODS =====
 
     def make_parfiles_consistent(self) -> Dict[str, Path]:
@@ -94,6 +115,9 @@ class ParameterManager:
             Dictionary of consistent parfile contents for each PTA
         """
         self.logger.info("Making par files consistent across PTAs")
+
+        # Clear cache at start of new consistency run
+        self._clear_pint_models_cache()
 
         # 1. Parse par files into dictionaries
         parfile_dicts = self._parse_parfiles()
@@ -301,9 +325,10 @@ class ParameterManager:
 
         # Pre-compute component parameters for ALL components
         component_params_map = {}
+        pint_models = self.pint_models  # Use cached models
         for component in self.combine_components:
-            component_params_map[component] = get_parameters_by_type_from_parfiles(
-                component, parfile_dicts
+            component_params_map[component] = get_parameters_by_type_from_models(
+                component, pint_models
             )
 
         # Pre-compute DMX parameters for ALL PTAs
@@ -528,7 +553,8 @@ class ParameterManager:
                 parfile_content = self._get_parfile_content(pta_name)
                 parfile_dicts[pta_name] = parse_parfile(StringIO(parfile_content))
 
-            params = get_parameters_by_type_from_parfiles(component_type, parfile_dicts)
+            pint_models = self.pint_models  # Use cached models
+            params = get_parameters_by_type_from_models(component_type, pint_models)
             mergeable_params.extend(params)
         return mergeable_params
 
