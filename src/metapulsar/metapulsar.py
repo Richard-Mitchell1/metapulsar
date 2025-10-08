@@ -67,7 +67,9 @@ class MetaPulsar(ep.BasePulsar):
         # Extract parfile data from objects
         self._parfile_dicts = self._get_parfile_data(pulsars)
         self.combination_strategy = combination_strategy
-        self.combine_components = combine_components
+        self.combine_components = (
+            combine_components if combination_strategy == "consistent" else []
+        )
         self.add_dm_derivatives = add_dm_derivatives
         self._sort = sort  # BasePulsar handles sorting
 
@@ -226,53 +228,6 @@ class MetaPulsar(ep.BasePulsar):
 
     def _setup_parameters(self):
         """Setup parameter management using existing infrastructure."""
-        if self.combination_strategy == "composite":
-            # For composite strategy, preserve original parameters from each PTA
-            self._setup_composite_parameters()
-        elif self.combination_strategy == "consistent":
-            # For consistent strategy, use consistent parameters (already handled by ParameterManager)
-            self._setup_consistent_parameters()
-
-    def _setup_composite_parameters(self):
-        """Setup parameters for composite strategy (preserve original PTA parameters)."""
-        # Get both PINT models and libstempo pulsars from the unpacked data
-        pint_models, _, lt_pulsars = self._unpack_pulsar_data()
-
-        # Create file data for ParameterManager
-        file_data = {}
-
-        # Handle PINT models
-        for pta_name, model in pint_models.items():
-            # Create minimal file data structure for ParameterManager
-            file_data[pta_name] = {
-                "par": None,  # Not needed for parameter mapping
-                "par_content": model.as_parfile(),
-            }
-
-        # Handle libstempo pulsars
-        for pta_name, lt_psr in lt_pulsars.items():
-            # Get parfile content using helper method
-            parfile_content = self._get_libstempo_parfile_content(lt_psr)
-            file_data[pta_name] = {
-                "par": None,  # Not needed for parameter mapping
-                "par_content": parfile_content,
-            }
-
-        # Create ParameterManager for parameter mapping
-        parameter_manager = ParameterManager(
-            file_data=file_data,
-            combine_components=[],  # Empty list for composite (no merging)
-        )
-
-        mapping = parameter_manager.build_parameter_mappings()
-
-        self._fitparameters = mapping.fitparameters
-        self._setparameters = mapping.setparameters
-        self.fitpars = list(self._fitparameters.keys())
-        self.setpars = list(self._setparameters.keys())
-
-    def _setup_consistent_parameters(self):
-        """Setup parameters for consistent strategy (use consistent parameters)."""
         # Get both PINT models and libstempo pulsars from the unpacked data
         pint_models, _, lt_pulsars = self._unpack_pulsar_data()
 

@@ -80,7 +80,7 @@ classDiagram
         +Dict _aliases
         +Dict _reverse_aliases
         +__init__(pint_models)
-        +resolve_parameter_equivalence(param_name) str
+        +resolve_parameter_aliases(param_name) str
         +check_parameter_available_across_ptas(param_name) bool
         +check_parameter_identifiable(pta_name, param_name) bool
         +check_component_available_across_ptas(component_name) bool

@@ -51,6 +51,7 @@ class ParameterManager:
         ],
         add_dm_derivatives: bool = True,
         output_dir: Path = None,
+        pulsar_name: str = None,
     ):
         """Initialize with file data and configuration.
 
@@ -59,11 +60,13 @@ class ParameterManager:
             combine_components: List of components to make consistent
             add_dm_derivatives: Whether to add DM1, DM2 parameters
             output_dir: Directory for output files
+            pulsar_name: Name of the pulsar (used for output filename generation)
         """
         self.file_data = file_data
         self.combine_components = combine_components
         self.add_dm_derivatives = add_dm_derivatives
         self.output_dir = output_dir
+        self.pulsar_name = pulsar_name
 
         # Use first dictionary key as reference (consistent with MetaPulsarFactory)
         self.reference_pta = next(iter(file_data.keys()))
@@ -80,7 +83,16 @@ class ParameterManager:
     # ===== MAIN PUBLIC METHODS =====
 
     def make_parfiles_consistent(self) -> Dict[str, Path]:
-        """Make par files consistent across PTAs."""
+        """Make par files consistent across PTAs so that the certain model
+        components (astrometry, spindown, binary, dispersion) are have
+        consistent values between PTAs.
+
+        Args:
+            None
+
+        Returns:
+            Dictionary of consistent parfile contents for each PTA
+        """
         self.logger.info("Making par files consistent across PTAs")
 
         # 1. Parse par files into dictionaries
@@ -155,7 +167,9 @@ class ParameterManager:
             try:
                 # Parse to check current units
                 parfile_dict = parse_parfile(StringIO(parfile_content))
-                current_units = parfile_dict.get("UNITS", ["TDB"])[0].upper()
+                current_units = parfile_dict.get(
+                    "UNITS", [self._get_default_time_units(pta_name)]
+                )[0].upper()
 
                 file_units[pta_name] = current_units
                 parfile_contents[pta_name] = parfile_content
@@ -165,6 +179,18 @@ class ParameterManager:
                 raise RuntimeError(f"Failed to read par file for PTA {pta_name}") from e
 
         return file_units, parfile_contents
+
+    def _get_default_time_units(self, pta_name: str) -> str:
+        """Get the default time units for a PTA based on its timing package.
+
+        Args:
+            pta_name: Name of the PTA
+
+        Returns:
+            Default time units: "TDB" for PINT, "TCB" for Tempo2
+        """
+        timing_package = self.file_data[pta_name].get("timing_package", "pint")
+        return "TDB" if timing_package == "pint" else "TCB"
 
     def _convert_mixed_units(
         self, file_units: Dict[str, str], parfile_contents: Dict[str, str]
@@ -228,7 +254,32 @@ class ParameterManager:
     def _make_parameters_consistent(
         self, parfile_data: Dict[str, str]
     ) -> Dict[str, str]:
-        """Make parameters consistent using reference PTA values."""
+        """Make parameters consistent using reference PTA values.
+
+        This function really is the workhorse of the MetaPulsar procedure to
+        make par models consistent across PTAs. Method:
+
+        - Start with parfiles that have been unit-converted (done)
+        - Get all parameters from the reference PTA
+        - Determine which model 'components' (astrometry, spindown, etc.) are
+          being made consistent, and find all parameters in the models
+        - For each component, replace the parameters with the values of the
+          reference PTA
+        - For dispersion, remove DMX parameters
+        - Optionally, add DM1 and DM2 parameters
+        - Always align CLOCK and EPHEM parameters
+        - Convert back to par file strings
+        - Write consistent par files to output directory
+
+        This method is deterministic, so we do not have to save the new parfiles
+        (but we can, as an option)
+
+        Args:
+            parfile_data: Dictionary of parfile contents for each PTA
+
+        Returns:
+            Dictionary of consistent parfile contents for each PTA
+        """
         self.logger.info(
             f"Making parameters consistent using reference PTA: {self.reference_pta}"
         )
@@ -282,6 +333,18 @@ class ParameterManager:
                     reference_dict,
                     self.add_dm_derivatives,
                     dmx_params_map,
+                )
+
+        # Always align CLOCK and EPHEM parameters
+        for pta_name, parfile_dict in parfile_dicts.items():
+            parfile_dict["EPHEM"] = reference_dict["EPHEM"]
+            if "CLOCK" in reference_dict:
+                parfile_dict["CLOCK"] = reference_dict["CLOCK"]
+            elif "CLK" in reference_dict:
+                parfile_dict["CLK"] = reference_dict["CLK"]
+            else:
+                self.logger.error(
+                    f"No CLOCK or CLK parameter found in reference PTA {self.reference_pta}"
                 )
 
         # Convert back to par file strings
@@ -448,7 +511,10 @@ class ParameterManager:
 
     def _get_output_filename(self, pta_name: str) -> str:
         """Generate output filename for consistent par file."""
-        return f"consistent_{pta_name}.par"
+        if self.pulsar_name:
+            return f"{self.pulsar_name}_consistent_{pta_name}.par"
+        else:
+            return f"consistent_{pta_name}.par"
 
     # ===== PARAMETER MAPPING METHODS =====
 
@@ -487,6 +553,17 @@ class ParameterManager:
                 pta_name, model, mergeable_params, setparameters, "all"
             )
 
+            # Make sure Offset is added if PHOFF is not present
+            # Neither Enterprise nor PINT report that parameter that is
+            # typically sneakily fit for
+            if "PHOFF" not in model.params:
+                self._add_pta_specific_parameter(
+                    "PHOFF", pta_name, "Offset", fitparameters
+                )
+                self._add_pta_specific_parameter(
+                    "PHOFF", pta_name, "Offset", setparameters
+                )
+
         return fitparameters, setparameters
 
     def _process_pta_parameters(
@@ -518,7 +595,7 @@ class ParameterManager:
             )
 
         for param_name in param_list:
-            meta_parname = self.resolve_parameter_equivalence(param_name)
+            meta_parname = self.resolve_parameter_aliases(param_name)
 
             # Check if this parameter should be merged
             if param_name in mergeable_params:
@@ -582,7 +659,7 @@ class ParameterManager:
 
     # ===== PARAMETER RESOLUTION METHODS =====
 
-    def resolve_parameter_equivalence(self, param_name: str) -> str:
+    def resolve_parameter_aliases(self, param_name: str) -> str:
         """Resolve parameter aliases to canonical names."""
         canonical = self._aliases.get(param_name, param_name)
         if canonical != param_name:

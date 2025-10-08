@@ -289,7 +289,8 @@ def dict_to_parfile_string_pint_driven(parfile_dict: Dict, format: str = "pint")
         result += "MODE 1\n"
     elif format.lower() == "pint":
         result += "# Created: " + datetime.now().isoformat() + "\n"
-        result += "# Format: pint\n"
+        result += "# Format:  PINT\n"
+        result += "# By:      MetaPulsar\n"
 
     # Format ALL parameters using PINT's exact formatting
     for param_name, param_data in parfile_dict.items():

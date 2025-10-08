@@ -231,10 +231,10 @@ UNITS TDB
 
     # ===== PARAMETER RESOLUTION TESTS =====
 
-    def test_resolve_parameter_equivalence(self, parameter_manager):
+    def test_resolve_parameter_aliases(self, parameter_manager):
         """Test parameter alias resolution."""
         # This will depend on what aliases are available in PINT
-        result = parameter_manager.resolve_parameter_equivalence("F0")
+        result = parameter_manager.resolve_parameter_aliases("F0")
         assert isinstance(result, str)
 
     def test_check_component_available_across_ptas(self, parameter_manager):

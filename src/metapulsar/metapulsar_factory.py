@@ -113,6 +113,7 @@ class MetaPulsarFactory:
             "dispersion",
         ],
         add_dm_derivatives: bool = True,
+        parfile_output_dir: Path = None,
     ) -> MetaPulsar:
         """Create MetaPulsar using specified combination strategy.
 
@@ -125,6 +126,8 @@ class MetaPulsarFactory:
             combine_components: List of components to make consistent (for consistent strategy).
                 Defaults to all components: ["astrometry", "spindown", "binary", "dispersion"]
             add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files (for consistent strategy)
+            parfile_output_dir: Directory to save consistent par files (for consistent strategy only).
+                If None, par files are not saved to disk.
 
         Returns:
             MetaPulsar object
@@ -141,7 +144,11 @@ class MetaPulsarFactory:
         # 2. Validate all files belong to same pulsar (coordinate-based)
         self._validate_single_pulsar_data(validated_data)
 
-        # 3. Create MetaPulsar (direct implementation)
+        # 3. Get pulsar name for output filename generation
+        pulsar_groups = discover_pulsars_by_coordinates_optimized(validated_data)
+        pulsar_name = list(pulsar_groups.keys())[0] if pulsar_groups else "unknown"
+
+        # 4. Create MetaPulsar (direct implementation)
         # Convert file data to single file per PTA format
         single_file_data = {}
         for pta_name, file_list in validated_data.items():
@@ -155,13 +162,20 @@ class MetaPulsarFactory:
             for pta, file_dict in single_file_data.items()
         }
 
-        # Process par files if consistent strategy
+        # Create output directory if parfile_output_dir is provided
+        if parfile_output_dir:
+            parfile_output_dir = Path(parfile_output_dir).resolve()
+            parfile_output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Process par files based on strategy
         if combination_strategy == "consistent":
             # Create ParameterManager for parfile consistency
             parameter_manager = ParameterManager(
                 file_data=single_file_data,
                 combine_components=combine_components,
                 add_dm_derivatives=add_dm_derivatives,
+                output_dir=parfile_output_dir,
+                pulsar_name=pulsar_name,
             )
 
             # Make par files consistent
@@ -173,6 +187,11 @@ class MetaPulsarFactory:
                 for pta in single_file_data.keys()
                 if pta in consistent_parfiles
             }
+        elif parfile_output_dir:
+            # For composite strategy, write original par files
+            self._write_original_parfiles(
+                single_file_data, parfile_output_dir, pulsar_name
+            )
 
         # Create PINT/Tempo2 objects from file pairs using file data
         pulsars = self._create_pulsar_objects(file_pairs, single_file_data)
@@ -335,6 +354,7 @@ class MetaPulsarFactory:
             "dispersion",
         ],
         add_dm_derivatives: bool = True,
+        parfile_output_dir: Path = None,
     ) -> Dict[str, MetaPulsar]:
         """Create MetaPulsars for all available pulsars using file data.
 
@@ -344,6 +364,8 @@ class MetaPulsarFactory:
             reference_pta: PTA to use as reference for all pulsars. If None, auto-selects by timespan.
             combine_components: List of components to make consistent
             add_dm_derivatives: Whether to ensure DM1, DM2 are present
+            parfile_output_dir: Directory to save consistent par files (for consistent strategy only).
+                If None, par files are not saved to disk. Creates subdirectories for each pulsar.
 
         Returns:
             Dictionary mapping pulsar names to MetaPulsar objects
@@ -375,6 +397,7 @@ class MetaPulsarFactory:
                     reference_pta=reference_pta_for_pulsar,
                     combine_components=combine_components,
                     add_dm_derivatives=add_dm_derivatives,
+                    parfile_output_dir=parfile_output_dir,
                 )
 
                 # Canonical name is automatically calculated from pulsar data
@@ -504,6 +527,34 @@ class MetaPulsarFactory:
                 raise RuntimeError(f"Failed to create raw pulsar for {pta_name}: {e}")
 
         return raw_pulsars
+
+    def _write_original_parfiles(
+        self,
+        single_file_data: Dict[str, Dict[str, Any]],
+        parfile_output_dir: Path,
+        pulsar_name: str,
+    ) -> None:
+        """Write original par files to output directory for composite strategy.
+
+        Args:
+            single_file_data: Single file per PTA data
+            parfile_output_dir: Directory to write par files
+            pulsar_name: Name of the pulsar for filename generation
+        """
+        for pta_name, file_dict in single_file_data.items():
+            if "par_content" in file_dict:
+                # Write original par content
+                output_filename = f"{pulsar_name}_original_{pta_name}.par"
+                output_path = parfile_output_dir / output_filename
+
+                with open(output_path, "w") as f:
+                    f.write(file_dict["par_content"])
+
+                self.logger.debug(f"Written original par file: {output_path}")
+            else:
+                self.logger.warning(
+                    f"No par_content found for {pta_name}, skipping original par file write"
+                )
 
 
 def reorder_ptas_for_pulsar(
