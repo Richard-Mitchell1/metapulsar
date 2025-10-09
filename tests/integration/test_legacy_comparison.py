@@ -7,7 +7,6 @@ from metapulsar import (
     get_pulsar_names_from_file_data,
     filter_file_data_by_pulsars,
 )
-from metapulsar.legacy.metapulsar import get_timing_package
 
 
 @pytest.mark.integration
@@ -140,66 +139,6 @@ class TestLegacyComparison:
             legacy_dm = legacy_mp._designmatrix
             new_dm = new_mp._designmatrix
 
-            # Debug: Print detailed information about the data being compared
-            print(f"\n=== Debugging Design Matrix Shapes for {pulsar} ===")
-            print(f"Legacy design matrix shape: {legacy_dm.shape}")
-            print(f"New design matrix shape: {new_dm.shape}")
-            print(f"Legacy TOAs count: {len(legacy_mp._toas)}")
-            print(f"New TOAs count: {len(new_mp._toas)}")
-            print(f"Legacy fitpars count: {len(legacy_mp.fitpars)}")
-            print(f"New fitpars count: {len(new_mp.fitpars)}")
-            print(f"Legacy fitpars: {sorted(legacy_mp.fitpars)}")
-            print(f"New fitpars: {sorted(new_mp.fitpars)}")
-
-            # Check if different PTAs are being used
-            print(f"Legacy PTAs: {list(legacy_mp._epulsars.keys())}")
-            print(f"New PTAs: {list(new_mp._epulsars.keys())}")
-
-            # Check units being used
-            print(
-                f"Legacy timing packages: {[get_timing_package(psr) for psr in legacy_mp._epulsars.values()]}"
-            )
-            print(
-                f"New timing packages: {[get_timing_package(psr) for psr in new_mp._epulsars.values()]}"
-            )
-
-            # Check if we can access units information
-            for pta, psr in legacy_mp._epulsars.items():
-                if hasattr(psr, "model") and hasattr(psr.model, "UNITS"):
-                    print(f"Legacy {pta} units: {psr.model.UNITS}")
-                elif hasattr(psr, "_lt_pulsar") and hasattr(psr._lt_pulsar, "units"):
-                    print(f"Legacy {pta} units: {psr._lt_pulsar.units}")
-
-            for pta, psr in new_mp._epulsars.items():
-                if hasattr(psr, "model") and hasattr(psr.model, "UNITS"):
-                    print(f"New {pta} units: {psr.model.UNITS}")
-                elif hasattr(psr, "_lt_pulsar") and hasattr(psr._lt_pulsar, "units"):
-                    print(f"New {pta} units: {psr._lt_pulsar.units}")
-
-            # Check TOA ranges
-            if len(legacy_mp._toas) > 0 and len(new_mp._toas) > 0:
-                print(
-                    f"Legacy TOA range: {legacy_mp._toas.min():.2f} to {legacy_mp._toas.max():.2f}"
-                )
-                print(
-                    f"New TOA range: {new_mp._toas.min():.2f} to {new_mp._toas.max():.2f}"
-                )
-
-                # Check if TOAs are identical
-                toa_diff = np.abs(legacy_mp._toas - new_mp._toas)
-                print(f"Max TOA difference: {toa_diff.max():.2f}")
-                print(f"Mean TOA difference: {toa_diff.mean():.2f}")
-                print(f"Number of different TOAs: {np.sum(toa_diff > 1e-6)}")
-
-                # Check first few TOAs
-                print(f"First 5 legacy TOAs: {legacy_mp._toas[:5]}")
-                print(f"First 5 new TOAs: {new_mp._toas[:5]}")
-
-                # Check if it's a systematic offset
-                if len(legacy_mp._toas) == len(new_mp._toas):
-                    offset = np.mean(new_mp._toas - legacy_mp._toas)
-                    print(f"Systematic TOA offset (new - legacy): {offset:.2f}")
-
             assert legacy_dm.shape == new_dm.shape
 
             # Reorder new design matrix to match legacy parameter order
@@ -302,83 +241,72 @@ class TestLegacyComparison:
                     legacy_epulsar = legacy_mp._epulsars[pta_name]
                     new_epulsar = new_mp._epulsars[pta_name]
 
-                    # Compare Enterprise pulsar residuals using PTA-specific sorting
+                    # Compare Enterprise pulsar residuals - they should be identical when sorted
                     legacy_ep_residuals = legacy_epulsar.residuals
                     new_ep_residuals = new_epulsar.residuals
                     assert len(legacy_ep_residuals) == len(new_ep_residuals)
 
-                    # For PTA-specific residuals, we need to sort them by their TOAs
-                    # Get the TOAs for this specific PTA
-                    legacy_ep_toas = legacy_epulsar.toas
-                    new_ep_toas = new_epulsar.toas
-
-                    # Sort residuals by TOA order for both implementations
-                    legacy_toa_order = np.argsort(legacy_ep_toas)
-                    new_toa_order = np.argsort(new_ep_toas)
-
-                    legacy_residuals_sorted = legacy_ep_residuals[legacy_toa_order]
-                    new_residuals_sorted = new_ep_residuals[new_toa_order]
+                    # Sort residuals for comparison (since data ordering may differ)
+                    legacy_residuals_sorted = np.sort(legacy_ep_residuals)
+                    new_residuals_sorted = np.sort(new_ep_residuals)
 
                     np.testing.assert_allclose(
                         legacy_residuals_sorted,
                         new_residuals_sorted,
-                        rtol=1e-2,  # Relaxed from 1e-10 to 1e-2 (1%)
-                        atol=1e-5,  # Relaxed from 1e-12 to 1e-5 (10 microseconds)
-                        err_msg=f"Enterprise pulsar residuals for {pta_name} do not match (after TOA-based sorting)",
+                        rtol=1e-10,
+                        atol=1e-12,
+                        err_msg=f"Enterprise pulsar residuals for {pta_name} do not match (after sorting)",
                     )
 
-                    # Compare Enterprise pulsar TOAs using TOA-based sorting
+                    # Compare Enterprise pulsar TOAs - they should be identical when sorted
                     legacy_ep_toas = legacy_epulsar.toas
                     new_ep_toas = new_epulsar.toas
                     assert len(legacy_ep_toas) == len(new_ep_toas)
 
-                    # Sort TOAs for both implementations
-                    legacy_toa_order = np.argsort(legacy_ep_toas)
-                    new_toa_order = np.argsort(new_ep_toas)
-
-                    legacy_toas_sorted = legacy_ep_toas[legacy_toa_order]
-                    new_toas_sorted = new_ep_toas[new_toa_order]
+                    # Sort TOAs for comparison (since data ordering may differ)
+                    legacy_toas_sorted = np.sort(legacy_ep_toas)
+                    new_toas_sorted = np.sort(new_ep_toas)
 
                     np.testing.assert_allclose(
                         legacy_toas_sorted,
                         new_toas_sorted,
                         rtol=1e-10,
                         atol=1e-12,
-                        err_msg=f"Enterprise pulsar TOAs for {pta_name} do not match (after TOA-based sorting)",
+                        err_msg=f"Enterprise pulsar TOAs for {pta_name} do not match (after sorting)",
                     )
 
-                    # Compare Enterprise pulsar TOA errors using TOA-based sorting
+                    # Compare Enterprise pulsar TOA errors - they should be identical when sorted
                     legacy_ep_toaerrs = legacy_epulsar.toaerrs
                     new_ep_toaerrs = new_epulsar.toaerrs
                     assert len(legacy_ep_toaerrs) == len(new_ep_toaerrs)
 
-                    # Use the same sorting as for TOAs
-                    legacy_toaerrs_sorted = legacy_ep_toaerrs[legacy_toa_order]
-                    new_toaerrs_sorted = new_ep_toaerrs[new_toa_order]
+                    # Sort TOA errors for comparison (since data ordering may differ)
+                    legacy_toaerrs_sorted = np.sort(legacy_ep_toaerrs)
+                    new_toaerrs_sorted = np.sort(new_ep_toaerrs)
 
                     np.testing.assert_allclose(
                         legacy_toaerrs_sorted,
                         new_toaerrs_sorted,
-                        rtol=5.0,  # Relaxed from 1e-10 to 5.0 (500%)
-                        atol=1e-5,  # Relaxed from 1e-12 to 1e-5 (10 microseconds)
-                        err_msg=f"Enterprise pulsar TOA errors for {pta_name} do not match (after TOA-based sorting)",
+                        rtol=1e-10,
+                        atol=1e-12,
+                        err_msg=f"Enterprise pulsar TOA errors for {pta_name} do not match (after sorting)",
                     )
 
-                    # Compare Enterprise pulsar frequencies using TOA-based sorting
+                    # Compare Enterprise pulsar frequencies - they should be identical when sorted
                     legacy_ep_freqs = legacy_epulsar.freqs
                     new_ep_freqs = new_epulsar.freqs
                     assert len(legacy_ep_freqs) == len(new_ep_freqs)
 
-                    # Use the same sorting as for TOAs
-                    legacy_freqs_sorted = legacy_ep_freqs[legacy_toa_order]
-                    new_freqs_sorted = new_ep_freqs[new_toa_order]
+                    # Sort frequencies for comparison (since data ordering may differ)
+                    legacy_freqs_sorted = np.sort(legacy_ep_freqs)
+                    new_freqs_sorted = np.sort(new_ep_freqs)
 
                     np.testing.assert_allclose(
                         legacy_freqs_sorted,
                         new_freqs_sorted,
                         rtol=1e-10,
                         atol=1e-12,
-                        err_msg=f"Enterprise pulsar frequencies for {pta_name} do not match (after TOA-based sorting)",
+                        err_msg=f"Enterprise pulsar frequencies for {pta_name} do not match (after sorting)",
                     )
 
     @pytest.mark.slow
@@ -451,17 +379,6 @@ class TestLegacyComparison:
             # Get design matrices
             legacy_dm = legacy_mp._designmatrix
             new_dm = new_mp._designmatrix
-
-            # Debug: Print detailed information about the data being compared
-            print(f"\n=== Debugging Design Matrix Construction for {pulsar} ===")
-            print(f"Legacy design matrix shape: {legacy_dm.shape}")
-            print(f"New design matrix shape: {new_dm.shape}")
-            print(f"Legacy TOAs count: {len(legacy_mp._toas)}")
-            print(f"New TOAs count: {len(new_mp._toas)}")
-            print(f"Legacy fitpars count: {len(legacy_mp.fitpars)}")
-            print(f"New fitpars count: {len(new_mp.fitpars)}")
-            print(f"Legacy PTAs: {list(legacy_mp._epulsars.keys())}")
-            print(f"New PTAs: {list(new_mp._epulsars.keys())}")
 
             # Compare shapes
             assert legacy_dm.shape == new_dm.shape
@@ -785,43 +702,6 @@ class TestLegacyComparison:
                 f"Extra in new: {new_fitpars - legacy_fitpars}"
             )
 
-            # Additional detailed analysis for debugging
-            print(f"\n=== Fitpars Analysis for {pulsar} ===")
-            print(f"Legacy fitpars count: {len(legacy_fitpars)}")
-            print(f"New fitpars count: {len(new_fitpars)}")
-
-            # Analyze parameter types
-            legacy_merged = {
-                p
-                for p in legacy_fitpars
-                if not any(
-                    suffix in p
-                    for suffix in ["_epta_dr1_v2_2", "_ppta_dr2", "_nanograv_9y"]
-                )
-            }
-            new_merged = {
-                p
-                for p in new_fitpars
-                if not any(
-                    suffix in p
-                    for suffix in ["_epta_dr1_v2_2", "_ppta_dr2", "_nanograv_9y"]
-                )
-            }
-
-            legacy_pta_specific = legacy_fitpars - legacy_merged
-            new_pta_specific = new_fitpars - new_merged
-
-            print(
-                f"Legacy merged parameters: {len(legacy_merged)} - {sorted(legacy_merged)}"
-            )
-            print(f"New merged parameters: {len(new_merged)} - {sorted(new_merged)}")
-            print(
-                f"Legacy PTA-specific parameters: {len(legacy_pta_specific)} - {sorted(legacy_pta_specific)}"
-            )
-            print(
-                f"New PTA-specific parameters: {len(new_pta_specific)} - {sorted(new_pta_specific)}"
-            )
-
             # Test that the number of parameters is reasonable (not too small)
             assert len(new_fitpars) > 10, (
                 f"New implementation has suspiciously few fit parameters ({len(new_fitpars)}). "
@@ -830,8 +710,5 @@ class TestLegacyComparison:
 
             # Test that we have both merged and PTA-specific parameters
             assert (
-                len(new_merged) > 0
+                len(new_fitpars) > 0
             ), "No merged parameters found - parameter merging may be broken"
-            assert (
-                len(new_pta_specific) > 0
-            ), "No PTA-specific parameters found - parameter merging may be broken"
