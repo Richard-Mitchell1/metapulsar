@@ -384,3 +384,48 @@ UNITS TDB
         assert mapping.setparameters == {"F0": {"EPTA": "F0"}}
         assert mapping.merged_parameters == ["F0"]
         assert mapping.pta_specific_parameters == []
+
+    def test_handle_dm_special_cases_missing_dm_error(self):
+        """Test that _handle_dm_special_cases raises error when DM is missing from reference dict."""
+        # Create file data without DM parameter
+        file_data_without_dm = {
+            "EPTA": {
+                "par": Path("test_parfiles/epta.par"),
+                "tim": Path("test_parfiles/epta.tim"),
+                "timespan_days": 3650.5,
+                "timing_package": "pint",
+                "par_content": "PSR J1857+0943\nPEPOCH 55000\nF0 186.494081\nF1 -6.2e-16\nRAJ 18:57:36.3937\nDECJ +09:43:17.291\nUNITS TDB\n",
+            },
+            "PPTA": {
+                "par": Path("test_parfiles/ppta.par"),
+                "tim": Path("test_parfiles/ppta.tim"),
+                "timespan_days": 4200.3,
+                "timing_package": "tempo2",
+                "par_content": "PSR J1857+0943\nPEPOCH 55000\nF0 186.494081\nF1 -6.2e-16\nRAJ 18:57:36.3937\nDECJ +09:43:17.291\nUNITS TDB\n",
+            },
+        }
+
+        # Create ParameterManager with add_dm_derivatives=True to trigger DM handling
+        parameter_manager = ParameterManager(
+            file_data=file_data_without_dm,
+            combine_components=["dispersion"],
+            add_dm_derivatives=True,
+        )
+
+        # Parse parfiles to get the reference dict
+        parfile_dicts = parameter_manager._parse_parfiles()
+        reference_dict = parfile_dicts["EPTA"]  # First PTA is used as reference
+
+        # Verify DM is not in reference dict
+        assert "DM" not in reference_dict
+
+        # Test that _handle_dm_special_cases raises an error when DM is missing
+        with pytest.raises(
+            ValueError, match="DM parameter is missing from reference parfile"
+        ):
+            parameter_manager._handle_dm_special_cases(
+                parfile_dicts=parfile_dicts,
+                reference_dict=reference_dict,
+                add_dm_derivatives=True,
+                dmx_params_map={"EPTA": [], "PPTA": []},
+            )

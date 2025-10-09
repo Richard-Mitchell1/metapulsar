@@ -202,18 +202,42 @@ class TestLegacyComparison:
 
             assert legacy_dm.shape == new_dm.shape
 
+            # Reorder new design matrix to match legacy parameter order
+            # Both implementations have the same fitpars, so we can use legacy order
+            legacy_fitpars = legacy_mp.fitpars
+            new_fitpars = new_mp.fitpars
+
+            # Create mapping from new parameter order to legacy parameter order
+            new_to_legacy_indices = [
+                new_fitpars.index(param) for param in legacy_fitpars
+            ]
+
+            # Reorder new design matrix columns to match legacy order
+            new_dm_reordered = new_dm[:, new_to_legacy_indices]
+
             # Compare design matrix values (within tolerance)
-            # Note: Legacy uses TCB units for Tempo2 PTAs and converts to TDB,
-            # while new implementation uses TDB directly. This causes systematic
-            # TOA differences (~4.33 seconds) that affect design matrix values.
-            # Use relaxed tolerances to account for this known unit difference.
-            np.testing.assert_allclose(legacy_dm, new_dm, rtol=1e-4, atol=1e-6)
+            np.testing.assert_allclose(
+                legacy_dm, new_dm_reordered, rtol=1e-10, atol=1e-12
+            )
 
             # Compare flags
             legacy_flags = legacy_mp._flags
             new_flags = new_mp._flags
             assert len(legacy_flags) == len(new_flags)
-            assert np.array_equal(legacy_flags, new_flags)
+
+            # Normalize timing_package field to handle case sensitivity differences
+            legacy_flags_normalized = legacy_flags.copy()
+            new_flags_normalized = new_flags.copy()
+
+            # Convert timing_package to lowercase for comparison
+            legacy_flags_normalized["timing_package"] = np.char.lower(
+                legacy_flags["timing_package"]
+            )
+            new_flags_normalized["timing_package"] = np.char.lower(
+                new_flags["timing_package"]
+            )
+
+            assert np.array_equal(legacy_flags_normalized, new_flags_normalized)
 
             # Compare timing residuals
             legacy_residuals = legacy_mp._residuals
@@ -252,8 +276,8 @@ class TestLegacyComparison:
             )
 
             # Compare frequencies
-            legacy_freqs = legacy_mp._freqs
-            new_freqs = new_mp._freqs
+            legacy_freqs = legacy_mp.freqs
+            new_freqs = new_mp.freqs
             assert len(legacy_freqs) == len(new_freqs)
             np.testing.assert_allclose(
                 legacy_freqs,
@@ -361,69 +385,80 @@ class TestLegacyComparison:
                     }
                 )
 
-                # Create both implementations
-                legacy_mp = legacy_module.create_metapulsar(input_files)
+            # Create both implementations
+            legacy_mp = legacy_module.create_metapulsar(input_files)
 
-                discovery_service = FileDiscoveryService()
-                file_data = discovery_service.discover_files(test_pta_data_releases)
+            discovery_service = FileDiscoveryService()
+            file_data = discovery_service.discover_files(test_pta_data_releases)
 
-                # Use proper pulsar selection methods like using_metapulsar.py
-                all_pulsar_names = get_pulsar_names_from_file_data(file_data)
+            # Use proper pulsar selection methods like using_metapulsar.py
+            all_pulsar_names = get_pulsar_names_from_file_data(file_data)
 
-                # Check if our target pulsar is in the discovered pulsars
-                if pulsar not in all_pulsar_names:
-                    continue  # Skip if pulsar not found
+            # Check if our target pulsar is in the discovered pulsars
+            if pulsar not in all_pulsar_names:
+                continue  # Skip if pulsar not found
 
-                # Filter file data to only include files for this specific pulsar
-                filtered_file_data = filter_file_data_by_pulsars(file_data, [pulsar])
+            # Filter file data to only include files for this specific pulsar
+            filtered_file_data = filter_file_data_by_pulsars(file_data, [pulsar])
 
-                if not filtered_file_data:
-                    continue  # Skip if no files found for this pulsar
+            if not filtered_file_data:
+                continue  # Skip if no files found for this pulsar
 
-                new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
-                    file_data=filtered_file_data
-                )
+            new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
+                file_data=filtered_file_data
+            )
 
-                # Get design matrices
-                legacy_dm = legacy_mp._designmatrix
-                new_dm = new_mp._designmatrix
+            # Get design matrices
+            legacy_dm = legacy_mp._designmatrix
+            new_dm = new_mp._designmatrix
 
-                # Debug: Print detailed information about the data being compared
-                print(f"\n=== Debugging Design Matrix Construction for {pulsar} ===")
-                print(f"Legacy design matrix shape: {legacy_dm.shape}")
-                print(f"New design matrix shape: {new_dm.shape}")
-                print(f"Legacy TOAs count: {len(legacy_mp._toas)}")
-                print(f"New TOAs count: {len(new_mp._toas)}")
-                print(f"Legacy fitpars count: {len(legacy_mp.fitpars)}")
-                print(f"New fitpars count: {len(new_mp.fitpars)}")
-                print(f"Legacy PTAs: {list(legacy_mp._epulsars.keys())}")
-                print(f"New PTAs: {list(new_mp._epulsars.keys())}")
+            # Debug: Print detailed information about the data being compared
+            print(f"\n=== Debugging Design Matrix Construction for {pulsar} ===")
+            print(f"Legacy design matrix shape: {legacy_dm.shape}")
+            print(f"New design matrix shape: {new_dm.shape}")
+            print(f"Legacy TOAs count: {len(legacy_mp._toas)}")
+            print(f"New TOAs count: {len(new_mp._toas)}")
+            print(f"Legacy fitpars count: {len(legacy_mp.fitpars)}")
+            print(f"New fitpars count: {len(new_mp.fitpars)}")
+            print(f"Legacy PTAs: {list(legacy_mp._epulsars.keys())}")
+            print(f"New PTAs: {list(new_mp._epulsars.keys())}")
 
-                # Compare shapes
-                assert legacy_dm.shape == new_dm.shape
+            # Compare shapes
+            assert legacy_dm.shape == new_dm.shape
 
-                # Compare values
-                # Note: Legacy uses TCB units for Tempo2 PTAs and converts to TDB,
-                # while new implementation uses TDB directly. This causes systematic
-                # TOA differences (~4.33 seconds) that affect design matrix values.
-                # Use relaxed tolerances to account for this known unit difference.
-                np.testing.assert_allclose(legacy_dm, new_dm, rtol=1e-4, atol=1e-6)
+            # Reorder new design matrix to match legacy parameter order
+            # Both implementations have the same fitpars, so we can use legacy order
+            legacy_fitpars = legacy_mp.fitpars
+            new_fitpars = new_mp.fitpars
 
-                # Test that no columns are all zeros (except possibly the first)
-                for i in range(1, legacy_dm.shape[1]):
-                    legacy_col = legacy_dm[:, i]
-                    new_col = new_dm[:, i]
+            # Create mapping from new parameter order to legacy parameter order
+            new_to_legacy_indices = [
+                new_fitpars.index(param) for param in legacy_fitpars
+            ]
 
-                    # Both should have the same zero pattern
-                    legacy_zeros = np.all(legacy_col == 0)
-                    new_zeros = np.all(new_col == 0)
-                    assert legacy_zeros == new_zeros
+            # Reorder new design matrix columns to match legacy order
+            new_dm_reordered = new_dm[:, new_to_legacy_indices]
 
-                    # If not all zeros, values should match
-                    if not legacy_zeros:
-                        np.testing.assert_allclose(
-                            legacy_col, new_col, rtol=1e-10, atol=1e-12
-                        )
+            # Compare values
+            np.testing.assert_allclose(
+                legacy_dm, new_dm_reordered, rtol=1e-10, atol=1e-12
+            )
+
+            # Test that no columns are all zeros (except possibly the first)
+            for i in range(1, legacy_dm.shape[1]):
+                legacy_col = legacy_dm[:, i]
+                new_col = new_dm_reordered[:, i]
+
+                # Both should have the same zero pattern
+                legacy_zeros = np.all(legacy_col == 0)
+                new_zeros = np.all(new_col == 0)
+                assert legacy_zeros == new_zeros
+
+                # If not all zeros, values should match
+                if not legacy_zeros:
+                    np.testing.assert_allclose(
+                        legacy_col, new_col, rtol=1e-10, atol=1e-12
+                    )
 
     @pytest.mark.slow
     @pytest.mark.legacy_comparison
@@ -496,11 +531,26 @@ class TestLegacyComparison:
 
             # Compare flags
             assert len(legacy_flags) == len(new_flags)
-            assert np.array_equal(legacy_flags, new_flags)
+
+            # Normalize timing_package field to handle case sensitivity differences
+            legacy_flags_normalized = legacy_flags.copy()
+            new_flags_normalized = new_flags.copy()
+
+            # Convert timing_package to lowercase for comparison
+            legacy_flags_normalized["timing_package"] = np.char.lower(
+                legacy_flags["timing_package"]
+            )
+            new_flags_normalized["timing_package"] = np.char.lower(
+                new_flags["timing_package"]
+            )
+
+            assert np.array_equal(legacy_flags_normalized, new_flags_normalized)
 
             # Test flag statistics
-            legacy_unique, legacy_counts = np.unique(legacy_flags, return_counts=True)
-            new_unique, new_counts = np.unique(new_flags, return_counts=True)
+            legacy_unique, legacy_counts = np.unique(
+                legacy_flags_normalized, return_counts=True
+            )
+            new_unique, new_counts = np.unique(new_flags_normalized, return_counts=True)
 
             assert len(legacy_unique) == len(new_unique)
             assert np.array_equal(legacy_unique, new_unique)

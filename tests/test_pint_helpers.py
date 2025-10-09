@@ -9,7 +9,6 @@ from metapulsar.pint_helpers import (
     get_parameters_by_type_from_parfiles,
     create_pint_model,
     PINTDiscoveryError,
-    _is_astrometry_parameter,
 )
 
 # Test constants for better maintainability
@@ -114,28 +113,12 @@ class TestGetParameterAliasesFromPint:
                 "XDOT": "A1DOT",
                 "E": "ECC",
                 "STIG": "STIGMA",
-                "RAJ": "ELONG",  # Coordinate alias - should be filtered out
-                "DECJ": "ELAT",  # Coordinate alias - should be filtered out
             }
 
             # Mock the category_component_map for coordinate detection
             mock_instance.category_component_map = {
                 "astrometry": ["AstrometryEquatorial", "AstrometryEcliptic"]
             }
-
-            # Mock astrometry components for coordinate detection
-            mock_astrometry_eq = Mock()
-            mock_astrometry_eq.return_value.params = ["RAJ", "DECJ", "PMRA", "PMDEC"]
-            mock_astrometry_ec = Mock()
-            mock_astrometry_ec.return_value.params = [
-                "ELONG",
-                "ELAT",
-                "PMELONG",
-                "PMELAT",
-            ]
-
-            mock_instance.AstrometryEquatorial = mock_astrometry_eq
-            mock_instance.AstrometryEcliptic = mock_astrometry_ec
 
             mock_all_components.return_value = mock_instance
 
@@ -145,12 +128,15 @@ class TestGetParameterAliasesFromPint:
             assert result["XDOT"] == "A1DOT"
             assert result["E"] == "ECC"
             assert result["STIG"] == "STIGMA"
-            assert "RAJ" not in result  # Coordinate alias filtered out
-            assert "DECJ" not in result  # Coordinate alias filtered out
             assert result["EDOT"] == "ECCDOT"
 
     def test_pint_discovery_failure_raises_error(self):
         """Test that PINT discovery failure raises PINTDiscoveryError."""
+        # Clear the cache to ensure the function actually calls AllComponents
+        import metapulsar.pint_helpers
+
+        metapulsar.pint_helpers._parameter_aliases_cache = None
+
         with patch(
             "metapulsar.pint_helpers.AllComponents",
             side_effect=Exception("PINT error"),
@@ -269,47 +255,6 @@ class TestGetParameterIdentifiabilityFromModel:
 
         result = get_parameter_identifiability_from_model(mock_model, "NONEXISTENT")
         assert result is False
-
-
-class TestIsAstrometryParameter:
-    """Test _is_astrometry_parameter helper function."""
-
-    def test_astrometry_parameter_true(self, mock_astrometry_components):
-        """Test that astrometry parameters are correctly identified."""
-        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
-            mock_all_components.return_value = mock_astrometry_components
-
-            # Test expected astrometry parameters
-            for param in EXPECTED_ASTROMETRY_PARAMS:
-                assert (
-                    _is_astrometry_parameter(param) is True
-                ), f"Parameter {param} should be identified as astrometry"
-
-    def test_astrometry_parameter_false(self, mock_astrometry_components):
-        """Test that non-astrometry parameters are correctly identified."""
-        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
-            mock_all_components.return_value = mock_astrometry_components
-
-            # Test non-astrometry parameters
-            non_astrometry_params = ["XDOT", "E", "F0", "F1", "PEPOCH", "NONEXISTENT"]
-            for param in non_astrometry_params:
-                assert (
-                    _is_astrometry_parameter(param) is False
-                ), f"Parameter {param} should not be identified as astrometry"
-
-    def test_empty_parameter_name(self, mock_astrometry_components):
-        """Test handling of empty parameter name."""
-        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
-            mock_all_components.return_value = mock_astrometry_components
-
-            assert _is_astrometry_parameter("") is False
-
-    def test_none_parameter_name(self, mock_astrometry_components):
-        """Test handling of None parameter name."""
-        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
-            mock_all_components.return_value = mock_astrometry_components
-
-            assert _is_astrometry_parameter(None) is False
 
 
 class TestGetParametersByTypeFromParfiles:
@@ -533,7 +478,9 @@ class TestGetParametersByTypeFromParfiles:
 
             # Should log warning for failed PTA
             mock_warning.assert_called_once()
-            assert "Failed to parse parfile for PTA PPTA" in str(mock_warning.call_args)
+            assert "Failed to create PINT model for PTA PPTA" in str(
+                mock_warning.call_args
+            )
 
     @pytest.mark.slow
     def test_empty_parfile_dicts(self):

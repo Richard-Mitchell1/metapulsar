@@ -339,3 +339,53 @@ def dict_to_parfile_string_pint_driven(parfile_dict: Dict, format: str = "pint")
                 result += param.as_parfile_line(format=format)
 
     return result
+
+
+def create_minimal_parfile_for_component(parfile_dict: Dict, component) -> str:
+    """Create minimal parfile for component discovery using PINT component system.
+
+    Args:
+        parfile_dict: Parsed parfile dictionary
+        component: String or list of strings specifying component(s) to include.
+                  Spindown is always included as PINT requires it.
+    """
+    # Normalize component to list
+    if isinstance(component, str):
+        components = [component]
+    else:
+        components = list(component)
+
+    # Always include spindown - PINT cannot process parfile without it
+    if "spindown" not in components:
+        components.append("spindown")
+
+    # Create PINT model from parfile dictionary
+    model = create_pint_model(parfile_dict)
+
+    # Get category mapping from PINT
+    category_mapping = get_category_mapping_from_pint()
+
+    # Extract parameters from all requested components
+    component_params = set()
+    for comp_name in components:
+        target_category = category_mapping.get(comp_name)
+        if not target_category:
+            continue
+
+        for comp in model.components.values():
+            if hasattr(comp, "category") and comp.category == target_category:
+                if hasattr(comp, "params"):
+                    component_params.update(comp.params)
+
+    # Create minimal parfile content
+    minimal_lines = []
+    for param in component_params:
+        if param in parfile_dict:
+            value = parfile_dict[param]
+            if isinstance(value, list):
+                value_str = " ".join(str(v) for v in value)
+            else:
+                value_str = str(value)
+            minimal_lines.append(f"{param} {value_str}")
+
+    return "\n".join(minimal_lines)

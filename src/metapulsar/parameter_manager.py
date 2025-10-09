@@ -23,7 +23,6 @@ from .pint_helpers import (
     get_parameters_by_type_from_models,
     check_component_available_in_model,
     get_parameter_identifiability_from_model,
-    get_category_mapping_from_pint,
     dict_to_parfile_string_pint_driven,
 )
 
@@ -434,6 +433,29 @@ class ParameterManager:
     ) -> None:
         """Handle DM-specific special cases: DMX removal, DMEPOCH, DM1/DM2 derivatives."""
 
+        # Handle DM and DMEPOCH explicitly - always add to all PTAs
+        dm_value = reference_dict.get("DM")
+        if dm_value is None:
+            raise ValueError(
+                "DM parameter is missing from reference parfile. "
+                "DM parameter is required when add_dm_derivatives=True. "
+                "Please ensure the reference parfile contains a DM parameter."
+            )
+
+        # Parse DM parameter format: ['value flag uncertainty'] -> [value, flag, uncertainty]
+        dm_str = dm_value[0] if isinstance(dm_value[0], str) else str(dm_value[0])
+        dm_parts = dm_str.split()
+        dm_value_parsed = float(dm_parts[0])
+        dm_flag = int(dm_parts[1]) if len(dm_parts) > 1 else 1
+
+        if dm_flag != 1:
+            self.logger.warning(
+                f"DM parameter in reference parfile for {self.reference_pta} is not free. "
+                "Setting to free."
+            )
+
+        reference_dm = dm_value_parsed
+
         # Handle DMEPOCH explicitly - always add to all PTAs
         reference_dmepoch = reference_dict.get("DMEPOCH", ["55000"])[0]
         if isinstance(reference_dmepoch, list):
@@ -450,6 +472,10 @@ class ParameterManager:
                 old_value = parfile_dict[dmx_param]
                 parfile_dict.pop(dmx_param)
                 self.logger.debug(f"PTA {pta_name}: Removed {dmx_param} = {old_value}")
+
+            # Set DM for ALL PTAs (so we ensure it's always being fit for)
+            parfile_dict["DM"] = [f"{reference_dm} 1"]  # 1 = free
+            self.logger.debug(f"PTA {pta_name}: Set DM = {reference_dm} (free)")
 
             # Set DMEPOCH for ALL PTAs (need it for DM1 and DM2)
             parfile_dict["DMEPOCH"] = [f"{reference_dmepoch} 0"]  # 0 = frozen
@@ -719,57 +745,6 @@ class ParameterManager:
             pta_name: parse_parfile(StringIO(self._get_parfile_content(pta_name)))
             for pta_name in self.file_data.keys()
         }
-
-    def _create_minimal_parfile_for_component(
-        self, parfile_dict: Dict, component
-    ) -> str:
-        """Create minimal parfile for component discovery using PINT component system.
-
-        Args:
-            parfile_dict: Parsed parfile dictionary
-            component: String or list of strings specifying component(s) to include.
-                      Spindown is always included as PINT requires it.
-        """
-        # Normalize component to list
-        if isinstance(component, str):
-            components = [component]
-        else:
-            components = list(component)
-
-        # Always include spindown - PINT cannot process parfile without it
-        if "spindown" not in components:
-            components.append("spindown")
-
-        # Create PINT model from parfile dictionary
-        model = create_pint_model(parfile_dict)
-
-        # Get category mapping from PINT
-        category_mapping = get_category_mapping_from_pint()
-
-        # Extract parameters from all requested components
-        component_params = set()
-        for comp_name in components:
-            target_category = category_mapping.get(comp_name)
-            if not target_category:
-                continue
-
-            for comp in model.components.values():
-                if hasattr(comp, "category") and comp.category == target_category:
-                    if hasattr(comp, "params"):
-                        component_params.update(comp.params)
-
-        # Create minimal parfile content
-        minimal_lines = []
-        for param in component_params:
-            if param in parfile_dict:
-                value = parfile_dict[param]
-                if isinstance(value, list):
-                    value_str = " ".join(str(v) for v in value)
-                else:
-                    value_str = str(value)
-                minimal_lines.append(f"{param} {value_str}")
-
-        return "\n".join(minimal_lines)
 
     def _get_parfile_content(self, pta_name: str) -> str:
         """Get parfile content for a specific PTA from file data."""

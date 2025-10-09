@@ -34,6 +34,7 @@ class TestErrorHandling:
 F0 123.456 1 0.001
 RAJ 00:30:27.4
 DECJ 04:51:39.7
+DM 13.299 1 0.001
 # Missing other required parameters like PEPOCH, etc.
 """
             with open(temp_par, "w") as f:
@@ -163,6 +164,7 @@ C 55000.0 123.456 0.001 1234.5 1234.5
                 minimal_parfile_content = """RAJ 00:30:27.4
 DECJ 04:51:39.7
 F0 123.456
+DM 13.299 1 0.001
 PEPOCH 55000
 """
                 file_data = {
@@ -213,6 +215,7 @@ C 55000.0 123.456 0.001 1234.5 1234.5
                 valid_parfile_content = """RAJ 00:30:27.4
 DECJ 04:51:39.7
 F0 123.456
+DM 13.299 1 0.001
 PEPOCH 55000
 """
                 file_data = {
