@@ -31,6 +31,12 @@ class MockPulsar(BasePulsar):
     Pulsar but uses synthetic data. It inherits from BasePulsar and provides
     all the necessary attributes and methods for Enterprise compatibility.
 
+    TODO: COMPLETELY REDESIGN - This MockPulsar class is fundamentally flawed.
+    The parameter structure is inconsistent with the real system and creates
+    logical contradictions (e.g., 3 Offset parameters for 2 PTAs). All tests
+    based on this class need to be completely rewritten with a proper design
+    that accurately reflects how the real ParameterManager and MetaPulsar work.
+
     Parameters
     ----------
     toas : array_like
@@ -101,7 +107,6 @@ class MockPulsar(BasePulsar):
             "F0": "123.456 1",  # 1 means free parameter
             "RAJ": "18:57:36.4 1",  # 1 means free parameter
             "DECJ": "09:43:17.1 1",  # 1 means free parameter
-            "Offset": "0.0 1",  # 1 means free parameter
         }  # Mock parfile data
         self._decj = 0.0  # Default Dec in radians
         self._sort = True  # Enable sorting by default
@@ -114,7 +119,7 @@ class MockPulsar(BasePulsar):
         self.fitpars = []
         self.setpars = []
 
-        # Add Offset parameter (Enterprise standard - always first)
+        # Add Offset parameter (automatically added by timing package)
         self.fitpars.append("Offset")
         self.setpars.append("Offset")
 
@@ -306,6 +311,11 @@ class LibstempoMockPulsarAdapter:
 
     This class provides the libstempo.tempopulsar interface that Tempo2Pulsar
     expects, allowing MockPulsar to be used as a raw timing object in tests.
+
+    TODO: COMPLETELY REDESIGN - This adapter is part of the fundamentally flawed
+    MockPulsar testing system. It creates inconsistent parameter structures and
+    logical contradictions. All tests using this adapter need to be completely
+    rewritten with a proper design that accurately reflects the real system.
 
     Parameters
     ----------
