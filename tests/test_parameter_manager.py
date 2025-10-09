@@ -166,12 +166,20 @@ UNITS TDB
             "UNITS": ["TDB"],
         }
 
-        result = parameter_manager._dict_to_parfile_string_custom(parfile_dict)
+        # Import the function directly instead of calling the removed method
+        from metapulsar.pint_helpers import dict_to_parfile_string
 
-        assert "PSR J1857+0943" in result
-        assert "F0 186.494081" in result
-        assert "RAJ 18:57:36.3937" in result
-        assert "UNITS TDB" in result
+        result = dict_to_parfile_string(parfile_dict)
+
+        # The function now includes headers and formatting, so check for the actual content
+        assert "PSR" in result
+        assert "J1857+0943" in result
+        assert "F0" in result
+        assert "186.494081" in result
+        assert "RAJ" in result
+        assert "18:57:36.3937" in result
+        assert "UNITS" in result
+        assert "TDB" in result
 
     # ===== PARAMETER MAPPING TESTS =====
 

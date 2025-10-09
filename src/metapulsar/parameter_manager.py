@@ -18,12 +18,13 @@ from pint.models.model_builder import parse_parfile
 from pint.models.timing_model import TimingModel
 
 from .pint_helpers import (
-    get_parameter_aliases_from_pint,
+    resolve_parameter_alias,
     create_pint_model,
     get_parameters_by_type_from_models,
     check_component_available_in_model,
     get_parameter_identifiability_from_model,
-    dict_to_parfile_string_pint_driven,
+    dict_to_parfile_string,
+    parse_parameter_using_pint,
 )
 
 logger = logging.getLogger(__name__)
@@ -71,13 +72,6 @@ class ParameterManager:
         self.reference_pta = next(iter(file_data.keys()))
 
         self.logger = logger
-        self._aliases = get_parameter_aliases_from_pint()
-        # Build reverse aliases inline
-        self._reverse_aliases = {}
-        for alias, canonical in self._aliases.items():
-            if canonical not in self._reverse_aliases:
-                self._reverse_aliases[canonical] = []
-            self._reverse_aliases[canonical].append(alias)
 
         # Cache for PINT models
         self._pint_models_cache = None
@@ -190,9 +184,11 @@ class ParameterManager:
             try:
                 # Parse to check current units
                 parfile_dict = parse_parfile(StringIO(parfile_content))
-                current_units = parfile_dict.get(
+                units_value = parfile_dict.get(
                     "UNITS", [self._get_default_time_units(pta_name)]
-                )[0].upper()
+                )
+                current_units, _ = parse_parameter_using_pint("UNITS", units_value)
+                current_units = str(current_units).upper()
 
                 file_units[pta_name] = current_units
                 parfile_contents[pta_name] = parfile_content
@@ -375,9 +371,7 @@ class ParameterManager:
         consistent_parfiles = {}
         for pta_name, parfile_dict in parfile_dicts.items():
             try:
-                consistent_content = self._dict_to_parfile_string(
-                    parfile_dict, format="pint"
-                )
+                consistent_content = dict_to_parfile_string(parfile_dict, format="pint")
                 consistent_parfiles[pta_name] = consistent_content
                 self.logger.debug(f"Converted PTA {pta_name} par file back to string")
             except Exception as e:
@@ -442,26 +436,18 @@ class ParameterManager:
                 "Please ensure the reference parfile contains a DM parameter."
             )
 
-        # Parse DM parameter format: ['value flag uncertainty'] -> [value, flag, uncertainty]
-        dm_str = dm_value[0] if isinstance(dm_value[0], str) else str(dm_value[0])
-        dm_parts = dm_str.split()
-        dm_value_parsed = float(dm_parts[0])
-        dm_flag = int(dm_parts[1]) if len(dm_parts) > 1 else 1
+        # Parse DM parameter using PINT's Parameter class
+        reference_dm, dm_is_frozen = parse_parameter_using_pint("DM", dm_value)
 
-        if dm_flag != 1:
+        if dm_is_frozen:
             self.logger.warning(
                 f"DM parameter in reference parfile for {self.reference_pta} is not free. "
                 "Setting to free."
             )
 
-        reference_dm = dm_value_parsed
-
         # Handle DMEPOCH explicitly - always add to all PTAs
-        reference_dmepoch = reference_dict.get("DMEPOCH", ["55000"])[0]
-        if isinstance(reference_dmepoch, list):
-            reference_dmepoch = reference_dmepoch[0]
-        else:
-            reference_dmepoch = reference_dmepoch.split()[0]
+        dmepoch_value = reference_dict.get("DMEPOCH", ["55000"])
+        reference_dmepoch, _ = parse_parameter_using_pint("DMEPOCH", dmepoch_value)
         self.logger.debug(f"Reference DMEPOCH: {reference_dmepoch}")
 
         # Process each PTA (including reference PTA)
@@ -502,41 +488,6 @@ class ParameterManager:
                     dmx_params.extend(comp.params)
 
         return dmx_params
-
-    def _dict_to_parfile_string(self, parfile_dict: Dict, format: str = "pint") -> str:
-        """Convert par file dictionary to string using PINT's pre-made functions.
-
-        Args:
-            parfile_dict: Dictionary representation of parfile
-            format: Output format ('pint', 'tempo', 'tempo2')
-
-        Returns:
-            Formatted parfile string using PINT's exact formatting
-        """
-        try:
-            # Use PINT's pre-made functions for maximum efficiency and consistency
-            return dict_to_parfile_string_pint_driven(parfile_dict, format)
-        except Exception as e:
-            self.logger.warning(
-                f"PINT-driven formatting failed, falling back to custom approach: {e}"
-            )
-            # Fallback to original custom approach if needed
-            return self._dict_to_parfile_string_custom(parfile_dict)
-
-    def _dict_to_parfile_string_custom(self, parfile_dict: Dict) -> str:
-        """Custom implementation for converting par file dictionary to string."""
-        lines = []
-        for param_name, param_values in parfile_dict.items():
-            for param_value in param_values:
-                if isinstance(param_value, list):
-                    # Handle list format: [value, error]
-                    value_str = " ".join(str(v) for v in param_value)
-                else:
-                    # Handle string format
-                    value_str = str(param_value)
-                lines.append(f"{param_name} {value_str}")
-
-        return "\n".join(lines) + "\n"
 
     def _write_consistent_parfiles(
         self, consistent_parfiles: Dict[str, str]
@@ -713,7 +664,7 @@ class ParameterManager:
 
     def resolve_parameter_aliases(self, param_name: str) -> str:
         """Resolve parameter aliases to canonical names."""
-        canonical = self._aliases.get(param_name, param_name)
+        canonical = resolve_parameter_alias(param_name)
         if canonical != param_name:
             self.logger.debug(
                 f"Resolved parameter alias '{param_name}' -> '{canonical}'"

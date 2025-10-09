@@ -3,7 +3,6 @@
 import pytest
 from unittest.mock import Mock, patch
 from metapulsar.pint_helpers import (
-    get_parameter_aliases_from_pint,
     check_component_available_in_model,
     get_parameter_identifiability_from_model,
     get_parameters_by_type_from_parfiles,
@@ -99,50 +98,6 @@ def mock_astrometry_components():
 #         ):
 #             with pytest.raises(PINTDiscoveryError):
 #                 get_parameters_by_type_from_pint("astrometry")
-
-
-class TestGetParameterAliasesFromPint:
-    """Test get_parameter_aliases_from_pint function."""
-
-    def test_alias_discovery_success(self):
-        """Test successful alias discovery from PINT."""
-        with patch("metapulsar.pint_helpers.AllComponents") as mock_all_components:
-            # Mock the alias map
-            mock_instance = Mock()
-            mock_instance._param_alias_map = {
-                "XDOT": "A1DOT",
-                "E": "ECC",
-                "STIG": "STIGMA",
-            }
-
-            # Mock the category_component_map for coordinate detection
-            mock_instance.category_component_map = {
-                "astrometry": ["AstrometryEquatorial", "AstrometryEcliptic"]
-            }
-
-            mock_all_components.return_value = mock_instance
-
-            result = get_parameter_aliases_from_pint()
-
-            # Should include simple aliases but exclude coordinate aliases
-            assert result["XDOT"] == "A1DOT"
-            assert result["E"] == "ECC"
-            assert result["STIG"] == "STIGMA"
-            assert result["EDOT"] == "ECCDOT"
-
-    def test_pint_discovery_failure_raises_error(self):
-        """Test that PINT discovery failure raises PINTDiscoveryError."""
-        # Clear the cache to ensure the function actually calls AllComponents
-        import metapulsar.pint_helpers
-
-        metapulsar.pint_helpers._parameter_aliases_cache = None
-
-        with patch(
-            "metapulsar.pint_helpers.AllComponents",
-            side_effect=Exception("PINT error"),
-        ):
-            with pytest.raises(PINTDiscoveryError):
-                get_parameter_aliases_from_pint()
 
 
 class TestCheckComponentAvailableInModel:
@@ -324,16 +279,12 @@ class TestGetParametersByTypeFromParfiles:
 
     @patch("metapulsar.pint_helpers.create_pint_model")
     @patch("metapulsar.pint_helpers.get_category_mapping_from_pint")
-    @patch("metapulsar.pint_helpers.get_parameter_aliases_from_pint")
     def test_spindown_parameters_with_dynamic_derivatives_and_pepoch(
-        self, mock_get_aliases, mock_get_category, mock_create_model, mock_parfile_dicts
+        self, mock_get_category, mock_create_model, mock_parfile_dicts
     ):
         """Test that function discovers dynamic derivatives like F2, F3 and includes PEPOCH."""
         # Mock category mapping
         mock_get_category.return_value = {"spindown": "spindown"}
-
-        # Mock aliases
-        mock_get_aliases.return_value = {"XDOT": "A1DOT", "E": "ECC"}
 
         # Mock PINT models with spindown components
         mock_model_epta = Mock()
@@ -365,16 +316,12 @@ class TestGetParametersByTypeFromParfiles:
 
     @patch("metapulsar.pint_helpers.create_pint_model")
     @patch("metapulsar.pint_helpers.get_category_mapping_from_pint")
-    @patch("metapulsar.pint_helpers.get_parameter_aliases_from_pint")
     def test_dispersion_parameters_with_dynamic_derivatives_and_dmepoch(
-        self, mock_get_aliases, mock_get_category, mock_create_model, mock_parfile_dicts
+        self, mock_get_category, mock_create_model, mock_parfile_dicts
     ):
         """Test that function discovers DM dynamic derivatives like DM3 and includes DMEPOCH."""
         # Mock category mapping
         mock_get_category.return_value = {"dispersion": "dispersion"}
-
-        # Mock aliases
-        mock_get_aliases.return_value = {}
 
         # Mock PINT models with dispersion components
         mock_model_epta = Mock()
@@ -404,16 +351,12 @@ class TestGetParametersByTypeFromParfiles:
 
     @patch("metapulsar.pint_helpers.create_pint_model")
     @patch("metapulsar.pint_helpers.get_category_mapping_from_pint")
-    @patch("metapulsar.pint_helpers.get_parameter_aliases_from_pint")
     def test_binary_parameters_with_complete_bt_model(
-        self, mock_get_aliases, mock_get_category, mock_create_model, mock_parfile_dicts
+        self, mock_get_category, mock_create_model, mock_parfile_dicts
     ):
         """Test that function discovers complete binary parameters for BT model."""
         # Mock category mapping
         mock_get_category.return_value = {"binary": "binary"}
-
-        # Mock aliases
-        mock_get_aliases.return_value = {"XDOT": "A1DOT", "E": "ECC", "STIG": "STIGMA"}
 
         # Mock PINT models with binary components
         mock_model_epta = Mock()
@@ -444,16 +387,12 @@ class TestGetParametersByTypeFromParfiles:
 
     @patch("metapulsar.pint_helpers.create_pint_model")
     @patch("metapulsar.pint_helpers.get_category_mapping_from_pint")
-    @patch("metapulsar.pint_helpers.get_parameter_aliases_from_pint")
     def test_parfile_parsing_failure_handled(
-        self, mock_get_aliases, mock_get_category, mock_create_model, mock_parfile_dicts
+        self, mock_get_category, mock_create_model, mock_parfile_dicts
     ):
         """Test that function handles parfile parsing failures gracefully."""
         # Mock category mapping
         mock_get_category.return_value = {"spindown": "spindown"}
-
-        # Mock aliases
-        mock_get_aliases.return_value = {}
 
         # Mock PINT model creation to fail for one PTA
         mock_model_epta = Mock()

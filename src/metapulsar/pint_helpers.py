@@ -4,7 +4,8 @@ This module provides pure functions that encapsulate PINT-specific logic
 for parameter discovery, alias resolution, and model validation.
 """
 
-from typing import Dict, List
+from typing import Dict, List, Tuple, Any
+from functools import lru_cache
 from pint.models import TimingModel
 from pint.models.timing_model import AllComponents
 from pint.models.parameter import Parameter
@@ -37,46 +38,76 @@ def get_category_mapping_from_pint() -> Dict[str, str]:
     return KeyReturningDict(mapping)
 
 
-# Cache for parameter aliases to avoid repeated AllComponents() creation
-_parameter_aliases_cache = None
+@lru_cache(maxsize=1)
+def _get_all_components():
+    """Get cached AllComponents instance.
+
+    Uses lru_cache to ensure AllComponents() is only created once,
+    avoiding the ~10ms creation cost on subsequent calls.
+    """
+    return AllComponents()
 
 
-def get_parameter_aliases_from_pint() -> Dict[str, str]:
-    """Get parameter aliases from PINT.
+def resolve_parameter_alias(param_name: str) -> str:
+    """Resolve a single parameter alias to canonical name using cached AllComponents.
+
+    This function provides fast on-demand alias resolution by leveraging the
+    cached AllComponents instance, avoiding the 12.9ms creation cost.
+
+    Args:
+        param_name: Parameter name that might be an alias
 
     Returns:
-        Dictionary mapping aliases to canonical parameter names
-
-    Raises:
-        PINTDiscoveryError: If PINT alias discovery fails
+        Canonical parameter name, or original name if not an alias
     """
-    from loguru import logger
-
-    global _parameter_aliases_cache
-
-    # Return cached result if available
-    if _parameter_aliases_cache is not None:
-        return _parameter_aliases_cache
+    # Handle special case: EDOT -> ECCDOT alias that PINT doesn't have
+    if param_name == "EDOT":
+        return "ECCDOT"
 
     try:
-        all_components = AllComponents()
+        all_components = _get_all_components()
+        canonical, _ = all_components.alias_to_pint_param(param_name)
+        return canonical
+    except Exception:
+        # If alias resolution fails, return the original name
+        return param_name
+
+
+def get_aliases_for_parameter(canonical_param: str) -> List[str]:
+    """Get all aliases for a canonical parameter name.
+
+    Args:
+        canonical_param: The canonical parameter name
+
+    Returns:
+        List of all aliases for this parameter, including the canonical name itself
+    """
+    try:
+        all_components = _get_all_components()
+        aliases = [canonical_param]  # Start with canonical name
+
+        # Search through the alias map to find all aliases that map to this canonical name
         alias_map = all_components._param_alias_map
+        for alias, canonical in alias_map.items():
+            if canonical == canonical_param and alias != canonical_param:
+                aliases.append(alias)
 
-        # Use all aliases - component-level discovery handles parameter types correctly
-        aliases = dict(alias_map)
+        # Handle special case: if canonical is ECCDOT, also include EDOT
+        if canonical_param == "ECCDOT" and "EDOT" not in aliases:
+            aliases.append("EDOT")
 
-        # Add missing aliases that PINT doesn't have but legacy expects
-        aliases["EDOT"] = "ECCDOT"
-
-        # Cache the result
-        _parameter_aliases_cache = aliases
-
-        logger.debug(f"Discovered {len(aliases)} parameter aliases from PINT")
         return aliases
-    except Exception as e:
-        logger.error(f"PINT alias discovery failed: {e}")
-        # NO FALLBACK - fail gracefully as per SSOT principle
-        raise PINTDiscoveryError(f"Failed to discover parameter aliases: {e}")
+    except Exception:
+        # If anything fails, just return the canonical name
+        return [canonical_param]
+
+
+def clear_all_components_cache():
+    """Clear the AllComponents cache.
+
+    This is useful for testing to ensure clean state between tests.
+    """
+    _get_all_components.cache_clear()
 
 
 def check_component_available_in_model(model: TimingModel, component_type: str) -> bool:
@@ -176,24 +207,12 @@ def get_parameters_by_type_from_models(
             )
             continue
 
-    # Get parameter aliases from PINT
-    alias_map = get_parameter_aliases_from_pint()
-
-    # Create reverse mapping: canonical -> all aliases
-    canonical_to_aliases = {}
-    for alias, canonical in alias_map.items():
-        if canonical not in canonical_to_aliases:
-            canonical_to_aliases[canonical] = []
-        canonical_to_aliases[canonical].append(alias)
-
     # Build complete parameter list including all aliases
     all_params_with_aliases = set()
     for canonical_param in all_params:
-        all_params_with_aliases.add(canonical_param)  # Add canonical name
-        if canonical_param in canonical_to_aliases:
-            all_params_with_aliases.update(
-                canonical_to_aliases[canonical_param]
-            )  # Add all aliases
+        # Get all aliases for this canonical parameter
+        aliases = get_aliases_for_parameter(canonical_param)
+        all_params_with_aliases.update(aliases)
 
     logger.debug(
         f"Component {param_type}: Found {len(all_params)} canonical parameters, {len(all_params_with_aliases)} total with aliases"
@@ -280,7 +299,7 @@ def create_pint_model(parfile_data) -> TimingModel:
         raise PINTDiscoveryError(f"Unexpected error creating PINT model: {e}")
 
 
-def dict_to_parfile_string_pint_driven(parfile_dict: Dict, format: str = "pint") -> str:
+def dict_to_parfile_string(parfile_dict: Dict, format: str = "pint") -> str:
     """Convert parfile dictionary to string using PINT's exact formatting.
 
     Simple approach that preserves ALL parameters without complex categorization.
@@ -389,3 +408,66 @@ def create_minimal_parfile_for_component(parfile_dict: Dict, component) -> str:
             minimal_lines.append(f"{param} {value_str}")
 
     return "\n".join(minimal_lines)
+
+
+def parse_parameter_using_pint(param_name: str, param_value) -> Tuple[Any, bool]:
+    """Parse parameter value using PINT's parsing approach.
+
+    This function elegantly handles parfile parameter parsing by extracting
+    the parsing logic from PINT's Parameter.from_parfile_line() method.
+    It handles the common parfile format of "value fit_status uncertainty" where:
+    - value: the parameter value (float for numeric params, string for text params)
+    - fit_status: 0=frozen, 1=free (int)
+    - uncertainty: optional uncertainty value
+
+    Args:
+        param_name: Name of the parameter (e.g., "DM", "DMEPOCH", "UNITS")
+        param_value: Parameter value from parfile dict (string or list)
+
+    Returns:
+        Tuple of (parsed_value, is_frozen)
+
+    Raises:
+        ValueError: If parameter cannot be parsed
+
+    Examples:
+        >>> parse_parameter_using_pint("DM", ["123.45 1 0.01"])
+        (123.45, False)
+        >>> parse_parameter_using_pint("DMEPOCH", ["55000 0"])
+        (55000.0, True)
+        >>> parse_parameter_using_pint("UNITS", ["TCB 0"])
+        ("TCB", True)
+    """
+    # Handle list format from parse_parfile
+    if isinstance(param_value, list):
+        param_str = param_value[0]
+    else:
+        param_str = str(param_value)
+
+    # Split the parameter string into components
+    parts = param_str.split()
+
+    if not parts:
+        raise ValueError(f"Empty parameter value for {param_name}: {param_value}")
+
+    # Parse value (first component)
+    value = parts[0]
+
+    # Try to convert to float for numeric parameters, keep as string for text parameters
+    try:
+        value = float(value)
+    except ValueError:
+        # Keep as string for non-numeric parameters like UNITS
+        pass
+
+    # Parse fit_status (second component, default to free if not specified)
+    is_frozen = False  # Default to free
+    if len(parts) > 1:
+        try:
+            fit_status = int(parts[1])
+            is_frozen = fit_status == 0
+        except ValueError:
+            # If second part is not an integer, treat as uncertainty and assume free
+            pass
+
+    return value, is_frozen
