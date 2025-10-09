@@ -27,7 +27,7 @@ from metapulsar.metapulsar import MetaPulsar
 @pytest.fixture
 def mock_file_discovery_service():
     """Mock FileDiscoveryService with test configurations."""
-    service = FileDiscoveryService({})  # Start with empty config
+    service = FileDiscoveryService(pta_data_releases={})  # Start with empty config
     service.add_data_release(
         "test_data_release1",
         {

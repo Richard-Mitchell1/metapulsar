@@ -15,7 +15,7 @@ class TestErrorHandling:
     def test_missing_data_directory(self):
         """Test handling of missing data directories."""
         # Test with non-existent PTA
-        discovery_service = FileDiscoveryService()
+        discovery_service = FileDiscoveryService(working_dir="../../data/ipta-dr2")
         with pytest.raises(KeyError):
             discovery_service.discover_files(["nonexistent_config"])
 

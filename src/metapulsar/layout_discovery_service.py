@@ -20,9 +20,30 @@ from loguru import logger
 
 
 class LayoutDiscoveryService:
-    """Heuristic-based pattern discovery for PTA data releases (renamed from PatternDiscoveryEngine)."""
+    """Heuristic-based pattern discovery for PTA data releases."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        working_dir: str = None,
+        verbose: bool = True,
+        excluded_dirs: List[str] = None,
+    ):
+        """Initialize the layout discovery service.
+
+        Args:
+            working_dir: Working directory for resolving relative paths. If None, uses current working directory.
+            verbose: Default verbosity setting for method calls. Can be overridden in individual method calls.
+            excluded_dirs: List of directory names to exclude from analysis. Defaults to common problematic directories.
+        """
+        self.working_dir = Path(working_dir) if working_dir else Path.cwd()
+        self.verbose = verbose
+        self.excluded_dirs = excluded_dirs or [
+            "alternate",
+            "extratim",
+            "clock",
+            "template",
+            "wideband",
+        ]
         self.logger = logger
         # Common PTA patterns we've seen
         self.known_pulsar_patterns = [
@@ -33,30 +54,25 @@ class LayoutDiscoveryService:
         # Common directory structures
         self.common_subdirs = ["par", "tim", "data", "pulsars"]
 
-        # Common file extensions and their purposes
-        self.file_types = {
-            ".par": "parameter",
-            ".tim": "timing",
-            ".gls": "glitch",
-            ".t2": "tempo2",
-        }
-
     def discover_layout(
-        self, working_dir: str = None, verbose: bool = True
+        self, working_dir: str = None, verbose: bool = None
     ) -> Dict[str, Dict[str, Any]]:
         """Discover PTA data release layout with user-friendly name.
 
         Args:
-            working_dir: Directory to analyze. If None, uses current directory.
-            verbose: If True, prints discovered layout to console.
+            working_dir: Directory to analyze. If None, uses instance default.
+            verbose: If True, prints discovered layout to console. If None, uses instance default.
 
         Returns:
             Dictionary of data release configurations
         """
-        if working_dir:
-            base_path = Path(working_dir)
-        else:
-            base_path = Path.cwd()
+        # Use instance defaults if not specified
+        if working_dir is None:
+            working_dir = self.working_dir
+        if verbose is None:
+            verbose = self.verbose
+
+        base_path = Path(working_dir)
 
         structure = self._analyze_directory_structure(base_path)
         data_release = self._generate_pta_data_release(structure)
@@ -76,12 +92,18 @@ class LayoutDiscoveryService:
 
         self.logger.info(f"Analyzing directory structure: {base_path}")
 
-        # Find all par and tim files, filtering out wideband data
+        # Find all par and tim files, filtering out wideband data and excluded directories
         par_files = [
-            f for f in base_path.rglob("*.par") if not self._is_wideband_file(f)
+            f
+            for f in base_path.rglob("*.par")
+            if not self._is_wideband_file(f)
+            and not self._is_excluded_directory(f, base_path)
         ]
         tim_files = [
-            f for f in base_path.rglob("*.tim") if not self._is_wideband_file(f)
+            f
+            for f in base_path.rglob("*.tim")
+            if not self._is_wideband_file(f)
+            and not self._is_excluded_directory(f, base_path)
         ]
 
         if not par_files:
@@ -269,7 +291,27 @@ class LayoutDiscoveryService:
             if indicator in path_str:
                 return True
 
-        return False
+    def _is_excluded_directory(self, file_path: Path, base_path: Path) -> bool:
+        """
+        Check if a file is in an excluded directory that should be ignored.
+
+        Args:
+            file_path: Path to the file to check
+            base_path: Base directory being analyzed
+
+        Returns:
+            True if the file is in an excluded directory
+        """
+        try:
+            rel_path = file_path.relative_to(base_path)
+            # Check if any part of the path contains excluded directories
+            for part in rel_path.parts:
+                if part.lower() in self.excluded_dirs:
+                    return True
+            return False
+        except ValueError:
+            # File is not relative to base_path, exclude it
+            return True
 
     def _find_common_path_parts(self, rel_paths: List[Path]) -> List[str]:
         """
@@ -386,8 +428,8 @@ class LayoutDiscoveryService:
         pulsar_names = structure["pulsar_names"]
 
         if not pulsar_names:
-            # Fallback to generic pattern
-            return r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)\.par"
+            # Fallback to generic pattern with flexible extension
+            return r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?).*\.par"
 
         # Use the most common pulsar name pattern found
         pulsar_pattern = self.known_pulsar_patterns[0]  # Default to standard pattern
@@ -395,7 +437,7 @@ class LayoutDiscoveryService:
         # Analyze the actual file structure
         par_files = [Path(f) for f in structure["par_files"]]
         if not par_files:
-            return f"{pulsar_pattern}\\.par"
+            return f"{pulsar_pattern}.*\\.par"
 
         # Find the common base directory - start from the structure base path
         structure_base = Path(structure["base_path"])
@@ -426,74 +468,78 @@ class LayoutDiscoveryService:
 
                 # Check for common patterns
                 if most_common_subdir == "par":
-                    return f"par/{pulsar_pattern}\\.par"
+                    return f"par/{pulsar_pattern}.*\\.par"
                 elif most_common_subdir == "tim":
-                    return f"tim/{pulsar_pattern}\\.par"
+                    return f"tim/{pulsar_pattern}.*\\.par"
                 else:
                     # Check if subdirectory name matches file stem (pulsar-specific dirs)
                     first_path = rel_paths[0]
                     file_stem = first_path.stem
                     if most_common_subdir == file_stem:
-                        return f"{pulsar_pattern}/{pulsar_pattern}\\.par"
+                        return f"{pulsar_pattern}/{pulsar_pattern}.*\\.par"
                     else:
                         # Generic subdirectory pattern
-                        return f"{pulsar_pattern}/{pulsar_pattern}\\.par"
+                        return f"{pulsar_pattern}/{pulsar_pattern}.*\\.par"
         else:
             # Files are in root directory
-            return f"{pulsar_pattern}\\.par"
+            return f"{pulsar_pattern}.*\\.par"
 
     def _generate_tim_pattern(self, structure: Dict) -> str:
         """Generate tim file pattern from structure analysis."""
 
-        # Start with par pattern and adapt
-        par_pattern = self._generate_par_pattern(structure)
-
-        # Replace .par with .tim and make it more flexible
-        tim_pattern = par_pattern.replace(".par", ".*\\.tim")
-
-        # Analyze tim file naming patterns more carefully
+        # Analyze tim file structure separately from par files
         tim_files = [Path(f) for f in structure["tim_files"]]
-        if tim_files:
-            # Find the common base directory - start from the structure base path
-            structure_base = Path(structure["base_path"])
-            base = structure_base
+        if not tim_files:
+            # Fallback to generic pattern with flexible extension
+            return r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?).*\.tim"
 
-            # Get relative paths from base
-            rel_paths = [f.relative_to(base) for f in tim_files]
+        # Use the most common pulsar name pattern found
+        pulsar_pattern = self.known_pulsar_patterns[0]  # Default to standard pattern
 
-            # Check for common suffixes in tim files
-            tim_stems = [p.stem for p in rel_paths]
-            if tim_stems:
-                # Look for common suffixes like "_all", "_dr1dr2", "_NANOGrav_9yv1"
-                common_suffixes = []
-                for stem in tim_stems:
-                    # Extract suffix after pulsar name
-                    for pattern in self.known_pulsar_patterns:
-                        match = re.search(pattern, stem)
-                        if match:
-                            # Find the end of the pulsar name in the stem
-                            pulsar_end = match.end()
-                            suffix = stem[pulsar_end:]
-                            if suffix:
-                                common_suffixes.append(suffix)
-                            break
+        # Find the common base directory - start from the structure base path
+        structure_base = Path(structure["base_path"])
+        base = structure_base
 
-                if common_suffixes:
-                    # Use most common suffix
-                    suffix_counts = Counter(common_suffixes)
-                    most_common_suffix = suffix_counts.most_common(1)[0][0]
-                    # For complex patterns, use flexible matching instead of specific suffix
-                    if len(rel_paths) > 0 and len(rel_paths[0].parts) > 3:
-                        # Don't add specific suffix for complex nested structures
-                        pass
+        # Get relative paths from base
+        rel_paths = [f.relative_to(base) for f in tim_files]
+
+        # Check directory structure patterns
+        if all(len(p.parts) > 1 for p in rel_paths):
+            # Find common path parts for complex nested structures
+            common_parts = self._find_common_path_parts(rel_paths)
+
+            if common_parts:
+                # For very deep nested structures, use a more flexible pattern
+                if len(common_parts) > 3:
+                    # Use wildcard for deep nested structures with flexible suffix
+                    return f".*{pulsar_pattern}.*\\.tim"
+                else:
+                    # Build pattern with common path parts
+                    path_pattern = "/".join(common_parts)
+                    return f"{path_pattern}/{pulsar_pattern}.*\\.tim"
+            else:
+                # Fallback to simple subdirectory analysis
+                subdir_names = [p.parts[0] for p in rel_paths]
+                subdir_counts = Counter(subdir_names)
+                most_common_subdir = subdir_counts.most_common(1)[0][0]
+
+                # Check for common patterns
+                if most_common_subdir == "tim":
+                    return f"tim/{pulsar_pattern}.*\\.tim"
+                elif most_common_subdir == "par":
+                    return f"par/{pulsar_pattern}.*\\.tim"
+                else:
+                    # Check if subdirectory name matches file stem (pulsar-specific dirs)
+                    first_path = rel_paths[0]
+                    file_stem = first_path.stem
+                    if most_common_subdir == file_stem:
+                        return f"{pulsar_pattern}/{pulsar_pattern}.*\\.tim"
                     else:
-                        # Escape special regex characters in the suffix
-                        escaped_suffix = re.escape(most_common_suffix)
-                        tim_pattern = tim_pattern.replace(
-                            ".tim", f"{escaped_suffix}.tim"
-                        )
-
-        return tim_pattern
+                        # Generic subdirectory pattern
+                        return f"{pulsar_pattern}/{pulsar_pattern}.*\\.tim"
+        else:
+            # Files are in root directory
+            return f"{pulsar_pattern}.*\\.tim"
 
     def _determine_base_dir(self, structure: Dict) -> str:
         """Determine the base directory for the PTA."""
@@ -526,18 +572,19 @@ class LayoutDiscoveryService:
 
 # Convenience function for easy access
 def discover_layout(
-    working_dir: str = None, verbose: bool = True
+    working_dir: str = None, verbose: bool = True, excluded_dirs: List[str] = None
 ) -> Dict[str, Dict[str, Any]]:
     """Convenience function for layout discovery.
 
     Args:
         working_dir: Directory to analyze. If None, uses current directory.
         verbose: If True, prints discovered layout to console.
+        excluded_dirs: List of directory names to exclude from analysis.
 
     Returns:
         Dictionary of data release configurations
     """
-    engine = LayoutDiscoveryService()
+    engine = LayoutDiscoveryService(working_dir, verbose, excluded_dirs)
     return engine.discover_layout(working_dir, verbose)
 
 

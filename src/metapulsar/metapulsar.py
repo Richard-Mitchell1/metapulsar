@@ -285,12 +285,7 @@ class MetaPulsar(ep.BasePulsar):
         self._stoas = concat("_stoas")
         self._residuals = concat("_residuals")
         self._toaerrs = concat("_toaerrs")
-
-        # Handle frequency data - try both _ssbfreqs and _freqs
-        ssbfreqs = concat("_ssbfreqs")
-        freqs = concat("_freqs")
-        self._ssbfreqs = ssbfreqs if len(ssbfreqs) > 0 else freqs
-
+        self._ssbfreqs = concat("_ssbfreqs")
         self._telescope = concat("_telescope")
 
         # Combine flags

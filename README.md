@@ -38,7 +38,7 @@ pip install -e ".[dev,libstempo,analysis]"
 from metapulsar import MetaPulsarFactory, FileDiscoveryService
 
 # Discover files from multiple PTAs
-discovery = FileDiscoveryService()
+discovery = FileDiscoveryService(working_dir="data/ipta-dr2")
 file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
 
 # Create MetaPulsar with consistent parameters
@@ -65,7 +65,7 @@ High-level factory for creating MetaPulsars from file configurations:
 from metapulsar import MetaPulsarFactory, FileDiscoveryService
 
 # Discover files
-discovery = FileDiscoveryService()
+discovery = FileDiscoveryService(working_dir="data/ipta-dr2")
 file_data = discovery.discover_all_files_in_ptas(["epta_dr2", "ppta_dr2"])
 
 # Create MetaPulsar
@@ -82,7 +82,7 @@ Manages PTA configurations and data discovery:
 ```python
 from metapulsar import FileDiscoveryService
 
-discovery = FileDiscoveryService()
+discovery = FileDiscoveryService(working_dir="data/ipta-dr2")
 
 # List available PTAs
 print(discovery.list_ptas())
@@ -114,7 +114,7 @@ mapping = param_manager.build_parameter_mappings()
 ```python
 from metapulsar import FileDiscoveryService
 
-discovery = FileDiscoveryService()
+discovery = FileDiscoveryService(working_dir="data/ipta-dr2")
 
 # Add custom PTA
 custom_config = {

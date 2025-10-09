@@ -25,7 +25,7 @@ class TestFileDiscoveryService:
                 "timing_package": "pint",
             }
         }
-        service = FileDiscoveryService(custom_data_releases)
+        service = FileDiscoveryService(pta_data_releases=custom_data_releases)
         assert service.data_releases == custom_data_releases
 
     def test_discover_patterns_in_data_release_success(self):
@@ -351,7 +351,11 @@ class TestConvenienceFunctions:
         with patch.object(FileDiscoveryService, "discover_files") as mock_discover:
             mock_discover.return_value = {"epta_dr2": []}
 
-            result = discover_files(working_dir="/test", data_release_names="epta_dr2")
+            # Mock data releases
+            mock_data_releases = {"epta_dr2": {"base_dir": "/test"}}
+            result = discover_files(
+                mock_data_releases, working_dir="/test", data_release_names="epta_dr2"
+            )
 
             mock_discover.assert_called_once_with("epta_dr2", True)
             assert result == {"epta_dr2": []}
@@ -361,8 +365,15 @@ class TestConvenienceFunctions:
         with patch.object(FileDiscoveryService, "discover_files") as mock_discover:
             mock_discover.return_value = {"epta_dr2": [], "ppta_dr2": []}
 
+            # Mock data releases
+            mock_data_releases = {
+                "epta_dr2": {"base_dir": "/test"},
+                "ppta_dr2": {"base_dir": "/test"},
+            }
             result = discover_files(
-                working_dir="/test", data_release_names=["epta_dr2", "ppta_dr2"]
+                mock_data_releases,
+                working_dir="/test",
+                data_release_names=["epta_dr2", "ppta_dr2"],
             )
 
             mock_discover.assert_called_once_with(["epta_dr2", "ppta_dr2"], True)
@@ -373,8 +384,13 @@ class TestConvenienceFunctions:
         with patch.object(FileDiscoveryService, "discover_files") as mock_discover:
             mock_discover.return_value = {"epta_dr2": []}
 
+            # Mock data releases
+            mock_data_releases = {"epta_dr2": {"base_dir": "/test"}}
             result = discover_files(
-                working_dir="/test", data_release_names="epta_dr2", verbose=False
+                mock_data_releases,
+                working_dir="/test",
+                data_release_names="epta_dr2",
+                verbose=False,
             )
 
             mock_discover.assert_called_once_with("epta_dr2", False)

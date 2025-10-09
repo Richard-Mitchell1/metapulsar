@@ -17,7 +17,7 @@ class TestLegacyComparison:
         self, pulsar_name, pta_data_releases, available_data_sets
     ):
         """Prepare input files for legacy implementation using the same discovery as new system."""
-        discovery_service = FileDiscoveryService()
+        discovery_service = FileDiscoveryService(working_dir="../../data/ipta-dr2")
 
         # Discover files for all PTAs
         file_data = discovery_service.discover_files(pta_data_releases)
@@ -67,7 +67,7 @@ class TestLegacyComparison:
         test_pta_data_releases = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
 
         # Get available pulsars and use the first 2 that have data
-        discovery_service = FileDiscoveryService()
+        discovery_service = FileDiscoveryService(working_dir="../../data/ipta-dr2")
         file_data = discovery_service.discover_files(test_pta_data_releases)
         all_pulsar_names = get_pulsar_names_from_file_data(file_data)
 
@@ -111,7 +111,7 @@ class TestLegacyComparison:
             # Create legacy MetaPulsar
             legacy_mp = legacy_module.create_metapulsar(input_files)
 
-            discovery_service = FileDiscoveryService()
+            discovery_service = FileDiscoveryService(working_dir="../../data/ipta-dr2")
             file_data = discovery_service.discover_files(test_pta_data_releases)
 
             # Use proper pulsar selection methods like using_metapulsar.py
@@ -356,7 +356,7 @@ class TestLegacyComparison:
             # Create both implementations
             legacy_mp = legacy_module.create_metapulsar(input_files)
 
-            discovery_service = FileDiscoveryService()
+            discovery_service = FileDiscoveryService(working_dir="../../data/ipta-dr2")
             file_data = discovery_service.discover_files(test_pta_data_releases)
 
             # Use proper pulsar selection methods like using_metapulsar.py
@@ -471,7 +471,7 @@ class TestLegacyComparison:
             # Create both implementations
             legacy_mp = legacy_module.create_metapulsar(input_files)
 
-            discovery_service = FileDiscoveryService()
+            discovery_service = FileDiscoveryService(working_dir="../../data/ipta-dr2")
             file_data = discovery_service.discover_files(test_pta_data_releases)
 
             # Use proper pulsar selection methods like using_metapulsar.py
@@ -570,7 +570,7 @@ class TestLegacyComparison:
             # Create both implementations
             legacy_mp = legacy_module.create_metapulsar(input_files)
 
-            discovery_service = FileDiscoveryService()
+            discovery_service = FileDiscoveryService(working_dir="../../data/ipta-dr2")
             file_data = discovery_service.discover_files(test_pta_data_releases)
 
             # Use proper pulsar selection methods like using_metapulsar.py
@@ -669,7 +669,7 @@ class TestLegacyComparison:
             # Create both implementations
             legacy_mp = legacy_module.create_metapulsar(input_files)
 
-            discovery_service = FileDiscoveryService()
+            discovery_service = FileDiscoveryService(working_dir="../../data/ipta-dr2")
             file_data = discovery_service.discover_files(test_pta_data_releases)
 
             # Use proper pulsar selection methods like using_metapulsar.py

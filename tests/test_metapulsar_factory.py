@@ -102,7 +102,7 @@ class TestMetaPulsarFactory:
     def setup_method(self):
         """Set up test fixtures."""
         self.factory = MetaPulsarFactory()
-        self.discovery_service = FileDiscoveryService()
+        self.discovery_service = FileDiscoveryService(working_dir="../../data/ipta-dr2")
 
     def test_initialization(self):
         """Test factory initialization without ParFileManager."""

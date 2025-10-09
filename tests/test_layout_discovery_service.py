@@ -18,14 +18,14 @@ class TestLayoutDiscoveryService:
 
     def setup_method(self):
         """Set up test fixtures."""
-        self.engine = LayoutDiscoveryService()
+        self.engine = LayoutDiscoveryService(working_dir="../../data/ipta-dr2")
 
     def test_init(self):
         """Test engine initialization."""
         assert self.engine.logger is not None
         assert len(self.engine.known_pulsar_patterns) > 0
         assert len(self.engine.common_subdirs) > 0
-        assert len(self.engine.file_types) > 0
+        assert self.engine.excluded_dirs is not None
 
     def test_analyze_directory_structure_nonexistent(self):
         """Test analysis of non-existent directory."""
@@ -310,12 +310,59 @@ class TestLayoutDiscoveryService:
                 assert f"discovered_{temp_path.name}" in result
                 assert "base_dir" in result[f"discovered_{temp_path.name}"]
 
+    def test_excluded_dirs_functionality(self):
+        """Test that excluded directories are properly filtered out."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
+            # Create normal files
+            (temp_path / "J1857+0943.par").write_text("test par file")
+            (temp_path / "J1857+0943.tim").write_text("test tim file")
+
+            # Create files in excluded directories
+            (temp_path / "alternate").mkdir()
+            (temp_path / "alternate" / "J1857+0943_alt.par").write_text(
+                "alternate par file"
+            )
+            (temp_path / "extratim").mkdir()
+            (temp_path / "extratim" / "J1857+0943_ext.tim").write_text("extratim file")
+            (temp_path / "wideband").mkdir()
+            (temp_path / "wideband" / "J1857+0943_wb.tim").write_text("wideband file")
+
+            # Test with default excluded dirs
+            engine = LayoutDiscoveryService(working_dir=temp_dir)
+            structure = engine._analyze_directory_structure(temp_path)
+
+            # Should only find the files not in excluded directories
+            assert len(structure["par_files"]) == 1
+            assert len(structure["tim_files"]) == 1
+            assert "alternate" not in str(structure["par_files"][0])
+            assert "extratim" not in str(structure["tim_files"][0])
+            assert "wideband" not in str(structure["tim_files"][0])
+
+            # Test with custom excluded dirs
+            engine_custom = LayoutDiscoveryService(
+                working_dir=temp_dir, excluded_dirs=["custom_exclude"]
+            )
+            (temp_path / "custom_exclude").mkdir()
+            (temp_path / "custom_exclude" / "J1857+0943_custom.par").write_text(
+                "custom par file"
+            )
+
+            structure_custom = engine_custom._analyze_directory_structure(temp_path)
+            # Should find the alternate/extratim files but not custom_exclude
+            # Note: wideband is still excluded by default, so we expect 2 tim files (original + extratim)
+            assert len(structure_custom["par_files"]) == 2  # original + alternate
+            assert (
+                len(structure_custom["tim_files"]) == 2
+            )  # original + extratim (wideband still excluded by default)
+
 
 def test_pattern_discovery_integration():
     """Integration test for pattern discovery engine on IPTA data."""
     print("=== Pattern Discovery Engine Integration Test ===\n")
 
-    engine = LayoutDiscoveryService()
+    engine = LayoutDiscoveryService(working_dir="../../data/ipta-dr2")
     data_root = Path("/workspaces/metapulsar/data/ipta-dr2")
 
     if not data_root.exists():

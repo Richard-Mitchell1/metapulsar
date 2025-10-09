@@ -125,15 +125,22 @@ class FileDiscoveryService:
     - Completely isolated and testable
     """
 
-    def __init__(self, pta_data_releases: Dict = None, working_dir: str = None):
+    def __init__(
+        self,
+        working_dir: str = None,
+        pta_data_releases: Dict = None,
+        verbose: bool = True,
+    ):
         """Initialize the file discovery service.
 
         Args:
-            pta_data_releases: Dictionary of data releases. If None, uses default presets.
             working_dir: Working directory for resolving relative paths. If None, uses current working directory.
+            pta_data_releases: Dictionary of data releases. If None, uses default presets.
+            verbose: Default verbosity setting for method calls. Can be overridden in individual method calls.
         """
         self.working_dir = Path(working_dir) if working_dir else Path.cwd()
         self.data_releases = pta_data_releases or PTA_DATA_RELEASES.copy()
+        self.verbose = verbose
         self.logger = logger
 
     def discover_patterns_in_data_release(self, data_release_name: str) -> List[str]:
@@ -223,17 +230,21 @@ class FileDiscoveryService:
     def discover_files(
         self,
         data_release_names: Union[str, List[str], None] = None,
-        verbose: bool = True,
+        verbose: bool = None,
     ) -> Dict[str, List[Dict[str, Any]]]:
         """Discover files with user-friendly name and verbose output.
 
         Args:
             data_release_names: Single data release name, list of data release names, or None to search all.
-            verbose: If True, prints summary of found files to console.
+            verbose: If True, prints summary of found files to console. If None, uses instance default.
 
         Returns:
             Dictionary mapping data release names to lists of file dictionaries
         """
+        # Use instance default if verbose not specified
+        if verbose is None:
+            verbose = self.verbose
+
         # Convert single string to list for internal processing
         if isinstance(data_release_names, str):
             data_release_names = [data_release_names]
@@ -418,23 +429,23 @@ class FileDiscoveryService:
 
 # Convenience function for easy access
 def discover_files(
+    pta_data_releases: Dict,
     working_dir: str = None,
-    pta_data_releases: Dict = None,
     data_release_names: Union[str, List[str], None] = None,
     verbose: bool = True,
 ) -> Dict[str, List[Dict[str, Any]]]:
     """Convenience function for file discovery.
 
     Args:
+        pta_data_releases: Dictionary of data releases (typically from layout discovery).
         working_dir: Working directory for resolving relative paths. If None, uses current working directory.
-        pta_data_releases: Dictionary of data releases. If None, uses default presets.
         data_release_names: Single data release name, list of data release names, or None to search all.
         verbose: If True, prints summary of found files to console.
 
     Returns:
         Dictionary mapping data release names to lists of file dictionaries
     """
-    service = FileDiscoveryService(pta_data_releases, working_dir)
+    service = FileDiscoveryService(working_dir, pta_data_releases, verbose)
     return service.discover_files(data_release_names, verbose)
 
 
