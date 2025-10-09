@@ -401,7 +401,7 @@ class MetaPulsarFactory:
                 )
 
                 # Canonical name is automatically calculated from pulsar data
-                metapulsars[pulsar_name] = metapulsar
+                metapulsars[metapulsar.name] = metapulsar
 
             except Exception as e:
                 self.logger.warning(
