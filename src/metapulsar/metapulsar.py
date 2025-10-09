@@ -240,18 +240,16 @@ class MetaPulsar(ep.BasePulsar):
 
         # Handle PINT models
         for pta_name, model in pint_models.items():
-            # Create minimal file data structure for ParameterManager
             file_data[pta_name] = {
-                "par": None,  # Not needed for parameter mapping
+                "par": None,
                 "par_content": model.as_parfile(),
             }
 
         # Handle libstempo pulsars
         for pta_name, lt_psr in lt_pulsars.items():
-            # Get parfile content using helper method
             parfile_content = self._get_libstempo_parfile_content(lt_psr)
             file_data[pta_name] = {
-                "par": None,  # Not needed for parameter mapping
+                "par": None,
                 "par_content": parfile_content,
             }
 
@@ -268,6 +266,19 @@ class MetaPulsar(ep.BasePulsar):
         self._setparameters = mapping.setparameters
         self.fitpars = list(self._fitparameters.keys())
         self.setpars = list(self._setparameters.keys())
+
+        # Setup canonical parameter lists for each pulsar for
+        # inter-pta consistent parameter lookups
+        self._setup_canonical_parameters()
+
+    def _setup_canonical_parameters(self):
+        """Setup canonical parameter lists for each pulsar."""
+        from .pint_helpers import resolve_parameter_alias
+
+        for pta_name, psr in self._epulsars.items():
+            # Create canonical versions of fitpars and setpars
+            psr.fitpars_canonical = [resolve_parameter_alias(p) for p in psr.fitpars]
+            psr.setpars_canonical = [resolve_parameter_alias(p) for p in psr.setpars]
 
     def _combine_timing_data(self):
         """Combine timing data from all PTAs."""
@@ -292,7 +303,7 @@ class MetaPulsar(ep.BasePulsar):
         self._combine_flags()
 
     def _combine_flags(self):
-        """Combine flags from all PTAs with proper handling."""
+        """Combine flags from all PTAs."""
         from collections import defaultdict
 
         pta_slice = self._get_pta_slices()
@@ -407,13 +418,12 @@ class MetaPulsar(ep.BasePulsar):
             # Get design matrix from Enterprise Pulsar
             if hasattr(psr, "_designmatrix"):
                 dm = psr._designmatrix
-                # CORRECT: Use the parameter mapping like legacy system
                 if full_parname in self._fitparameters:
                     for mapped_pta, mapped_param in self._fitparameters[
                         full_parname
                     ].items():
                         if mapped_pta == pta:
-                            par_idx = psr.fitpars.index(mapped_param)
+                            par_idx = psr.fitpars_canonical.index(mapped_param)
                             column[slice_obj] = dm[:, par_idx]
                             break
 

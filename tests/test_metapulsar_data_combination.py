@@ -56,7 +56,6 @@ class TestMetaPulsarDataCombination:
 
         return {"test_pta1": mock_psr1, "test_pta2": mock_psr2}
 
-    @pytest.mark.slow
     def test_timing_data_combination_basic(self, mock_pulsars):
         """Test basic timing data combination."""
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
@@ -76,7 +75,6 @@ class TestMetaPulsarDataCombination:
         assert isinstance(metapulsar._ssbfreqs, np.ndarray)
         assert isinstance(metapulsar._telescope, np.ndarray)
 
-    @pytest.mark.slow
     def test_timing_data_combination_ordering(self, mock_pulsars):
         """Test that timing data is combined in correct order."""
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
@@ -90,7 +88,6 @@ class TestMetaPulsarDataCombination:
         # Check that last 50 elements come from second PTA
         assert np.allclose(metapulsar._toas[50:], mock_pulsars["test_pta2"]._toas)
 
-    @pytest.mark.slow
     def test_flag_combination(self, mock_pulsars):
         """Test flag combination."""
         # Convert MockPulsar objects to libstempo adapters
@@ -125,7 +122,6 @@ class TestMetaPulsarDataCombination:
         assert np.all(metapulsar._flags["pta"][:50] == "test_pta1")
         assert np.all(metapulsar._flags["pta"][50:] == "test_pta2")
 
-    @pytest.mark.slow
     def test_pta_slice_calculation(self, mock_pulsars):
         """Test PTA slice calculation."""
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
@@ -140,7 +136,6 @@ class TestMetaPulsarDataCombination:
         assert slices["test_pta1"] == slice(0, 50)
         assert slices["test_pta2"] == slice(50, 100)
 
-    @pytest.mark.slow
     def test_pta_slice_data_access(self, mock_pulsars):
         """Test that PTA slices correctly access data."""
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
@@ -162,7 +157,6 @@ class TestMetaPulsarDataCombination:
         with pytest.raises(StopIteration):
             MetaPulsar({}, combination_strategy="composite")
 
-    @pytest.mark.slow
     def test_timing_data_combination_single_pulsar(self):
         """Test timing data combination with single pulsar."""
         toas, residuals, errors, freqs = create_mock_timing_data(25)
@@ -191,7 +185,6 @@ class TestMetaPulsarDataCombination:
         assert np.allclose(metapulsar._toas, mock_psr._toas)
         assert np.array_equal(metapulsar._residuals, mock_psr._residuals)
 
-    @pytest.mark.slow
     def test_timing_data_combination_different_sizes(self):
         """Test timing data combination with different PTA sizes."""
         # Create pulsars with different sizes
@@ -238,7 +231,6 @@ class TestMetaPulsarDataCombination:
         assert slices["small_pta"] == slice(0, 30)
         assert slices["large_pta"] == slice(30, 100)
 
-    @pytest.mark.slow
     def test_timing_package_detection(self, mock_pulsars):
         """Test timing package detection."""
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
@@ -248,7 +240,6 @@ class TestMetaPulsarDataCombination:
             package = metapulsar._get_timing_package(psr)
             assert package == "unknown"
 
-    @pytest.mark.slow
     def test_timing_data_frequency_handling(self, mock_pulsars):
         """Test that frequency data is properly handled."""
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
@@ -265,7 +256,6 @@ class TestMetaPulsarDataCombination:
         # Use allclose for floating-point comparison due to precision differences
         assert np.allclose(metapulsar._ssbfreqs, expected_freqs)
 
-    @pytest.mark.slow
     def test_timing_data_consistency(self, mock_pulsars):
         """Test that all timing data arrays have consistent lengths."""
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
@@ -285,7 +275,6 @@ class TestMetaPulsarDataCombination:
             length == lengths[0] for length in lengths
         ), f"Inconsistent array lengths: {lengths}"
 
-    @pytest.mark.slow
     def test_flag_structure(self, mock_pulsars):
         """Test that combined flags have correct structure."""
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)
@@ -309,7 +298,6 @@ class TestMetaPulsarDataCombination:
         # Check array length
         assert len(metapulsar._flags) == 100
 
-    @pytest.mark.slow
     def test_data_combination_integration(self, mock_pulsars):
         """End-to-end integration test for data combination functionality."""
         adapted_pulsars = self._create_adapted_pulsars(mock_pulsars)

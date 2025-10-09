@@ -1,6 +1,5 @@
 """Tests for MetaPulsar with ParameterManager integration."""
 
-import pytest
 from unittest.mock import Mock, patch
 from pint.models import TimingModel
 from pint.toa import TOAs
@@ -54,7 +53,6 @@ class TestMetaPulsarWithParameterManager:
         self.mock_libstempo_psr.name = "J1857+0943"
         self.mock_libstempo_psr.parfile = {"F0": "123.456", "RAJ": "18:57:36.4"}
 
-    @pytest.mark.slow
     def test_composite_strategy_parameter_setup(self):
         """Test parameter setup for composite strategy with ParameterManager."""
         # Test ParameterManager initialization directly
@@ -79,7 +77,6 @@ class TestMetaPulsarWithParameterManager:
             param_manager.reference_pta == "epta_dr2"
         )  # Should be the first dictionary key
 
-    @pytest.mark.slow
     def test_consistent_strategy_parameter_setup(self):
         """Test parameter setup for consistent strategy with ParameterManager."""
         # Test ParameterManager initialization directly

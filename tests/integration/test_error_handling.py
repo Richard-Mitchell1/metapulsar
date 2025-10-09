@@ -19,7 +19,6 @@ class TestErrorHandling:
         with pytest.raises(KeyError):
             discovery_service.discover_files(["nonexistent_config"])
 
-    @pytest.mark.slow
     def test_malformed_par_file(self, available_data_sets):
         """Test handling of malformed par files."""
         if not available_data_sets:
@@ -61,7 +60,6 @@ DM 13.299 1 0.001
                     }
                     MetaPulsarFactory().create_metapulsar(file_data)
 
-    @pytest.mark.slow
     def test_malformed_tim_file(self, available_data_sets):
         """Test handling of malformed tim files."""
         if not available_data_sets:
@@ -101,7 +99,6 @@ C 12345.67890 0.0001
                     }
                     MetaPulsarFactory().create_metapulsar(file_data)
 
-    @pytest.mark.slow
     def test_invalid_data_release_config(self):
         """Test handling of invalid data release configurations."""
         # Test with invalid PTA config name
@@ -132,7 +129,6 @@ C 12345.67890 0.0001
                 e
             ), f"Unexpected KeyError for invalid reference_pta: {e}"
 
-    @pytest.mark.slow
     def test_empty_par_files(self, available_data_sets):
         """Test handling of empty par files."""
         if not available_data_sets:
@@ -180,7 +176,6 @@ PEPOCH 55000
                 }
                 MetaPulsarFactory().create_metapulsar(file_data)
 
-    @pytest.mark.slow
     def test_corrupted_binary_files(self, available_data_sets):
         """Test handling of corrupted binary files."""
         if not available_data_sets:
@@ -248,7 +243,6 @@ PEPOCH 55000
             assert "memory" not in str(e).lower()
             assert "segfault" not in str(e).lower()
 
-    @pytest.mark.slow
     def test_concurrent_access(self, available_data_sets):
         """Test handling of concurrent access to data files."""
         if not available_data_sets:

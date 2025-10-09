@@ -358,6 +358,7 @@ class TestLayoutDiscoveryService:
             )  # original + extratim (wideband still excluded by default)
 
 
+@pytest.mark.slow
 def test_pattern_discovery_integration():
     """Integration test for pattern discovery engine on IPTA data."""
     print("=== Pattern Discovery Engine Integration Test ===\n")

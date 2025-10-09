@@ -111,7 +111,6 @@ class TestMetaPulsarFactory:
         assert not hasattr(factory, "parfile_manager")
 
     @patch("metapulsar.position_helpers.bj_name_from_pulsar")
-    @pytest.mark.slow
     def test_create_metapulsar_success(self, mock_bj_name):
         """Test successful MetaPulsar creation using MockPulsar directly."""
         # Mock position helper

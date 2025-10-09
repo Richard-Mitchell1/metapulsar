@@ -88,7 +88,6 @@ class TestMetaPulsarDesignMatrix:
                 # Rebuild design matrix to include the new Offset parameter
                 mp._build_design_matrix()
 
-    @pytest.mark.slow
     def test_design_matrix_creation(self):
         """Test that design matrix is created correctly for both strategies."""
         # Test composite strategy
@@ -107,7 +106,6 @@ class TestMetaPulsarDesignMatrix:
         )  # TODO: COMPLETELY REDESIGN - This comment is wrong! 3 Offset parameters for 2 PTAs is logically impossible
         assert np.count_nonzero(self.consistent_mp._designmatrix) > 0
 
-    @pytest.mark.slow
     def test_design_matrix_parameters(self):
         """Test that design matrix has correct parameters for both strategies."""
         # Test composite strategy - PTA-specific parameters
@@ -152,7 +150,6 @@ class TestMetaPulsarDesignMatrix:
         for param in expected_consistent_params:
             assert param in self.consistent_mp.fitpars
 
-    @pytest.mark.slow
     def test_design_matrix_structure(self):
         """Test design matrix structure and content for both strategies."""
         # Test composite strategy
@@ -212,7 +209,6 @@ class TestMetaPulsarDesignMatrix:
         assert not np.allclose(f1_col, 0.0)  # Should have non-zero values
         assert not np.allclose(f1_col, f1_col[0])  # Should vary with time
 
-    @pytest.mark.slow
     def test_design_matrix_pta_slices(self):
         """Test that design matrix correctly handles PTA slices for both strategies."""
         # Test composite strategy
@@ -233,7 +229,6 @@ class TestMetaPulsarDesignMatrix:
         assert pta_slices_consistent["test_pta2"].start == 30
         assert pta_slices_consistent["test_pta2"].stop == 60
 
-    @pytest.mark.slow
     def test_unit_conversion_coordinate_parameters(self):
         """Test unit conversion for coordinate parameters for both strategies."""
         import astropy.units as u
@@ -269,7 +264,6 @@ class TestMetaPulsarDesignMatrix:
         )
         assert np.allclose(converted_decj_consistent, decj_col * expected_factor_deg)
 
-    @pytest.mark.slow
     def test_unit_conversion_non_coordinate_parameters(self):
         """Test that non-coordinate parameters are not converted for both strategies."""
         # Test composite strategy with PTA-specific parameter names
@@ -285,7 +279,6 @@ class TestMetaPulsarDesignMatrix:
         )
         assert np.allclose(converted_f0_consistent, f0_col)
 
-    @pytest.mark.slow
     def test_design_matrix_column_construction(self):
         """Test individual design matrix column construction for both strategies."""
         # Test composite strategy with PTA-specific parameter names
@@ -318,7 +311,6 @@ class TestMetaPulsarDesignMatrix:
         assert len(f1_col) == 60
         assert not np.allclose(f1_col, 0.0)  # Should have non-zero values
 
-    @pytest.mark.slow
     def test_design_matrix_with_different_strategies(self):
         """Test design matrix with different combination strategies."""
         # Test composite strategy - should have PTA-specific parameters
@@ -341,14 +333,12 @@ class TestMetaPulsarDesignMatrix:
         assert "F0" in self.consistent_mp.fitpars
         assert "RAJ" in self.consistent_mp.fitpars
 
-    @pytest.mark.slow
     def test_design_matrix_empty_pulsars(self):
         """Test design matrix with empty pulsar list."""
         # Empty pulsars should raise an exception
         with pytest.raises(StopIteration):
             MetaPulsar({}, combination_strategy="composite")
 
-    @pytest.mark.slow
     def test_timing_package_detection(self):
         """Test timing package detection for MockPulsar for both strategies."""
         # Test composite strategy
@@ -363,7 +353,6 @@ class TestMetaPulsarDesignMatrix:
             timing_pkg_consistent == "unknown"
         )  # MockPulsar doesn't have PINT/Tempo2 attributes
 
-    @pytest.mark.slow
     def test_design_matrix_parameter_mapping(self):
         """Test that parameter mapping works correctly for both strategies."""
         # Test composite strategy - PTA-specific parameters
@@ -420,7 +409,6 @@ class TestMetaPulsarDesignMatrix:
                 assert "test_pta1" in self.consistent_mp._fitparameters[param]
                 assert "test_pta2" in self.consistent_mp._fitparameters[param]
 
-    @pytest.mark.slow
     def test_design_matrix_consistency(self):
         """Test that design matrix is consistent across PTAs for both strategies."""
         # Test composite strategy - PTA-specific parameters
@@ -448,7 +436,6 @@ class TestMetaPulsarDesignMatrix:
         assert np.allclose(f0_pta1_consistent, 1.0)
         assert np.allclose(f0_pta2_consistent, 1.0)
 
-    @pytest.mark.slow
     def test_design_matrix_astrometry_parameters(self):
         """Test that astrometry parameters are handled correctly for both strategies."""
         # Test composite strategy - PTA-specific parameters
@@ -483,7 +470,6 @@ class TestMetaPulsarDesignMatrix:
         assert not np.allclose(raj_col, 0.0)
         assert not np.allclose(decj_col, 0.0)
 
-    @pytest.mark.slow
     def test_design_matrix_spin_parameters(self):
         """Test that spin parameters are handled correctly for both strategies."""
         # Test composite strategy - PTA-specific parameters

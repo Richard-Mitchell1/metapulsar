@@ -130,7 +130,13 @@ class ParameterManager:
         return output_files
 
     def build_parameter_mappings(self) -> "ParameterMapping":
-        """Build parameter mappings for MetaPulsar."""
+        """Build parameter mappings for MetaPulsar.
+
+        The parameter mappings map the meta pulsar parameter names to the
+        parameter names of the underlying PTA pulsars. The composite parameters
+        will get an additional PTA name suffix to make them unique.
+
+        """
         self.logger.info("Building parameter mappings for MetaPulsar")
 
         # 1. Discover parameters for components that should be merged

@@ -235,7 +235,6 @@ class TestCoordinateBasedDiscovery:
             assert len(pulsar_info["test_data_release1"]) > 0
             assert len(pulsar_info["test_data_release2"]) > 0
 
-    @pytest.mark.slow
     def test_create_metapulsar_with_canonical_name(
         self, mock_file_discovery_service, mock_file_system
     ):

@@ -421,7 +421,6 @@ class TestGetParametersByTypeFromParfiles:
                 mock_warning.call_args
             )
 
-    @pytest.mark.slow
     def test_empty_parfile_dicts(self):
         """Test handling of empty parfile dictionaries."""
         result = get_parameters_by_type_from_parfiles("spindown", {})
