@@ -8,6 +8,26 @@ Usage (drop-in):
     psr = tempopulsar(parfile="J1713.par", timfile="J1713.tim", dofit=False)
     r = psr.residuals()
 
+Advanced with logging:
+    from sandbox_tempo2 import tempopulsar, configure_logging, Policy
+    configure_logging(level="DEBUG", log_file="tempo2.log")
+    policy = Policy(ctor_retry=5, call_timeout_s=300.0)
+    psr = tempopulsar(parfile="J1713.par", timfile="J1713.tim", policy=policy)
+
+With specific environment:
+    psr = tempopulsar(parfile="J1713.par", timfile="J1713.tim", env_name="myenv")
+    # or for conda: env_name="mycondaenv"
+    # or explicit path: env_name="python:/path/to/python"
+
+With persistent workers (no recycling/timeouts):
+    policy = Policy(
+        call_timeout_s=None,        # No RPC timeouts
+        max_calls_per_worker=None,  # Never recycle by call count
+        max_age_s=None,            # Never recycle by age
+        rss_soft_limit_mb=None     # Never recycle by memory
+    )
+    psr = tempopulsar(parfile="J1713.par", timfile="J1713.tim", policy=policy)
+
 Advanced:
     from sandbox_tempo2 import load_many, Policy
     ok, retried, failed = load_many([("J1713.par","J1713.tim"), ...], policy=Policy())
@@ -20,6 +40,21 @@ Environment selection (Apple Silicon + Rosetta etc.):
 
 You can force Rosetta prefix via env var:
     TEMPO2_SANDBOX_WORKER_ARCH_PREFIX="arch -x86_64"
+
+Logging:
+    The sandbox now includes comprehensive loguru logging for debugging and monitoring.
+    Use configure_logging() to set up logging levels and outputs. Logs include:
+    - Worker process lifecycle (creation, recycling, termination)
+    - RPC call details and timing
+    - Constructor retry attempts and failures
+    - Memory usage and recycling decisions
+    - Error details and recovery attempts
+
+Robustness:
+    The sandbox automatically suppresses libstempo debug output during construction
+    to prevent interference with the JSON-RPC protocol. This ensures reliable
+    communication even when libstempo prints diagnostic messages. The suppression
+    works at the OS file descriptor level to catch output from C libraries.
 """
 
 from __future__ import annotations
@@ -42,6 +77,15 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
+
+# Loguru logging
+try:
+    from loguru import logger
+except ImportError:
+    # Fallback to basic logging if loguru not available
+    import logging
+
+    logger = logging.getLogger(__name__)
 
 # ---------------------------- Public Exceptions ---------------------------- #
 
@@ -67,22 +111,29 @@ class Tempo2ConstructorFailed(Tempo2Error):
 
 
 # ------------------------------- Policy knobs ----------------------------- #
-
-
 @dataclass(frozen=True)
 class Policy:
     # Constructor protection
-    ctor_retry: int = 2  # number of extra tries after the first
+    ctor_retry: int = 5  # number of extra tries after the first
     ctor_backoff: float = 0.75  # seconds between ctor retries
-    preload_residuals: bool = True  # call residuals() once after ctor
+    preload_residuals: bool = False  # call residuals() once after ctor
+    preload_designmatrix: bool = False  # call designmatrix() once after ctor
+    preload_toas: bool = False  # call toas() once after ctor
+    preload_fit: bool = False  # call fit() once after ctor
 
     # RPC protection
-    call_timeout_s: float = 120.0  # per-call timeout (seconds)
+    call_timeout_s: Optional[float] = (
+        None  # per-call timeout (seconds), None = no timeout
+    )
     kill_grace_s: float = 2.0  # after timeout, wait before SIGKILL
 
     # Recycling / hygiene
-    max_calls_per_worker: int = 200  # recycle after this many good calls
-    max_age_s: float = 20 * 60.0  # recycle after this many seconds
+    max_calls_per_worker: Optional[int] = (
+        None  # recycle after this many good calls, None = never recycle by calls
+    )
+    max_age_s: Optional[float] = (
+        None  # recycle after this many seconds, None = never recycle by age
+    )
     rss_soft_limit_mb: Optional[int] = None  # if provided, recycle when beaten
 
 
@@ -249,9 +300,34 @@ def _worker_stdio_main() -> None:
             if method == "ctor":
                 if _lib_tempopulsar is None:
                     raise ImportError("libstempo not available in worker")
-                obj = _lib_tempopulsar(**params["kwargs"])
-                if params.get("preload_residuals", True):
-                    _ = obj.residuals(updatebats=True, formresiduals=True)
+
+                # Suppress stdout/stderr during constructor to prevent libstempo debug output
+                # from contaminating the JSON-RPC protocol. We need to redirect at the OS level
+                # because tempo2 writes directly to file descriptors.
+                import os
+
+                # Save original stdout/stderr file descriptors
+                original_stdout = os.dup(1)
+                original_stderr = os.dup(2)
+
+                try:
+                    # Redirect stdout/stderr to /dev/null
+                    devnull = os.open(os.devnull, os.O_WRONLY)
+                    os.dup2(devnull, 1)  # stdout
+                    os.dup2(devnull, 2)  # stderr
+
+                    obj = _lib_tempopulsar(**params["kwargs"])
+                    if params.get("preload_residuals", True):
+                        _ = obj.residuals(updatebats=True, formresiduals=True)
+
+                finally:
+                    # Restore original stdout/stderr
+                    os.dup2(original_stdout, 1)
+                    os.dup2(original_stderr, 2)
+                    os.close(devnull)
+                    os.close(original_stdout)
+                    os.close(original_stderr)
+
                 _write_response(
                     {
                         "jsonrpc": "2.0",
@@ -349,17 +425,24 @@ class _WorkerProc:
         self.cmd = cmd
         self.proc: Optional[subprocess.Popen] = None
         self._id = 0
+        logger.info(f"Creating worker process with command: {' '.join(cmd)}")
+        logger.info(f"Require x86_64 architecture: {require_x86_64}")
         self._start(require_x86_64=require_x86_64)
 
     # ---------- process management ----------
 
     def _start(self, require_x86_64: bool = False):
+        logger.debug("Starting worker subprocess...")
         self._hard_kill()  # just in case
 
         # Ensure unbuffered text I/O
         env = os.environ.copy()
         env.setdefault("PYTHONUNBUFFERED", "1")
 
+        logger.debug(
+            f"Launching subprocess with environment: PYTHONUNBUFFERED={env.get('PYTHONUNBUFFERED')}"
+        )
+        logger.debug(f"Subprocess working directory: {os.getcwd()}")
         self.proc = subprocess.Popen(
             self.cmd,
             stdin=subprocess.PIPE,
@@ -367,29 +450,46 @@ class _WorkerProc:
             stderr=subprocess.PIPE,
             text=True,
             bufsize=1,  # line buffered
+            cwd=os.getcwd(),  # Explicitly set working directory
         )
 
+        logger.debug(f"Worker process started with PID: {self.proc.pid}")
+
         # Hello handshake (one line of JSON)
+        logger.debug("Waiting for worker hello handshake...")
         hello = self._readline_with_timeout(self.policy.call_timeout_s)
         if hello is None:
-            self._hard_kill()
-            raise Tempo2Timeout("worker did not send hello in time")
+            if self.policy.call_timeout_s is None:
+                logger.error("Worker did not send hello - worker disconnected")
+                self._hard_kill()
+                raise Tempo2Crashed("worker did not send hello - worker disconnected")
+            else:
+                logger.error("Worker did not send hello in time")
+                self._hard_kill()
+                raise Tempo2Timeout("worker did not send hello in time")
 
         try:
             hello_obj = json.loads(hello)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to parse worker hello: {e}")
             self._hard_kill()
             raise Tempo2ProtocolError(f"malformed hello: {hello!r}")
 
         info = hello_obj.get("hello", {})
+        logger.info(f"Worker hello received: {info}")
+
         if require_x86_64:
             if str(info.get("machine", "")).lower() != "x86_64":
+                logger.error(
+                    f"Architecture mismatch: worker is {info.get('machine')}, but x86_64 required"
+                )
                 self._hard_kill()
                 raise Tempo2Error(
                     f"worker arch is {info.get('machine')}, but x86_64 is required for quad precision"
                 )
 
         if not info.get("has_libstempo", False):
+            logger.error("libstempo not available in worker environment")
             # Keep the worker up; subsequent ctor will return a clean error,
             # but we can already warn here to fail fast.
             self._hard_kill()
@@ -400,27 +500,42 @@ class _WorkerProc:
 
         self.birth = time.time()
         self.calls_ok = 0
+        logger.info(f"Worker ready and initialized (PID: {self.proc.pid})")
 
-    def _readline_with_timeout(self, timeout: float) -> Optional[str]:
+    def _readline_with_timeout(self, timeout: Optional[float]) -> Optional[str]:
         if self.proc is None or self.proc.stdout is None:
             return None
-        end = time.time() + timeout
-        while time.time() < end:
-            rlist, _, _ = select.select(
-                [self.proc.stdout], [], [], max(0.01, end - time.time())
-            )
-            if rlist:
-                line = self.proc.stdout.readline()
-                if not line:  # EOF
-                    return None
-                return line.rstrip("\n")
-        return None
+
+        if timeout is None:
+            # No timeout - wait indefinitely
+            while True:
+                rlist, _, _ = select.select([self.proc.stdout], [], [])
+                if rlist:
+                    line = self.proc.stdout.readline()
+                    if not line:  # EOF
+                        return None
+                    return line.rstrip("\n")
+        else:
+            # With timeout
+            end = time.time() + timeout
+            while time.time() < end:
+                rlist, _, _ = select.select(
+                    [self.proc.stdout], [], [], max(0.01, end - time.time())
+                )
+                if rlist:
+                    line = self.proc.stdout.readline()
+                    if not line:  # EOF
+                        return None
+                    return line.rstrip("\n")
+            return None
 
     def _hard_kill(self):
         if self.proc and self.proc.poll() is None:
+            logger.warning(f"Hard killing worker process (PID: {self.proc.pid})")
             try:
                 self.proc.terminate()
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to terminate process: {e}")
                 pass
             t0 = time.time()
             while (
@@ -429,18 +544,25 @@ class _WorkerProc:
             ):
                 time.sleep(0.01)
             if self.proc.poll() is None:
+                logger.warning(
+                    f"Sending SIGKILL to worker process (PID: {self.proc.pid})"
+                )
                 with contextlib.suppress(Exception):
                     os.kill(self.proc.pid, signal.SIGKILL)
         self.proc = None
 
     def close(self):
+        logger.debug("Closing worker process...")
         if self.proc and self.proc.poll() is None:
             try:
+                logger.debug("Sending bye RPC to worker")
                 self._send_rpc("bye", {})
                 # ignore response; we're closing anyway
-            except Exception:
+            except Exception as e:
+                logger.debug(f"Bye RPC failed (expected): {e}")
                 pass
         self._hard_kill()
+        logger.debug("Worker process closed")
 
     def __del__(self):
         with contextlib.suppress(Exception):
@@ -452,10 +574,13 @@ class _WorkerProc:
         self, method: str, params: Dict[str, Any], timeout: Optional[float] = None
     ) -> Any:
         if self.proc is None or self.proc.stdin is None or self.proc.stdout is None:
+            logger.error("Worker not running, cannot send RPC")
             raise Tempo2Crashed("worker not running")
 
         self._id += 1
         rid = self._id
+        logger.debug(f"Sending RPC {method} (id: {rid})")
+
         frame = {
             "jsonrpc": "2.0",
             "id": rid,
@@ -468,23 +593,38 @@ class _WorkerProc:
             self.proc.stdin.write(line)
             self.proc.stdin.flush()
         except Exception as e:
+            logger.error(f"Failed to send RPC {method}: {e}")
             self._hard_kill()
             raise Tempo2Crashed(f"send failed: {e!r}")
 
         # Wait for response
         t = self.policy.call_timeout_s if timeout is None else timeout
+        if t is None:
+            logger.debug(f"Waiting for RPC {method} response (no timeout)")
+        else:
+            logger.debug(f"Waiting for RPC {method} response (timeout: {t}s)")
         resp_line = self._readline_with_timeout(t)
         if resp_line is None:
-            self._hard_kill()
-            raise Tempo2Timeout(f"RPC '{method}' timed out")
+            if t is None:
+                logger.error(f"RPC {method} failed - worker disconnected")
+                self._hard_kill()
+                raise Tempo2Crashed(f"RPC '{method}' failed - worker disconnected")
+            else:
+                logger.error(f"RPC {method} timed out after {t}s")
+                self._hard_kill()
+                raise Tempo2Timeout(f"RPC '{method}' timed out")
 
         try:
             resp = json.loads(resp_line)
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to parse RPC {method} response: {e}")
             self._hard_kill()
             raise Tempo2ProtocolError(f"malformed response: {resp_line!r}")
 
         if resp.get("id") != rid:
+            logger.error(
+                f"RPC {method} id mismatch: expected {rid}, got {resp.get('id')}"
+            )
             self._hard_kill()
             raise Tempo2ProtocolError(
                 f"mismatched id in response: {resp.get('id')} vs {rid}"
@@ -494,32 +634,41 @@ class _WorkerProc:
             err = resp["error"]
             msg = err.get("message", "error")
             data = err.get("data", "")
+            logger.error(f"RPC {method} failed: {msg}")
             raise Tempo2Error(f"{msg}\n{data}")
 
+        logger.debug(f"RPC {method} completed successfully")
         result_b64 = resp.get("result_b64", None)
         return _b64_loads_py(result_b64) if result_b64 is not None else None
 
     # Public RPCs
     def ctor(self, kwargs: Dict[str, Any], preload_residuals: bool):
+        logger.info(f"Constructing tempopulsar with kwargs: {kwargs}")
+        logger.info(f"Preload residuals: {preload_residuals}")
         return self._send_rpc(
             "ctor", {"kwargs": kwargs, "preload_residuals": preload_residuals}
         )
 
     def get(self, name: str):
+        logger.debug(f"Getting attribute: {name}")
         return self._send_rpc("get", {"name": name})
 
     def set(self, name: str, value: Any):
+        logger.debug(f"Setting attribute: {name}")
         return self._send_rpc("set", {"name": name, "value": value})
 
     def call(self, name: str, args=(), kwargs=None):
+        logger.debug(f"Calling method: {name} with args={args}, kwargs={kwargs}")
         return self._send_rpc(
             "call", {"name": name, "args": tuple(args), "kwargs": dict(kwargs or {})}
         )
 
     def rss(self) -> Optional[int]:
         try:
+            logger.debug("Getting worker RSS memory usage")
             return self._send_rpc("rss", {})
-        except Exception:
+        except Exception as e:
+            logger.warning(f"Failed to get RSS: {e}")
             return None
 
 
@@ -554,6 +703,14 @@ def _detect_environment_type(env_name: str) -> str:
         Path.home() / ".virtualenvs" / env_name / "bin" / "python",
         Path.cwd() / env_name / "bin" / "python",
         Path.cwd() / ".venv" / "bin" / "python",  # only if env_name == '.venv'
+        # Additional common locations for containers/dev environments
+        Path("/opt/venvs") / env_name / "bin" / "python",
+        Path("/opt/virtualenvs") / env_name / "bin" / "python",
+        Path("/usr/local/venvs") / env_name / "bin" / "python",
+        Path("/home") / "venvs" / env_name / "bin" / "python",
+        # Try to find any python executable with the env name in the path
+        Path(f"/opt/venvs/{env_name}/bin/python"),
+        Path(f"/opt/virtualenvs/{env_name}/bin/python"),
     ]
     for p in venv_paths:
         if p.exists():
@@ -572,6 +729,14 @@ def _find_venv_python_path(env_name: str) -> Optional[str]:
         Path.home() / ".virtualenvs" / env_name / "bin" / "python",
         Path.cwd() / env_name / "bin" / "python",
         Path.cwd() / ".venv" / "bin" / "python",
+        # Additional common locations for containers/dev environments
+        Path("/opt/venvs") / env_name / "bin" / "python",
+        Path("/opt/virtualenvs") / env_name / "bin" / "python",
+        Path("/usr/local/venvs") / env_name / "bin" / "python",
+        Path("/home") / "venvs" / env_name / "bin" / "python",
+        # Try to find any python executable with the env name in the path
+        Path(f"/opt/venvs/{env_name}/bin/python"),
+        Path(f"/opt/virtualenvs/{env_name}/bin/python"),
     ]
     for p in venv_paths:
         if p.exists():
@@ -586,9 +751,19 @@ def _resolve_worker_cmd(env_name: Optional[str]) -> Tuple[List[str], bool]:
     """
 
     # Base invocation that runs this file in worker mode:
-    # python -c "import sandbox_tempo2 as m; m._worker_stdio_main()"
+    # Find the src directory dynamically
+    current_file = Path(__file__).resolve()
+    src_dir = (
+        current_file.parent.parent
+    )  # Go up from metapulsar/sandbox_tempo2.py to src/
+    src_path = str(src_dir)
+
     def python_to_worker_cmd(python_exe: str) -> List[str]:
-        return [python_exe, "-c", "import sandbox_tempo2 as m; m._worker_stdio_main()"]
+        return [
+            python_exe,
+            "-c",
+            f"import sys; sys.path.insert(0, '{src_path}'); import metapulsar.sandbox_tempo2 as m; m._worker_stdio_main()",
+        ]
 
     arch_prefix_env = os.environ.get("TEMPO2_SANDBOX_WORKER_ARCH_PREFIX", "").strip()
     require_x86_64 = False
@@ -615,7 +790,7 @@ def _resolve_worker_cmd(env_name: Optional[str]) -> Tuple[List[str], bool]:
             env_name,
             "python",
             "-c",
-            "import sandbox_tempo2 as m; m._worker_stdio_main()",
+            f"import sys; sys.path.insert(0, '{src_path}'); import metapulsar.sandbox_tempo2 as m; m._worker_stdio_main()",
         ]
         # Choosing to require x86_64 only if user *explicitly* asks via arch prefix or env_name == "arch"
         require_x86_64 = "arch" in env_name.lower()
@@ -668,6 +843,7 @@ class tempopulsar:
 
     Args:
         env_name: Environment name (conda env or venv name, 'arch', or 'python:/abs/python').
+                 If None (default), uses the current Python environment.
         **kwargs: Additional arguments passed to libstempo.tempopulsar
     """
 
@@ -689,34 +865,57 @@ class tempopulsar:
         self._state = _State(created_at=time.time(), calls_ok=0)
         self._require_x86 = False
 
+        logger.info(
+            f"Creating tempopulsar with env_name='{env_name}', kwargs={self._ctor_kwargs}"
+        )
+        logger.info(
+            f"Using policy: ctor_retry={self._policy.ctor_retry}, ctor_backoff={self._policy.ctor_backoff}s"
+        )
         self._construct_with_retries()
 
     # --------------- construction / reconstruction with retries --------------- #
 
     def _construct_with_retries(self):
+        logger.info(
+            f"Starting construction with {self._policy.ctor_retry + 1} total attempts"
+        )
         last_exc: Optional[Exception] = None
-        for _ in range(1 + self._policy.ctor_retry):
+        for attempt in range(1 + self._policy.ctor_retry):
+            logger.info(
+                f"Construction attempt {attempt + 1}/{self._policy.ctor_retry + 1}"
+            )
             try:
                 cmd, require_x86 = _resolve_worker_cmd(self._env_name)
                 self._require_x86 = require_x86
+                logger.debug(f"Resolved worker command: {' '.join(cmd)}")
+                logger.debug(f"Require x86_64: {require_x86}")
+
                 self._wp = _WorkerProc(self._policy, cmd, require_x86_64=require_x86)
                 # ctor on the worker (libstempo.tempopulsar)
+                logger.info("Calling constructor on worker...")
                 self._wp.ctor(
                     self._ctor_kwargs, preload_residuals=self._policy.preload_residuals
                 )
                 self._state.created_at = time.time()
                 self._state.calls_ok = 0
+                logger.info(f"Construction successful on attempt {attempt + 1}")
                 return
             except Exception as e:
+                logger.warning(f"Construction attempt {attempt + 1} failed: {e}")
                 last_exc = e
                 # kill and retry
                 try:
                     if self._wp:
+                        logger.debug("Cleaning up failed worker")
                         self._wp.close()
-                except Exception:
+                except Exception as cleanup_e:
+                    logger.warning(f"Cleanup failed: {cleanup_e}")
                     pass
                 self._wp = None
-                time.sleep(self._policy.ctor_backoff)
+                if attempt < self._policy.ctor_retry:  # Don't sleep after last attempt
+                    logger.info(f"Waiting {self._policy.ctor_backoff}s before retry...")
+                    time.sleep(self._policy.ctor_backoff)
+        logger.error(f"All construction attempts failed. Last error: {last_exc}")
         raise Tempo2ConstructorFailed(
             f"tempopulsar ctor failed after retries: {last_exc}"
         )
@@ -725,30 +924,60 @@ class tempopulsar:
 
     def _should_recycle(self) -> bool:
         if self._wp is None:
+            logger.debug("Should recycle: worker is None")
             return True
-        if (time.time() - self._state.created_at) > self._policy.max_age_s:
+
+        age = time.time() - self._state.created_at
+
+        # Check age limit (if set)
+        if self._policy.max_age_s is not None and age > self._policy.max_age_s:
+            logger.info(
+                f"Should recycle: worker age {age:.1f}s exceeds max_age_s {self._policy.max_age_s}"
+            )
             return True
-        if self._state.calls_ok >= self._policy.max_calls_per_worker:
+
+        # Check call limit (if set)
+        if (
+            self._policy.max_calls_per_worker is not None
+            and self._state.calls_ok >= self._policy.max_calls_per_worker
+        ):
+            logger.info(
+                f"Should recycle: calls_ok {self._state.calls_ok} exceeds max_calls_per_worker {self._policy.max_calls_per_worker}"
+            )
             return True
-        if self._policy.rss_soft_limit_mb:
+
+        # Check RSS limit (if set)
+        if self._policy.rss_soft_limit_mb is not None:
             rss = self._wp.rss()
             if rss and rss > self._policy.rss_soft_limit_mb:
+                logger.info(
+                    f"Should recycle: RSS {rss}MB exceeds limit {self._policy.rss_soft_limit_mb}MB"
+                )
                 return True
+
+        logger.debug(
+            f"Worker still healthy: age={age:.1f}s, calls={self._state.calls_ok}"
+        )
         return False
 
     def _recycle(self):
+        logger.info("Recycling worker (creating new one)")
         if self._wp is not None:
+            logger.debug("Closing old worker")
             with contextlib.suppress(Exception):
                 self._wp.close()
             self._wp = None
+        logger.debug("Constructing new worker")
         self._construct_with_retries()
 
     # ---------------------------- RPC convenience ----------------------------- #
 
     def _rpc(self, call: str, **payload):
         if self._wp is None:
+            logger.debug("Worker is None, constructing...")
             self._construct_with_retries()
         if self._should_recycle():
+            logger.info("Worker needs recycling")
             self._recycle()
         assert self._wp is not None
         try:
@@ -763,8 +992,11 @@ class tempopulsar:
             else:
                 raise Tempo2ProtocolError(f"unknown call {call}")
             self._state.calls_ok += 1
+            logger.debug(f"RPC {call} successful, total calls: {self._state.calls_ok}")
             return out
-        except (Tempo2Timeout, Tempo2Crashed, Tempo2ProtocolError, Tempo2Error):
+        except (Tempo2Timeout, Tempo2Crashed, Tempo2ProtocolError, Tempo2Error) as e:
+            logger.warning(f"RPC {call} failed with {type(e).__name__}: {e}")
+            logger.info("Attempting automatic worker recycle and retry")
             # automatic one-time recycle on a fresh worker
             self._recycle()
             assert self._wp is not None
@@ -777,6 +1009,9 @@ class tempopulsar:
                     payload["name"], payload.get("args", ()), payload.get("kwargs", {})
                 )
             self._state.calls_ok += 1
+            logger.info(
+                f"RPC {call} succeeded after recycle, total calls: {self._state.calls_ok}"
+            )
             return out
 
     # ------------------------ Attribute proxying magic ------------------------ #
@@ -846,8 +1081,15 @@ def load_many(
     failed_list:     [LoadReport,...]
     """
     pol = policy if isinstance(policy, Policy) else Policy()
+    logger.info(
+        f"Starting bulk load of {len(list(pairs))} pulsars with {parallel} parallel workers"
+    )
+    logger.info(
+        f"Using policy: ctor_retry={pol.ctor_retry}, ctor_backoff={pol.ctor_backoff}s"
+    )
 
     def _one(par, tim):
+        logger.debug(f"Loading pulsar: par={par}, tim={tim}")
         attempts = 0
         report = LoadReport(par=par, tim=tim, attempts=0, ok=False)
         last_exc = None
@@ -859,13 +1101,16 @@ def load_many(
                 report.attempts = attempts
                 report.ok = True
                 report.retried = attempts > 1
+                logger.info(f"Successfully loaded {name} in {attempts} attempt(s)")
                 return ("ok", name, psr, report)
             except Exception as e:
+                logger.warning(f"Failed to load {par} (attempt {attempts}): {e}")
                 last_exc = e
                 time.sleep(pol.ctor_backoff)
         report.attempts = attempts
         report.ok = False
         report.error = f"{last_exc.__class__.__name__}: {last_exc}"
+        logger.error(f"Failed to load {par} after {attempts} attempts: {last_exc}")
         return ("fail", None, None, report)
 
     ok: Dict[str, tempopulsar] = {}
@@ -882,10 +1127,58 @@ def load_many(
                     retried[name] = report
             else:
                 failed.append(report)
+
+    logger.info(
+        f"Bulk load completed: {len(ok)} successful, {len(retried)} retried, {len(failed)} failed"
+    )
     return ok, retried, failed
 
 
 # ------------------------------- Quick helpers ------------------------------ #
+
+
+def configure_logging(
+    level: str = "INFO", log_file: Optional[str] = None, enable_console: bool = True
+):
+    """
+    Configure loguru logging for the sandbox.
+
+    Args:
+        level: Log level ("DEBUG", "INFO", "WARNING", "ERROR")
+        log_file: Optional file path to log to
+        enable_console: Whether to log to console
+    """
+    try:
+        from loguru import logger as loguru_logger
+
+        # Remove default handler
+        loguru_logger.remove()
+
+        # Add console handler if requested
+        if enable_console:
+            loguru_logger.add(
+                sys.stderr,
+                level=level,
+                format="<green>{time:HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>tempo2_sandbox</cyan> | <level>{message}</level>",
+                colorize=True,
+            )
+
+        # Add file handler if requested
+        if log_file:
+            loguru_logger.add(
+                log_file,
+                level=level,
+                format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | tempo2_sandbox | {message}",
+                rotation="10 MB",
+                retention="7 days",
+            )
+
+        logger.info(
+            f"Logging configured: level={level}, console={enable_console}, file={log_file}"
+        )
+
+    except ImportError:
+        logger.warning("loguru not available, using basic logging")
 
 
 def setup_instructions(env_name: str = "tempo2_intel"):
