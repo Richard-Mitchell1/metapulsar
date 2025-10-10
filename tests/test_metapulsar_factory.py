@@ -679,7 +679,9 @@ class TestPerPulsarOrdering:
             with patch.object(factory, "_ensure_parfile_content") as mock_ensure:
                 with patch.object(factory, "create_metapulsar") as mock_create:
                     mock_ensure.return_value = file_data
-                    mock_create.return_value = Mock()
+                    mock_metapulsar = Mock()
+                    mock_metapulsar.name = "J1857+0943"
+                    mock_create.return_value = mock_metapulsar
 
                     result = factory.create_all_metapulsars(
                         file_data, reference_pta=None

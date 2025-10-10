@@ -78,6 +78,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+# Import TimFileAnalyzer for proactive TOA counting
+from .tim_file_analyzer import TimFileAnalyzer
+
 # Loguru logging
 try:
     from loguru import logger
@@ -140,6 +143,15 @@ class Policy:
         None  # recycle after this many seconds, None = never recycle by age
     )
     rss_soft_limit_mb: Optional[int] = None  # if provided, recycle when beaten
+
+    # Proactive TOA handling for large files
+    auto_nobs_retry: bool = True  # automatically add nobs parameter for large TOA files
+    nobs_threshold: int = (
+        10000  # add nobs parameter if TOA count exceeds this threshold
+    )
+    nobs_safety_margin: float = (
+        1.1  # multiplier for nobs parameter (e.g., 1.1 = 10% more than actual count)
+    )
 
 
 # -------------------------- Wire serialization helpers --------------------- #
@@ -906,6 +918,11 @@ class tempopulsar:
         logger.info(
             f"Starting construction with {self._policy.ctor_retry + 1} total attempts"
         )
+
+        # Proactive TOA counting to avoid "Too many TOAs" errors
+        if self._policy.auto_nobs_retry:
+            self._proactive_nobs_setup()
+
         last_exc: Optional[Exception] = None
         for attempt in range(1 + self._policy.ctor_retry):
             logger.info(
@@ -946,6 +963,38 @@ class tempopulsar:
         raise Tempo2ConstructorFailed(
             f"tempopulsar ctor failed after retries: {last_exc}"
         )
+
+    def _proactive_nobs_setup(self):
+        """Proactively count TOAs and add nobs parameter if needed to avoid 'Too many TOAs' errors."""
+        try:
+            timfile = self._ctor_kwargs.get("timfile")
+            if not timfile:
+                logger.debug("No timfile specified, skipping proactive nobs setup")
+                return
+
+            timfile_path = Path(timfile)
+            if not timfile_path.exists():
+                logger.warning(f"TIM file does not exist: {timfile_path}")
+                return
+
+            logger.info(f"Proactively counting TOAs in {timfile_path}")
+            analyzer = TimFileAnalyzer()
+            toa_count = analyzer.count_toas(timfile_path)
+
+            if toa_count > self._policy.nobs_threshold:
+                maxobs_with_margin = int(toa_count * self._policy.nobs_safety_margin)
+                self._ctor_kwargs["maxobs"] = maxobs_with_margin
+                logger.info(
+                    f"Proactively added maxobs={maxobs_with_margin} parameter (TOAs: {toa_count}, threshold: {self._policy.nobs_threshold}, margin: {self._policy.nobs_safety_margin})"
+                )
+            else:
+                logger.debug(
+                    f"TOA count {toa_count} below threshold {self._policy.nobs_threshold}, no maxobs parameter needed"
+                )
+
+        except Exception as e:
+            logger.warning(f"Proactive nobs setup failed: {e}")
+            # Don't raise - this is just optimization, construction should still work
 
     # ----------------------------- recycling policy --------------------------- #
 
@@ -1044,6 +1093,23 @@ class tempopulsar:
     # ------------------------ Attribute proxying magic ------------------------ #
 
     def __getattr__(self, name: str):
+        # Filter out IPython-specific attributes to prevent infinite loops
+        if name.startswith("_ipython_") or name in {
+            "_ipython_canary_method_should_not_exist_",
+            "_repr_mimebundle_",
+            "_repr_html_",
+            "_repr_json_",
+            "_repr_latex_",
+            "_repr_png_",
+            "_repr_jpeg_",
+            "_repr_svg_",
+            "_repr_pdf_",
+        }:
+            logger.debug(f"Filtering out IPython attribute: {name}")
+            raise AttributeError(
+                f"'{self.__class__.__name__}' object has no attribute '{name}'"
+            )
+
         def _remote_method(*args, **kwargs):
             return self._rpc("call", name=name, args=args, kwargs=kwargs)
 
