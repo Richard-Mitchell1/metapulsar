@@ -42,7 +42,7 @@ You can force Rosetta prefix via env var:
     TEMPO2_SANDBOX_WORKER_ARCH_PREFIX="arch -x86_64"
 
 Logging:
-    The sandbox now includes comprehensive loguru logging for debugging and monitoring.
+    The sandbox includes comprehensive loguru logging for debugging and monitoring.
     Use configure_logging() to set up logging levels and outputs. Logs include:
     - Worker process lifecycle (creation, recycling, termination)
     - RPC call details and timing
@@ -51,7 +51,7 @@ Logging:
     - Error details and recovery attempts
 
 Robustness:
-    The sandbox automatically suppresses libstempo debug output during construction
+    The sandbox suppresses libstempo debug output during construction
     to prevent interference with the JSON-RPC protocol. This ensures reliable
     communication even when libstempo prints diagnostic messages. The suppression
     works at the OS file descriptor level to catch output from C libraries.
@@ -113,6 +113,11 @@ class Tempo2ConstructorFailed(Tempo2Error):
 # ------------------------------- Policy knobs ----------------------------- #
 @dataclass(frozen=True)
 class Policy:
+    """Configuration policy for sandbox worker behavior and lifecycle management.
+
+    Controls retry behavior, timeouts, and worker recycling policies.
+    """
+
     # Constructor protection
     ctor_retry: int = 5  # number of extra tries after the first
     ctor_backoff: float = 0.75  # seconds between ctor retries
@@ -149,20 +154,24 @@ except Exception:
 
 
 def _b64_dumps_py(obj: Any) -> str:
+    """Serialize Python object to base64-encoded string using cloudpickle."""
     return base64.b64encode(_cp.dumps(obj)).decode("ascii")
 
 
 def _b64_loads_py(s: str) -> Any:
+    """Deserialize base64-encoded string to Python object using cloudpickle."""
     return _cp.loads(base64.b64decode(s.encode("ascii")))
 
 
 def _format_exc_tuple() -> Tuple[str, str, str]:
+    """Format current exception info as tuple of (type_name, message, traceback)."""
     et, ev, tb = sys.exc_info()
     name = et.__name__ if et else "Exception"
     return (name, str(ev), "".join(traceback.format_exception(et, ev, tb)))
 
 
 def _current_rss_mb_portable() -> Optional[int]:
+    """Get current process RSS memory usage in MB, portable across platforms."""
     try:
         if sys.platform.startswith("linux"):
             with open("/proc/self/statm") as f:
@@ -230,12 +239,13 @@ def _worker_stdio_main() -> None:
         import numpy as _np  # noqa
     except Exception:
         # Keep serving, but report on first request
-        _lib_tempopulsar = None  # type: ignore
-        _np = None  # type: ignore
+        _lib_tempopulsar: Optional[Any] = None
+        _np: Optional[Any] = None
 
     obj = None
 
     def _write_response(resp: Dict[str, Any]) -> None:
+        """Write JSON response to stdout and flush."""
         sys.stdout.write(json.dumps(resp) + "\n")
         sys.stdout.flush()
 
@@ -759,6 +769,7 @@ def _resolve_worker_cmd(env_name: Optional[str]) -> Tuple[List[str], bool]:
     src_path = str(src_dir)
 
     def python_to_worker_cmd(python_exe: str) -> List[str]:
+        """Build command to run worker with given Python executable."""
         return [
             python_exe,
             "-c",
@@ -831,6 +842,8 @@ def _resolve_worker_cmd(env_name: Optional[str]) -> Tuple[List[str], bool]:
 
 @dataclasses.dataclass
 class _State:
+    """Internal state tracking for tempopulsar proxy instances."""
+
     created_at: float
     calls_ok: int
 
@@ -839,12 +852,26 @@ class tempopulsar:
     """
     Proxy for libstempo.tempopulsar living inside an isolated subprocess.
 
-    Constructor kwargs are forwarded to libstempo.tempopulsar unchanged.
+    This class provides a drop-in replacement for libstempo.tempopulsar that runs
+    in a separate process to prevent crashes from affecting the main kernel.
+    All constructor arguments are forwarded to libstempo.tempopulsar unchanged.
+
+    The proxy automatically handles:
+    - Worker process lifecycle management
+    - Automatic retry on failures
+    - Worker recycling based on age, call count, or memory usage
+    - JSON-RPC communication over stdio
 
     Args:
         env_name: Environment name (conda env or venv name, 'arch', or 'python:/abs/python').
                  If None (default), uses the current Python environment.
+        policy: Optional Policy instance to configure worker behavior
         **kwargs: Additional arguments passed to libstempo.tempopulsar
+
+    Example:
+        >>> psr = tempopulsar(parfile="J1713.par", timfile="J1713.tim", dofit=False)
+        >>> residuals = psr.residuals()
+        >>> design_matrix = psr.designmatrix()
     """
 
     __slots__ = (
@@ -1089,6 +1116,7 @@ def load_many(
     )
 
     def _one(par, tim):
+        """Load a single pulsar with retry logic for bulk loading."""
         logger.debug(f"Loading pulsar: par={par}, tim={tim}")
         attempts = 0
         report = LoadReport(par=par, tim=tim, attempts=0, ok=False)
@@ -1182,6 +1210,11 @@ def configure_logging(
 
 
 def setup_instructions(env_name: str = "tempo2_intel"):
+    """Print setup instructions for creating a tempo2 environment.
+
+    This is a utility function to help users set up their environment
+    for using the sandbox with different Python environments.
+    """
     print("Setup instructions for environment '{}':".format(env_name))
     print("\n1. Conda (recommended):")
     print(f"   conda create -n {env_name} python=3.11")
@@ -1202,6 +1235,11 @@ def setup_instructions(env_name: str = "tempo2_intel"):
 
 
 def detect_and_guide(env_name: str):
+    """Detect environment type and provide guidance for setup.
+
+    This is a utility function to help users understand what type
+    of environment they have and how to use it with the sandbox.
+    """
     et = _detect_environment_type(env_name)
     print(f"Environment detection for '{env_name}': {et}")
     if et.startswith("conda:"):
