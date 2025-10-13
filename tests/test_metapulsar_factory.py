@@ -431,16 +431,18 @@ class TestMetaPulsarFactory:
             }
         }
 
-        with patch("metapulsar.metapulsar_factory.t2") as mock_t2:
+        with patch("metapulsar.metapulsar_factory.tempopulsar") as mock_tempopulsar:
             mock_psr = Mock()
-            mock_t2.tempopulsar.return_value = mock_psr
+            mock_tempopulsar.return_value = mock_psr
 
             result = self.factory._create_pulsar_objects(file_pairs, file_data)
 
             assert "epta_dr2" in result
             assert result["epta_dr2"] == mock_psr
-            mock_t2.tempopulsar.assert_called_once_with(
-                str(file_pairs["epta_dr2"][0]), str(file_pairs["epta_dr2"][1])
+            mock_tempopulsar.assert_called_once_with(
+                parfile=str(file_pairs["epta_dr2"][0]),
+                timfile=str(file_pairs["epta_dr2"][1]),
+                dofit=False,
             )
 
 

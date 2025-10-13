@@ -6,6 +6,7 @@ from pathlib import Path
 from metapulsar import MetaPulsarFactory, FileDiscoveryService
 from metapulsar.file_discovery_service import PTA_DATA_RELEASES
 from metapulsar.pint_helpers import PINTDiscoveryError
+from metapulsar.sandbox_tempo2 import Tempo2Error
 
 
 @pytest.mark.integration
@@ -129,6 +130,7 @@ C 12345.67890 0.0001
                 e
             ), f"Unexpected KeyError for invalid reference_pta: {e}"
 
+    @pytest.mark.slow
     def test_empty_par_files(self, available_data_sets):
         """Test handling of empty par files."""
         if not available_data_sets:
@@ -153,8 +155,8 @@ C 55000.0 123.456 0.001 1234.5 1234.5
             data_release["base_dir"] = str(temp_dir)
             data_release["par_pattern"] = "J0030+0451.par"
 
-            # This should raise ValueError because the par file is empty and causes issues in Enterprise
-            with pytest.raises(ValueError):
+            # This should raise Tempo2Error because the par file is empty and causes libstempo toas() to fail
+            with pytest.raises(Tempo2Error):
                 # Create file_data format for the test (list format)
                 # Provide minimal valid parfile content with coordinates for coordinate discovery
                 minimal_parfile_content = """RAJ 00:30:27.4
@@ -176,6 +178,7 @@ PEPOCH 55000
                 }
                 MetaPulsarFactory().create_metapulsar(file_data)
 
+    @pytest.mark.slow
     def test_corrupted_binary_files(self, available_data_sets):
         """Test handling of corrupted binary files."""
         if not available_data_sets:
@@ -203,8 +206,8 @@ C 55000.0 123.456 0.001 1234.5 1234.5
             data_release["base_dir"] = str(temp_dir)
             data_release["par_pattern"] = "J0030+0451.par"
 
-            # This should raise ValueError because the par file is corrupted and causes issues in Enterprise
-            with pytest.raises(ValueError):
+            # This should raise Tempo2Error because the par file is corrupted and causes libstempo toas() to fail
+            with pytest.raises(Tempo2Error):
                 # Create file_data format for the test (list format)
                 # Provide valid parfile content for coordinate discovery, but the actual file is corrupted
                 valid_parfile_content = """RAJ 00:30:27.4

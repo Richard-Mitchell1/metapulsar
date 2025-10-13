@@ -26,11 +26,8 @@ try:
 except ImportError:
     get_model_and_toas = None
 
-# Import libstempo for Tempo2Pulsar creation
-try:
-    import libstempo as t2
-except ImportError:
-    t2 = None
+# Import sandbox for robust libstempo usage
+from .sandbox_tempo2 import tempopulsar
 
 
 class MetaPulsarFactory:
@@ -444,13 +441,10 @@ class MetaPulsarFactory:
                     pulsar_objects[pta_name] = (model, toas)
 
                 else:  # tempo2
-                    # Create Tempo2 object
-                    if t2 is None:
-                        raise RuntimeError(
-                            "libstempo not available for Tempo2 creation"
-                        )
-
-                    t2_psr = t2.tempopulsar(str(parfile), str(timfile))
+                    # Create Tempo2 object using sandbox
+                    t2_psr = tempopulsar(
+                        parfile=str(parfile), timfile=str(timfile), dofit=False
+                    )
                     pulsar_objects[pta_name] = t2_psr
 
                 self.logger.debug(f"Created {timing_package} object for {pta_name}")
@@ -510,12 +504,9 @@ class MetaPulsarFactory:
                     raw_pulsars[pta_name] = (model, toas)
 
                 else:  # tempo2
-                    if t2 is None:
-                        raise RuntimeError(
-                            "libstempo not available for raw Tempo2 creation"
-                        )
-
-                    t2_psr = t2.tempopulsar(str(parfile), str(timfile))
+                    t2_psr = tempopulsar(
+                        parfile=str(parfile), timfile=str(timfile), dofit=False
+                    )
                     raw_pulsars[pta_name] = t2_psr
 
                 self.logger.debug(
