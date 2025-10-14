@@ -38,6 +38,18 @@ def get_category_mapping_from_pint() -> Dict[str, str]:
     return KeyReturningDict(mapping)
 
 
+def get_extra_top_level_params_for_category() -> Dict[str, List[str]]:
+    """Return extra top-level parameters to include per logical component.
+
+    Some parameters (e.g., BINARY) are defined at the TimingModel top level in
+    PINT and are not listed under any component's ``params``. This registry
+    allows discovery to include such parameters in a declarative way.
+    """
+    return {
+        "binary": ["BINARY"],
+    }
+
+
 @lru_cache(maxsize=1)
 def _get_all_components():
     """Get cached AllComponents instance.
@@ -213,6 +225,19 @@ def get_parameters_by_type_from_models(
         # Get all aliases for this canonical parameter
         aliases = get_aliases_for_parameter(canonical_param)
         all_params_with_aliases.update(aliases)
+
+    # Include extra top-level params for this category if present on any model
+    for extra in get_extra_top_level_params_for_category().get(param_type, []):
+        # Add the extra only if at least one model has it set
+        for tm in pint_models.values():
+            if hasattr(tm, extra):
+                try:
+                    if getattr(tm, extra).value is not None:
+                        all_params_with_aliases.add(extra)
+                        break
+                except Exception:
+                    # Be robust to any attribute access issues
+                    pass
 
     logger.debug(
         f"Component {param_type}: Found {len(all_params)} canonical parameters, {len(all_params_with_aliases)} total with aliases"
