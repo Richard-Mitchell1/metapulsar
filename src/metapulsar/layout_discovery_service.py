@@ -7,7 +7,7 @@ without requiring machine learning or external dependencies.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Sequence
 import re
 from collections import defaultdict, Counter
 import sys
@@ -18,6 +18,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 from loguru import logger
 
+DEFAULT_EXCLUDED_DIRS: Sequence[str] = (
+    "alternate",
+    "extratim",
+    "clock",
+    "template",
+    "wideband",
+)
+
 
 class LayoutDiscoveryService:
     """Heuristic-based pattern discovery for PTA data releases."""
@@ -26,7 +34,8 @@ class LayoutDiscoveryService:
         self,
         working_dir: str = None,
         verbose: bool = True,
-        excluded_dirs: List[str] = None,
+        excluded_dirs: Sequence[str] = DEFAULT_EXCLUDED_DIRS,
+        name: Optional[str] = None,
     ):
         """Initialize the layout discovery service.
 
@@ -34,17 +43,13 @@ class LayoutDiscoveryService:
             working_dir: Working directory for resolving relative paths. If None, uses current working directory.
             verbose: Default verbosity setting for method calls. Can be overridden in individual method calls.
             excluded_dirs: List of directory names to exclude from analysis. Defaults to common problematic directories.
+            name: Optional name to use for the discovered layout when returning results.
         """
         self.working_dir = Path(working_dir) if working_dir else Path.cwd()
         self.verbose = verbose
-        self.excluded_dirs = excluded_dirs or [
-            "alternate",
-            "extratim",
-            "clock",
-            "template",
-            "wideband",
-        ]
+        self.excluded_dirs = excluded_dirs
         self.logger = logger
+        self.name = name
         # Common PTA patterns we've seen
         self.known_pulsar_patterns = [
             r"([BJ]\d{4}[+-]\d{2,4}[A-Z]?)",  # Standard B/J names
@@ -55,13 +60,14 @@ class LayoutDiscoveryService:
         self.common_subdirs = ["par", "tim", "data", "pulsars"]
 
     def discover_layout(
-        self, working_dir: str = None, verbose: bool = None
+        self, working_dir: str = None, verbose: bool = None, name: Optional[str] = None
     ) -> Dict[str, Dict[str, Any]]:
         """Discover PTA data release layout with user-friendly name.
 
         Args:
             working_dir: Directory to analyze. If None, uses instance default.
             verbose: If True, prints discovered layout to console. If None, uses instance default.
+            name: Optional override for the returned layout name key.
 
         Returns:
             Dictionary of data release configurations
@@ -77,13 +83,18 @@ class LayoutDiscoveryService:
         structure = self._analyze_directory_structure(base_path)
         data_release = self._generate_pta_data_release(structure)
 
+        # Determine the layout name key with override precedence: method arg > instance > default
+        layout_name = (
+            name or getattr(self, "name", None) or f"discovered_{base_path.name}"
+        )
+
         if verbose:
             print(f"Discovered layout in {base_path}:")
             for key, value in data_release.items():
                 if key != "discovery_confidence":
                     print(f"  - {key} = {repr(value)}")
 
-        return {f"discovered_{base_path.name}": data_release}
+        return {layout_name: data_release}
 
     def _analyze_directory_structure(self, base_path: Path) -> Dict[str, Any]:
         """Analyze a directory structure and infer PTA patterns."""
@@ -572,7 +583,10 @@ class LayoutDiscoveryService:
 
 # Convenience function for easy access
 def discover_layout(
-    working_dir: str = None, verbose: bool = True, excluded_dirs: List[str] = None
+    working_dir: str = None,
+    verbose: bool = True,
+    excluded_dirs: Sequence[str] = DEFAULT_EXCLUDED_DIRS,
+    name: Optional[str] = None,
 ) -> Dict[str, Dict[str, Any]]:
     """Convenience function for layout discovery.
 
@@ -580,12 +594,13 @@ def discover_layout(
         working_dir: Directory to analyze. If None, uses current directory.
         verbose: If True, prints discovered layout to console.
         excluded_dirs: List of directory names to exclude from analysis.
+        name: Optional name to use for the returned layout key.
 
     Returns:
         Dictionary of data release configurations
     """
-    engine = LayoutDiscoveryService(working_dir, verbose, excluded_dirs)
-    return engine.discover_layout(working_dir, verbose)
+    engine = LayoutDiscoveryService(working_dir, verbose, excluded_dirs, name=name)
+    return engine.discover_layout(working_dir, verbose, name=name)
 
 
 def combine_layouts(

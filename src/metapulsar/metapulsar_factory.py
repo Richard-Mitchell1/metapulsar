@@ -29,6 +29,14 @@ except ImportError:
 # Import sandbox for robust libstempo usage
 from .sandbox_tempo2 import tempopulsar
 
+# Default components for consistent combination strategy
+DEFAULT_COMBINE_COMPONENTS: List[str] = [
+    "astrometry",
+    "spindown",
+    "binary",
+    "dispersion",
+]
+
 
 class MetaPulsarFactory:
     """Factory for creating MetaPulsars by orchestrating Enterprise Pulsar creation.
@@ -102,13 +110,7 @@ class MetaPulsarFactory:
         self,
         file_data: Dict[str, List[Dict[str, Any]]],
         combination_strategy: str = "consistent",
-        reference_pta: str = None,
-        combine_components: List[str] = [
-            "astrometry",
-            "spindown",
-            "binary",
-            "dispersion",
-        ],
+        combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
         add_dm_derivatives: bool = True,
         parfile_output_dir: Path = None,
     ) -> MetaPulsar:
@@ -119,7 +121,6 @@ class MetaPulsarFactory:
             combination_strategy: Strategy for combining PTAs:
                 - "consistent": Astrophysical consistency (modifies par files for consistency, the default)
                 - "composite": Multi-PTA composition (preserves original parameters, Borg/FrankenStat methods)
-            reference_pta: PTA to use as reference (for consistent strategy)
             combine_components: List of components to make consistent (for consistent strategy).
                 Defaults to all components: ["astrometry", "spindown", "binary", "dispersion"]
             add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files (for consistent strategy)
@@ -344,12 +345,7 @@ class MetaPulsarFactory:
         file_data: Dict[str, List[Dict[str, Any]]],
         combination_strategy: str = "consistent",
         reference_pta: str = None,
-        combine_components: List[str] = [
-            "astrometry",
-            "spindown",
-            "binary",
-            "dispersion",
-        ],
+        combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
         add_dm_derivatives: bool = True,
         parfile_output_dir: Path = None,
     ) -> Dict[str, MetaPulsar]:
@@ -391,7 +387,6 @@ class MetaPulsarFactory:
                 metapulsar = self.create_metapulsar(
                     file_data=pulsar_file_data,
                     combination_strategy=combination_strategy,
-                    reference_pta=reference_pta_for_pulsar,
                     combine_components=combine_components,
                     add_dm_derivatives=add_dm_derivatives,
                     parfile_output_dir=parfile_output_dir,
@@ -407,6 +402,143 @@ class MetaPulsarFactory:
 
         self.logger.info(f"Successfully created {len(metapulsars)} MetaPulsars")
         return metapulsars
+
+    def _get_display_name_for_pulsar(
+        self, pulsar_name: str, pulsar_file_data: Dict[str, List[Dict[str, Any]]]
+    ) -> str:
+        """Get display name for pulsar using B-name preference logic.
+
+        Returns B-name if any PTA uses B-names internally, otherwise J-name.
+        This matches the naming logic used in MetaPulsar.
+
+        Args:
+            pulsar_name: J-name from coordinate-based discovery
+            pulsar_file_data: File data for this pulsar
+
+        Returns:
+            Display name (B-name or J-name)
+        """
+        # Check if any PTA uses B-names internally
+        if self._any_pta_uses_b_names(pulsar_file_data):
+            # Extract coordinates from first file and convert to B-name
+            from .position_helpers import (
+                extract_coordinates_from_parfile_optimized,
+                bj_name_from_coordinates_optimized,
+            )
+
+            first_pta = list(pulsar_file_data.keys())[0]
+            first_file = pulsar_file_data[first_pta][0]
+            coords = extract_coordinates_from_parfile_optimized(
+                first_file["par_content"]
+            )
+
+            if coords:
+                return bj_name_from_coordinates_optimized(coords[0], coords[1], "B")
+
+        return pulsar_name
+
+    def _any_pta_uses_b_names(
+        self, pulsar_file_data: Dict[str, List[Dict[str, Any]]]
+    ) -> bool:
+        """Check if any PTA uses B-names internally."""
+        for pta_name, files in pulsar_file_data.items():
+            for file_info in files:
+                from .pint_helpers import create_pint_model
+
+                model = create_pint_model(file_info["par_content"])
+                pta_pulsar_name = model.PSR.value
+                if pta_pulsar_name.startswith("B") and len(pta_pulsar_name) >= 6:
+                    return True
+        return False
+
+    def pta_summary(self, file_data: Dict[str, List[Dict[str, Any]]]) -> None:
+        """Display summary statistics for all pulsars and PTAs in the file data.
+
+        Performs coordinate-based discovery to group files by pulsar, then displays
+        timespan statistics for each pulsar and PTA combination.
+
+        Args:
+            file_data: File data from FileDiscoveryService (per data release)
+        """
+        import warnings
+
+        # Suppress PINT warnings and loguru output for clean summary display
+        import sys
+        from loguru import logger as loguru_logger
+
+        # Store original loguru configuration (for potential future use)
+
+        try:
+            # Remove all existing loguru handlers
+            loguru_logger.remove()
+
+            # Add a new handler that only shows CRITICAL messages
+            loguru_logger.add(lambda msg: None, level="CRITICAL")
+
+            # Also suppress Python warnings
+            warnings.filterwarnings("ignore")
+
+            with self.logger.catch():
+                print("Quickly processing PTA files...")
+
+                # Note: file_data contains file paths per PTA, but pulsars are not yet matched between PTAs.
+                # The coordinate-based discovery groups files by pulsar using coordinate matching, not name matching.
+                # 1. Ensure parfile content is loaded
+                validated_data = self._ensure_parfile_content(file_data)
+
+                # 2. Group files by pulsar with reference PTA ordering
+                pulsar_groups = self._group_files_by_pulsar_with_ordering(
+                    validated_data
+                )
+
+                if not pulsar_groups:
+                    print("No valid pulsar files found in file_data")
+                    return
+
+                print(f"Found {len(pulsar_groups)} pulsars:")
+                print()
+
+                for pulsar_name, pulsar_file_data in pulsar_groups.items():
+                    # Get display name using B-name preference logic
+                    display_name = self._get_display_name_for_pulsar(
+                        pulsar_name, pulsar_file_data
+                    )
+                    print(display_name)
+
+                    # Calculate timespans for each PTA
+                    pta_timespans = []
+                    for pta_name, files in pulsar_file_data.items():
+                        if not files:
+                            continue
+
+                        # Get timespan for this PTA's files for this pulsar
+                        timespan_days = max(f.get("timespan_days", 0) for f in files)
+                        timespan_years = timespan_days / 365.25
+                        pta_timespans.append((pta_name, timespan_days, timespan_years))
+
+                    # Sort by timespan (longest first)
+                    pta_timespans.sort(key=lambda x: x[1], reverse=True)
+
+                    # Display PTAs with reference indicator
+                    reference_pta = list(pulsar_file_data.keys())[
+                        0
+                    ]  # First in original ordering
+
+                    for pta_name, timespan_days, timespan_years in pta_timespans:
+                        reference_indicator = (
+                            " -- Reference PTA" if pta_name == reference_pta else ""
+                        )
+                        print(
+                            f"- {pta_name}: {timespan_days:.0f} days ({timespan_years:.1f} years){reference_indicator}"
+                        )
+
+                    print()
+
+        finally:
+            # Restore original loguru configuration
+            loguru_logger.remove()
+            # Re-add default handler
+            loguru_logger.add(sys.stderr, level="DEBUG")
 
     def _create_pulsar_objects(
         self,
@@ -566,3 +698,57 @@ def reorder_ptas_for_pulsar(
     ordered = {reference_pta: pulsar_file_data[reference_pta]}
     ordered.update({k: v for k, v in pulsar_file_data.items() if k != reference_pta})
     return ordered
+
+
+# Convenience functions for user-facing API
+def create_metapulsar(
+    file_data: Dict[str, List[Dict[str, Any]]],
+    combination_strategy: str = "consistent",
+    combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
+    add_dm_derivatives: bool = True,
+    parfile_output_dir: Path = None,
+) -> MetaPulsar:
+    """Convenience wrapper to create a single MetaPulsar.
+
+    Thin wrapper around MetaPulsarFactory.create_metapulsar.
+    """
+    factory = MetaPulsarFactory()
+    return factory.create_metapulsar(
+        file_data=file_data,
+        combination_strategy=combination_strategy,
+        combine_components=combine_components,
+        add_dm_derivatives=add_dm_derivatives,
+        parfile_output_dir=parfile_output_dir,
+    )
+
+
+def create_all_metapulsars(
+    file_data: Dict[str, List[Dict[str, Any]]],
+    combination_strategy: str = "consistent",
+    reference_pta: str = None,
+    combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
+    add_dm_derivatives: bool = True,
+    parfile_output_dir: Path = None,
+) -> Dict[str, MetaPulsar]:
+    """Convenience wrapper to create MetaPulsars for all pulsars in input.
+
+    Returns a dictionary mapping canonical pulsar name to MetaPulsar.
+    """
+    factory = MetaPulsarFactory()
+    return factory.create_all_metapulsars(
+        file_data=file_data,
+        combination_strategy=combination_strategy,
+        reference_pta=reference_pta,
+        combine_components=combine_components,
+        add_dm_derivatives=add_dm_derivatives,
+        parfile_output_dir=parfile_output_dir,
+    )
+
+
+def pta_summary(file_data: Dict[str, List[Dict[str, Any]]]) -> None:
+    """Convenience wrapper to display PTA summary statistics.
+
+    Thin wrapper around MetaPulsarFactory.pta_summary.
+    """
+    factory = MetaPulsarFactory()
+    factory.pta_summary(file_data)

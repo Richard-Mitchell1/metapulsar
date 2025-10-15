@@ -7,7 +7,13 @@ objects for gravitational wave detection.
 
 # Core classes
 from .metapulsar import MetaPulsar
-from .metapulsar_factory import MetaPulsarFactory, reorder_ptas_for_pulsar
+from .metapulsar_factory import (
+    MetaPulsarFactory,
+    reorder_ptas_for_pulsar,
+    create_metapulsar,
+    create_all_metapulsars,
+    pta_summary,
+)
 from .file_discovery_service import (
     FileDiscoveryService,
     PTA_DATA_RELEASES,
@@ -56,6 +62,9 @@ __all__ = [
     "discover_layout",
     "combine_layouts",
     "reorder_ptas_for_pulsar",
+    "create_metapulsar",
+    "create_all_metapulsars",
+    "pta_summary",
     "get_pulsar_names_from_file_data",
     "filter_file_data_by_pulsars",
 ]
