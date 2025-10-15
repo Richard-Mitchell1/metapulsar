@@ -78,6 +78,7 @@ class MetaPulsar(ep.BasePulsar):
         self._setup_parameters()
         self._combine_timing_data()
         self._build_design_matrix()
+        self._remove_nonidentifiable_parameters()
         self._setup_position_and_planets()
 
         # BasePulsar handles sorting automatically
@@ -401,6 +402,56 @@ class MetaPulsar(ep.BasePulsar):
 
         for i, parname in enumerate(self.fitpars):
             self._designmatrix[:, i] = self._build_design_matrix_column(parname)
+
+    def _remove_nonidentifiable_parameters(self):
+        """Remove parameters with zero-information design matrix columns.
+
+        Any parameter whose design matrix column sums to zero in absolute value
+        is considered non-identifiable and is removed from:
+        - self._designmatrix (column removed)
+        - self._fitparameters (entry deleted)
+        - self.fitpars (name removed)
+        Additionally, if this MetaPulsar instance defines a meta-level
+        self.fitpars_canonical list with the same ordering as self.fitpars,
+        it will be updated consistently. This method does NOT modify per-PTA
+        psr.fitpars_canonical lists to preserve alignment with their own
+        underlying design matrices.
+        """
+        if self._designmatrix.size == 0:
+            return
+
+        # Compute per-column absolute sum to detect zero-information columns
+        column_abs_sums = np.sum(np.abs(self._designmatrix), axis=0)
+
+        if column_abs_sums.shape[0] != len(self.fitpars):
+            # Safety check: inconsistent state; do nothing
+            logger.error("Design matrix column count does not match fitpars length")
+            raise ValueError("Design matrix column count does not match fitpars length")
+
+        keep_indices = [i for i, s in enumerate(column_abs_sums) if s != 0.0]
+        if len(keep_indices) == len(self.fitpars):
+            # Nothing to remove
+            return
+
+        removed_indices = [i for i, s in enumerate(column_abs_sums) if s == 0.0]
+        original_fitpars = list(self.fitpars)
+        removed_parameters = [original_fitpars[i] for i in removed_indices]
+
+        # Warn about each removed parameter
+        for param_name in removed_parameters:
+            logger.warning(
+                f"Parameter '{param_name}' is non-identifiable (zero design matrix column); removing from fit"
+            )
+
+        # Update mapping dict
+        for param_name in removed_parameters:
+            del self._fitparameters[param_name]
+
+        # Slice the design matrix to keep only identifiable parameters
+        self._designmatrix = self._designmatrix[:, keep_indices]
+
+        # Update fitpars to reflect kept parameters
+        self.fitpars = [original_fitpars[i] for i in keep_indices]
 
     def _build_design_matrix_column(self, full_parname):
         """Build design matrix column for a single parameter."""
