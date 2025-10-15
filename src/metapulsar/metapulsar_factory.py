@@ -505,16 +505,19 @@ class MetaPulsarFactory:
                     )
                     print(display_name)
 
-                    # Calculate timespans for each PTA
+                    # Calculate timespans and TOA counts for each PTA
                     pta_timespans = []
                     for pta_name, files in pulsar_file_data.items():
                         if not files:
                             continue
 
-                        # Get timespan for this PTA's files for this pulsar
+                        # Get timespan and TOA count for this PTA's files for this pulsar
                         timespan_days = max(f.get("timespan_days", 0) for f in files)
                         timespan_years = timespan_days / 365.25
-                        pta_timespans.append((pta_name, timespan_days, timespan_years))
+                        toa_count = sum(f.get("toa_count", 0) for f in files)
+                        pta_timespans.append(
+                            (pta_name, timespan_days, timespan_years, toa_count)
+                        )
 
                     # Sort by timespan (longest first)
                     pta_timespans.sort(key=lambda x: x[1], reverse=True)
@@ -524,12 +527,17 @@ class MetaPulsarFactory:
                         0
                     ]  # First in original ordering
 
-                    for pta_name, timespan_days, timespan_years in pta_timespans:
+                    for (
+                        pta_name,
+                        timespan_days,
+                        timespan_years,
+                        toa_count,
+                    ) in pta_timespans:
                         reference_indicator = (
                             " -- Reference PTA" if pta_name == reference_pta else ""
                         )
                         print(
-                            f"- {pta_name}: {timespan_days:.0f} days ({timespan_years:.1f} years){reference_indicator}"
+                            f"- {pta_name}: {timespan_days:.0f} days ({timespan_years:.1f} years, {toa_count} TOAs){reference_indicator}"
                         )
 
                     print()

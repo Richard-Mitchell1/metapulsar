@@ -656,6 +656,7 @@ class TestPerPulsarOrdering:
                     "par": Path("test1.par"),
                     "tim": Path("test1.tim"),
                     "timespan_days": 1000.0,
+                    "toa_count": 500,
                 }
             ],
             "ppta_dr2": [
@@ -663,6 +664,7 @@ class TestPerPulsarOrdering:
                     "par": Path("test2.par"),
                     "tim": Path("test2.tim"),
                     "timespan_days": 2000.0,
+                    "toa_count": 1000,
                 }
             ],
         }
@@ -692,7 +694,9 @@ class TestPerPulsarOrdering:
                     # Should create MetaPulsar for the pulsar
                     assert "J1857+0943" in result
 
-                    # Should call create_metapulsar with PPTA as reference (longer timespan)
+                    # Should call create_metapulsar with PPTA data first (longer timespan)
                     mock_create.assert_called_once()
                     call_args = mock_create.call_args
-                    assert call_args[1]["reference_pta"] == "ppta_dr2"
+                    # Check that the file_data passed to create_metapulsar has PPTA first
+                    file_data_passed = call_args[1]["file_data"]
+                    assert list(file_data_passed.keys())[0] == "ppta_dr2"

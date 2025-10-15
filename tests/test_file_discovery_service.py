@@ -293,7 +293,7 @@ class TestFileDiscoveryService:
     @patch("pathlib.Path.exists")
     @patch("pathlib.Path.rglob")
     @patch(
-        "metapulsar.file_discovery_service.FileDiscoveryService._calculate_timespan_from_tim_file"
+        "metapulsar.file_discovery_service.FileDiscoveryService._calculate_timespan_and_count_from_tim_file"
     )
     @patch("pathlib.Path.read_text")
     def test_discover_all_file_pairs_in_config_success(
@@ -310,7 +310,7 @@ class TestFileDiscoveryService:
         mock_read_text.return_value = (
             "PSR J1857+0943\nRAJ 18:57:36.4\nDECJ 09:43:17.1\n"
         )
-        mock_timespan.return_value = 1000.0
+        mock_timespan.return_value = (1000.0, 500)
 
         config = {
             "base_dir": "/test",
@@ -324,6 +324,8 @@ class TestFileDiscoveryService:
         assert len(result) == 1
         assert result[0]["par"] == Path("/test/J1857+0943.par")
         assert result[0]["tim"] == Path("/test/J1857+0943.tim")
+        assert result[0]["timespan_days"] == 1000.0
+        assert result[0]["toa_count"] == 500
 
     @patch("pathlib.Path.exists")
     def test_discover_all_file_pairs_in_config_no_base_dir(self, mock_exists):

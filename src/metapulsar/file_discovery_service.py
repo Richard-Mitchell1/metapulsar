@@ -5,7 +5,7 @@ It is completely independent - NO external dependencies on PINT, libstempo, or o
 Uses only regex patterns for file matching and pattern extraction.
 """
 
-from typing import Dict, List, Any, Union
+from typing import Dict, List, Any, Union, Tuple
 from pathlib import Path
 import re
 from loguru import logger
@@ -387,8 +387,8 @@ class FileDiscoveryService:
         # Step 3: Match par and tim files by canonical pulsar name
         for pulsar_name in par_files_by_pulsar:
             if pulsar_name in tim_files_by_pulsar:
-                # Calculate timespan for this data release/pulsar combination
-                timespan = self._calculate_timespan_from_tim_file(
+                # Calculate timespan and TOA count for this data release/pulsar combination
+                timespan, toa_count = self._calculate_timespan_and_count_from_tim_file(
                     tim_files_by_pulsar[pulsar_name]
                 )
 
@@ -398,6 +398,7 @@ class FileDiscoveryService:
                         "tim": tim_files_by_pulsar[pulsar_name],
                         "timing_package": data_release["timing_package"],
                         "timespan_days": timespan,
+                        "toa_count": toa_count,
                         "par_content": par_files_by_pulsar[pulsar_name].read_text(
                             encoding="utf-8"
                         ),
@@ -406,25 +407,27 @@ class FileDiscoveryService:
 
         return file_pairs
 
-    def _calculate_timespan_from_tim_file(self, tim_file_path: Path) -> float:
-        """Calculate timespan from TIM file using TimFileAnalyzer.
+    def _calculate_timespan_and_count_from_tim_file(
+        self, tim_file_path: Path
+    ) -> Tuple[float, int]:
+        """Calculate timespan and TOA count from TIM file using TimFileAnalyzer.
 
         Args:
             tim_file_path: Path to the TIM file
 
         Returns:
-            Timespan in days (max(mjd) - min(mjd))
+            Tuple of (timespan_in_days, toa_count)
         """
         try:
             from .tim_file_analyzer import TimFileAnalyzer
 
             analyzer = TimFileAnalyzer()
-            return analyzer.calculate_timespan(tim_file_path)
+            return analyzer._get_timespan_and_count(tim_file_path)
         except Exception as e:
             self.logger.warning(
-                f"Could not calculate timespan for {tim_file_path}: {e}"
+                f"Could not calculate timespan and count for {tim_file_path}: {e}"
             )
-            return 0.0
+            return 0.0, 0
 
 
 # Convenience function for easy access
