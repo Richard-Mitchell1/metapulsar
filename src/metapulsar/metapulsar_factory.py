@@ -110,6 +110,7 @@ class MetaPulsarFactory:
         self,
         file_data: Dict[str, List[Dict[str, Any]]],
         combination_strategy: str = "consistent",
+        reference_pta: str = None,
         combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
         add_dm_derivatives: bool = True,
         parfile_output_dir: Path = None,
@@ -121,6 +122,7 @@ class MetaPulsarFactory:
             combination_strategy: Strategy for combining PTAs:
                 - "consistent": Astrophysical consistency (modifies par files for consistency, the default)
                 - "composite": Multi-PTA composition (preserves original parameters, Borg/FrankenStat methods)
+            reference_pta: PTA to use as reference (for consistent strategy). If None, uses first PTA in file_data.
             combine_components: List of components to make consistent (for consistent strategy).
                 Defaults to all components: ["astrometry", "spindown", "binary", "dispersion"]
             add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files (for consistent strategy)
@@ -142,11 +144,20 @@ class MetaPulsarFactory:
         # 2. Validate all files belong to same pulsar (coordinate-based)
         self._validate_single_pulsar_data(validated_data)
 
-        # 3. Get pulsar name for output filename generation
+        # 3. Apply reference PTA ordering if specified
+        if reference_pta is not None and reference_pta in validated_data:
+            validated_data = reorder_ptas_for_pulsar(validated_data, reference_pta)
+        elif reference_pta is not None:
+            # Invalid reference_pta - fall back to original ordering (first PTA)
+            self.logger.warning(
+                f"Reference PTA '{reference_pta}' not found in file data, using original ordering"
+            )
+
+        # 4. Get pulsar name for output filename generation
         pulsar_groups = discover_pulsars_by_coordinates_optimized(validated_data)
         pulsar_name = list(pulsar_groups.keys())[0] if pulsar_groups else "unknown"
 
-        # 4. Create MetaPulsar (direct implementation)
+        # 5. Create MetaPulsar
         # Convert file data to single file per PTA format
         single_file_data = {}
         for pta_name, file_list in validated_data.items():
@@ -387,6 +398,7 @@ class MetaPulsarFactory:
                 metapulsar = self.create_metapulsar(
                     file_data=pulsar_file_data,
                     combination_strategy=combination_strategy,
+                    reference_pta=reference_pta_for_pulsar,
                     combine_components=combine_components,
                     add_dm_derivatives=add_dm_derivatives,
                     parfile_output_dir=parfile_output_dir,
@@ -712,18 +724,37 @@ def reorder_ptas_for_pulsar(
 def create_metapulsar(
     file_data: Dict[str, List[Dict[str, Any]]],
     combination_strategy: str = "consistent",
+    reference_pta: str = None,
     combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
     add_dm_derivatives: bool = True,
     parfile_output_dir: Path = None,
 ) -> MetaPulsar:
-    """Convenience wrapper to create a single MetaPulsar.
+    """Create MetaPulsar using specified combination strategy.
 
-    Thin wrapper around MetaPulsarFactory.create_metapulsar.
+    Args:
+        file_data: File data from FileDiscoveryService (should contain data for single pulsar only)
+        combination_strategy: Strategy for combining PTAs:
+            - "consistent": Astrophysical consistency (modifies par files for consistency, the default)
+            - "composite": Multi-PTA composition (preserves original parameters, Borg/FrankenStat methods)
+        reference_pta: PTA to use as reference (for consistent strategy). If None, uses first PTA in file_data.
+        combine_components: List of components to make consistent (for consistent strategy).
+            Defaults to all components: ["astrometry", "spindown", "binary", "dispersion"]
+        add_dm_derivatives: Whether to ensure DM1, DM2 are present in all par files (for consistent strategy)
+        parfile_output_dir: Directory to save consistent par files (for consistent strategy only).
+            If None, par files are not saved to disk.
+
+    Returns:
+        MetaPulsar object
+
+    Raises:
+        ValueError: If no files found, multiple pulsars detected, or invalid parameters
+        RuntimeError: If Enterprise Pulsar creation fails
     """
     factory = MetaPulsarFactory()
     return factory.create_metapulsar(
         file_data=file_data,
         combination_strategy=combination_strategy,
+        reference_pta=reference_pta,
         combine_components=combine_components,
         add_dm_derivatives=add_dm_derivatives,
         parfile_output_dir=parfile_output_dir,
@@ -738,9 +769,19 @@ def create_all_metapulsars(
     add_dm_derivatives: bool = True,
     parfile_output_dir: Path = None,
 ) -> Dict[str, MetaPulsar]:
-    """Convenience wrapper to create MetaPulsars for all pulsars in input.
+    """Create MetaPulsars for all available pulsars using file data.
 
-    Returns a dictionary mapping canonical pulsar name to MetaPulsar.
+    Args:
+        file_data: File data from FileDiscoveryService (per data release)
+        combination_strategy: Strategy for combining PTAs
+        reference_pta: PTA to use as reference for all pulsars. If None, auto-selects by timespan.
+        combine_components: List of components to make consistent
+        add_dm_derivatives: Whether to ensure DM1, DM2 are present
+        parfile_output_dir: Directory to save consistent par files (for consistent strategy only).
+            If None, par files are not saved to disk. Creates subdirectories for each pulsar.
+
+    Returns:
+        Dictionary mapping pulsar names to MetaPulsar objects
     """
     factory = MetaPulsarFactory()
     return factory.create_all_metapulsars(
@@ -754,9 +795,13 @@ def create_all_metapulsars(
 
 
 def pta_summary(file_data: Dict[str, List[Dict[str, Any]]]) -> None:
-    """Convenience wrapper to display PTA summary statistics.
+    """Display summary statistics for all pulsars and PTAs in the file data.
 
-    Thin wrapper around MetaPulsarFactory.pta_summary.
+    Performs coordinate-based discovery to group files by pulsar, then displays
+    timespan statistics for each pulsar and PTA combination.
+
+    Args:
+        file_data: File data from FileDiscoveryService (per data release)
     """
     factory = MetaPulsarFactory()
     factory.pta_summary(file_data)
