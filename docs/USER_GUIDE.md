@@ -74,10 +74,9 @@ file_data = discover_files(combined_layout)
 #### Basic Creation
 
 ```python
-from metapulsar import MetaPulsarFactory
+from metapulsar import create_metapulsar
 
-factory = MetaPulsarFactory()
-metapulsar = factory.create_metapulsar(
+metapulsar = create_metapulsar(
     file_data=pulsar_data,
     combination_strategy="consistent",
     combine_components=["astrometry", "spindown", "binary", "dispersion"],
@@ -113,21 +112,21 @@ The reference PTA determines which parameter values are inherited for merged com
 
 ```python
 # Automatically select PTA with longest timespan per pulsar
-metapulsars = factory.create_all_metapulsars(file_data, reference_pta=None)
+metapulsars = create_all_metapulsars(file_data, reference_pta=None)
 ```
 
 #### Global Reference
 
 ```python
 # Use same PTA as reference for all pulsars
-metapulsars = factory.create_all_metapulsars(file_data, reference_pta="epta_dr2")
+metapulsars = create_all_metapulsars(file_data, reference_pta="epta_dr2")
 ```
 
 #### Manual Selection
 
 ```python
 # Specify reference PTA per pulsar
-metapulsars = factory.create_all_metapulsars(file_data, reference_pta="epta_dr2")
+metapulsars = create_all_metapulsars(file_data, reference_pta="epta_dr2")
 ```
 
 ### 4. Enterprise Integration
@@ -154,39 +153,52 @@ MetaPulsar uses clear naming conventions:
 
 ## Advanced Usage
 
-### Custom PTA Configuration
+### Automated File Discovery
 
 ```python
-from metapulsar import FileDiscoveryService
+from metapulsar import discover_files, discover_layout, combine_layouts, pta_summary
 
-discovery = FileDiscoveryService(working_dir="data/ipta-dr2")
+# Discover layouts for different PTAs
+epta_layout = discover_layout('data/ipta-dr2/EPTA_v2.2', name='EPTA dr2')
+ppta_layout = discover_layout('data/ipta-dr2/PPTA_dr1dr2', name='PPTA dr1dr2')
+nanograv_layout = discover_layout('data/ipta-dr2/NANOGrav_9y', name='NANOGrav 9y')
 
-# Add custom PTA
-custom_config = {
-    "base_dir": "/path/to/custom_pta",
-    "par_pattern": r"([BJ]\d{4}[+-]\d{2,4})_custom\.par",
-    "tim_pattern": r"([BJ]\d{4}[+-]\d{2,4})_custom\.tim",
-    "timing_package": "pint",
-    "priority": 1,
-    "description": "Custom PTA dataset"
-}
+# Combine layouts
+combined_layout = combine_layouts(epta_layout, ppta_layout, nanograv_layout)
 
-discovery.add_pta("custom_pta", custom_config)
+# Discover files
+file_data = discover_files(combined_layout)
+
+# Get summary of discovered data
+pta_summary(file_data)
 ```
 
-### Parameter Management
+### Pulsar Selection and Filtering
 
 ```python
-from metapulsar import ParameterManager
+from metapulsar import get_pulsar_names_from_file_data, filter_file_data_by_pulsars
 
-param_manager = ParameterManager(
-    file_data=file_data,
-    reference_pta="epta_dr2",
+# Get all pulsar names (coordinate-based matching)
+pulsar_names = get_pulsar_names_from_file_data(file_data)
+
+# Filter to specific pulsars
+pulsar_selection = ['B1855+09', 'J1939+2135', 'J0030+0451']
+filtered_data = filter_file_data_by_pulsars(file_data, pulsar_selection)
+```
+
+### Batch MetaPulsar Creation
+
+```python
+from metapulsar import create_all_metapulsars
+
+# Create MetaPulsars for all filtered pulsars
+metapulsars = create_all_metapulsars(
+    filtered_data, 
+    reference_pta=None,  # Auto-select reference PTA
+    combination_strategy="consistent",
     combine_components=["astrometry", "spindown", "binary", "dispersion"],
     add_dm_derivatives=True
 )
-
-mapping = param_manager.build_parameter_mappings()
 ```
 
 ## Troubleshooting
@@ -208,11 +220,10 @@ loguru.logger.add(sys.stdout, level="DEBUG")
 
 ## Examples
 
+- **Interactive Tutorial**: `examples/notebooks/using_metapulsar.ipynb` - Complete workflow demonstration
 - **Basic Workflow**: `examples/basic_workflow.py`
 - **Parameter Management**: `examples/parameter_management.py`
-- **Custom PTA Configuration**: `examples/custom_pta_configuration.py`
 - **Enterprise Integration**: `examples/enterprise_integration.py`
-- **Interactive Tutorials**: `examples/notebooks/`
 
 ## API Reference
 

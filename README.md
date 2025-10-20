@@ -28,13 +28,14 @@ pip install -e .
 ### Basic Usage
 
 ```python
-from metapulsar import MetaPulsarFactory
+from metapulsar import create_metapulsar
 
 # Create MetaPulsar
-factory = MetaPulsarFactory()
-metapulsar = factory.create_metapulsar(
+metapulsar = create_metapulsar(
     file_data=pulsar_data,
-    combination_strategy="consistent"
+    combination_strategy="consistent",
+    combine_components=["astrometry", "spindown", "binary", "dispersion"],
+    add_dm_derivatives=True,
 )
 
 # Access combined data

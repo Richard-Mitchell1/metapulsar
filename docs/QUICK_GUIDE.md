@@ -28,10 +28,9 @@ pulsar_data = {
 ### Create MetaPulsar
 
 ```python
-from metapulsar import MetaPulsarFactory
+from metapulsar import create_metapulsar
 
-factory = MetaPulsarFactory()
-metapulsar = factory.create_metapulsar(
+metapulsar = create_metapulsar(
     file_data=pulsar_data,
     combination_strategy="consistent",
     combine_components=["astrometry", "spindown", "binary", "dispersion"],
@@ -62,13 +61,13 @@ file_data = discover_files(combined_layout)
 
 ```python
 # Filter to specific pulsars
-from metapulsar import get_pulsar_names_from_file_data, filter_file_data_by_pulsars
+from metapulsar import get_pulsar_names_from_file_data, filter_file_data_by_pulsars, create_all_metapulsars
 
 pulsar_selection = ['B1855+09', 'J1939+2135', 'J0030+0451']
 filtered_data = filter_file_data_by_pulsars(file_data, pulsar_selection)
 
 # Create MetaPulsars
-metapulsars = factory.create_all_metapulsars(filtered_data, reference_pta=None)
+metapulsars = create_all_metapulsars(filtered_data, reference_pta=None)
 ```
 
 ## Part 3: Enterprise Integration
@@ -92,12 +91,12 @@ print("PTA-specific parameters (with suffix):", [p for p in metapulsar.fitpars i
 - **Global reference**: Use same PTA for all pulsars
 - **Manual**: Specify reference PTA per pulsar
 
-```python
+```pythowang-weiyun
 # Auto-select reference PTA (default)
-metapulsars = factory.create_all_metapulsars(file_data, reference_pta=None)
+metapulsars = create_all_metapulsars(file_data, reference_pta=None)
 
 # Use specific PTA as reference
-metapulsars = factory.create_all_metapulsars(file_data, reference_pta="epta_dr2")
+metapulsars = create_all_metapulsars(file_data, reference_pta="epta_dr2")
 ```
 
 ## Installation
