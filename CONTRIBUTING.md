@@ -8,13 +8,13 @@ We welcome contributions to MetaPulsar! This document provides guidelines for co
 
 1. **Fork and Clone**
    ```bash
-   git clone https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar.git
+   git clone https://www.github.com/vhaasteren/metapulsar.git
    cd metapulsar
    ```
 
 2. **Install in Development Mode**
    ```bash
-   pip install -e ".[dev,libstempo,analysis]"
+   pip install -e ".[dev,libstempo]"
    ```
 
 3. **Install Pre-commit Hooks**
@@ -229,9 +229,8 @@ When requesting features, please include:
 
 ## 📞 Getting Help
 
-- **Issues**: [GitLab Issues](https://gitlab.aei.uni-hannover.de/vhaasteren/metapulsar/-/issues)
+- **Issues**: [GitLab Issues](https://www.github.com/vhaasteren/metapulsar/issues)
 - **Email**: [rutger@vhaasteren.com](mailto:rutger@vhaasteren.com)
-- **Documentation**: [Read the Docs](https://metapulsar.readthedocs.io)
 
 ## 📄 License
 

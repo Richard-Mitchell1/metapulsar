@@ -10,10 +10,9 @@ A framework for combining pulsar timing data from multiple PTA collaborations in
 ## Features
 
 - **Multi-PTA Data Combination**: Combine data from EPTA, PPTA, NANOGrav, MPTA, and other PTAs
-- **Enterprise Integration**: Full compatibility with the Enterprise pulsar timing analysis framework
+- **Enterprise Integration**: Full compatibility with the Enterprise pulsar timing analysis package
 - **Dual Timing Package Support**: Works with both PINT and libstempo/tempo2
 - **Flexible Parameter Management**: Support for "consistent" and "composite" combination strategies
-- **Robust Testing**: 219 comprehensive tests with MockPulsar support
 
 ## Quick Start
 
@@ -23,6 +22,9 @@ A framework for combining pulsar timing data from multiple PTA collaborations in
 git clone https://github.com/vhaasteren/metapulsar.git
 cd metapulsar
 pip install -e .
+
+# With optional dependencies
+pip install -e ".[dev,libstempo]"
 ```
 
 ### Basic Usage
@@ -45,15 +47,11 @@ print(f"PTA names: {list(metapulsar._pulsars.keys())}")
 
 ## Documentation
 
-- **[Quick Guide](docs/QUICK_GUIDE.md)** - Get started in 5 minutes
-- **[User Guide](docs/USER_GUIDE.md)** - Complete usage guide
+- **[Interactive Tutorial](examples/notebooks/using_metapulsar.ipynb)** - Complete usage guide with examples
 - **[API Reference](docs/API_REFERENCE.md)** - Complete API documentation
-- **[Installation](docs/INSTALLATION.md)** - Installation and setup
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 
 ## Examples
 
-- **[Interactive Tutorials](examples/notebooks/)** - Jupyter notebook examples
 - **[Python Examples](examples/)** - Standalone Python examples
 
 ## Testing
@@ -66,6 +64,17 @@ pytest
 pytest --cov=src/metapulsar
 ```
 
+## Troubleshooting
+
+### Debug Mode
+
+```python
+import loguru
+import sys
+loguru.logger.remove()
+loguru.logger.add(sys.stdout, level="DEBUG")
+```
+
 ## Dependencies
 
 - **Python 3.8+**
@@ -75,13 +84,6 @@ pytest --cov=src/metapulsar
 - **pint-pulsar** ≥ 0.9.0
 - **enterprise-pulsar** ≥ 3.0.0
 
-## Supported PTAs
-
-- **EPTA** (DR2) - Tempo2
-- **PPTA** (DR2) - Tempo2
-- **NANOGrav** (15yr) - PINT
-- **MPTA** (DR1) - Tempo2
-- **Custom** - PINT/Tempo2
 
 ## Contributing
 
@@ -114,4 +116,3 @@ If you use this software in your research, please cite:
 
 - **Issues**: [GitHub Issues](https://github.com/vhaasteren/metapulsar/issues)
 - **Email**: [rutger@vhaasteren.com](mailto:rutger@vhaasteren.com)
-- **Documentation**: [Read the Docs](https://metapulsar.readthedocs.io)

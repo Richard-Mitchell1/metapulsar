@@ -55,13 +55,6 @@ docs = [
 libstempo = [
     "libstempo>=2.0.0",
 ]
-analysis = [
-    "xarray>=0.20.0",
-    "arviz>=0.12.0",
-    "la-forge>=0.1.0",
-    "matplotlib>=3.5.0",
-    "seaborn>=0.11.0",
-]
 
 [project.urls]
 Homepage = "https://github.com/vhaasteren/metapulsar"
