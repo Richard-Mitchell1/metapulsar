@@ -1,3 +1,8 @@
+.. image:: https://github.com/vhaasteren/metapulsar/blob/main/docs/logo/metapulsar_logo.png
+   :alt: PINT Logo
+   :align: right
+
+
 # MetaPulsar
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
