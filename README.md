@@ -1,4 +1,4 @@
-<p align="right">
+<p align="left">
   <img src="docs/logo/metapulsar_logo.png" alt="MetaPulsar Logo" width="180" />
 </p>
 
