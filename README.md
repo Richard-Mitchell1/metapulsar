@@ -1,7 +1,6 @@
-.. image:: https://github.com/vhaasteren/metapulsar/blob/main/docs/logo/metapulsar_logo.png
-   :alt: PINT Logo
-   :align: right
-
+<p align="right">
+  <img src="docs/logo/metapulsar_logo.png" alt="MetaPulsar Logo" width="180" />
+</p>
 
 # MetaPulsar
 
