@@ -1,5 +1,5 @@
 <p align="left">
-  <img src="docs/logo/metapulsar_logo.png" alt="MetaPulsar Logo" width="180" />
+  <img src="docs/logo/metapulsar_logo_notext.png" alt="MetaPulsar Logo" width="180" />
 </p>
 
 # MetaPulsar
