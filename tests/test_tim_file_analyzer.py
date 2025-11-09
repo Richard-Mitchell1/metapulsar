@@ -396,6 +396,251 @@ TIME 55000
         # Should return 0.0 for file with no TOAs
         assert timespan == 0.0
 
+    # Caching Functionality Tests
+
+    def test_cache_hit_behavior(self):
+        """Test that cache is used on subsequent calls to same file."""
+        content = f"""FORMAT 1
+{self._create_tempo2_line(55087.1109722889085)}
+{self._create_tempo2_line(55090.1109722889085)}
+"""
+        tim_file = self._create_test_tim_file("cache_test.tim", content)
+
+        # First call - should parse file and cache result
+        timespan1 = self.analyzer.calculate_timespan(tim_file)
+        assert timespan1 == 3.0
+
+        # Verify file is in cache
+        assert tim_file in self.analyzer._file_cache
+        cached_timespan, cached_count = self.analyzer._file_cache[tim_file]
+        assert cached_timespan == 3.0
+        assert cached_count == 2
+
+        # Second call - should use cache (no file parsing)
+        timespan2 = self.analyzer.calculate_timespan(tim_file)
+        assert timespan2 == 3.0
+        assert timespan1 == timespan2
+
+    def test_cache_miss_behavior(self):
+        """Test that cache miss triggers file parsing."""
+        content = f"""FORMAT 1
+{self._create_tempo2_line(55087.1109722889085)}
+{self._create_tempo2_line(55090.1109722889085)}
+"""
+        tim_file = self._create_test_tim_file("cache_miss_test.tim", content)
+
+        # Verify file is not in cache initially
+        assert tim_file not in self.analyzer._file_cache
+
+        # First call - should parse file and cache result
+        timespan = self.analyzer.calculate_timespan(tim_file)
+        assert timespan == 3.0
+
+        # Verify file is now in cache
+        assert tim_file in self.analyzer._file_cache
+
+    def test_cache_with_multiple_files(self):
+        """Test caching behavior with multiple different files."""
+        # Create multiple files with different content
+        file1_content = f"""FORMAT 1
+{self._create_tempo2_line(55087.1109722889085)}
+{self._create_tempo2_line(55090.1109722889085)}
+"""
+        file2_content = f"""FORMAT 1
+{self._create_tempo2_line(55093.1109722889085)}
+{self._create_tempo2_line(55096.1109722889085)}
+{self._create_tempo2_line(55099.1109722889085)}
+"""
+        file3_content = f"""FORMAT 1
+{self._create_tempo2_line(55100.1109722889085)}
+"""
+
+        file1 = self._create_test_tim_file("cache_multi1.tim", file1_content)
+        file2 = self._create_test_tim_file("cache_multi2.tim", file2_content)
+        file3 = self._create_test_tim_file("cache_multi3.tim", file3_content)
+
+        # Parse all files
+        timespan1 = self.analyzer.calculate_timespan(file1)
+        timespan2 = self.analyzer.calculate_timespan(file2)
+        timespan3 = self.analyzer.calculate_timespan(file3)
+
+        assert timespan1 == 3.0
+        assert timespan2 == 6.0
+        assert timespan3 == 0.0
+
+        # Verify all files are cached
+        assert file1 in self.analyzer._file_cache
+        assert file2 in self.analyzer._file_cache
+        assert file3 in self.analyzer._file_cache
+
+        # Verify cache contains correct data for each file
+        assert self.analyzer._file_cache[file1] == (3.0, 2)
+        assert self.analyzer._file_cache[file2] == (6.0, 3)
+        assert self.analyzer._file_cache[file3] == (0.0, 1)
+
+        # Verify cache hit on subsequent calls
+        assert self.analyzer.calculate_timespan(file1) == 3.0
+        assert self.analyzer.calculate_timespan(file2) == 6.0
+        assert self.analyzer.calculate_timespan(file3) == 0.0
+
+    def test_cache_clear_functionality(self):
+        """Test that clear_cache() removes all cached data."""
+        content = f"""FORMAT 1
+{self._create_tempo2_line(55087.1109722889085)}
+{self._create_tempo2_line(55090.1109722889085)}
+"""
+        tim_file = self._create_test_tim_file("cache_clear_test.tim", content)
+
+        # Parse file and verify it's cached
+        timespan = self.analyzer.calculate_timespan(tim_file)
+        assert timespan == 3.0
+        assert tim_file in self.analyzer._file_cache
+
+        # Clear cache
+        self.analyzer.clear_cache()
+
+        # Verify cache is empty
+        assert len(self.analyzer._file_cache) == 0
+        assert tim_file not in self.analyzer._file_cache
+
+        # Verify file can still be parsed after cache clear
+        timespan_after_clear = self.analyzer.calculate_timespan(tim_file)
+        assert timespan_after_clear == 3.0
+        assert tim_file in self.analyzer._file_cache  # Should be cached again
+
+    def test_cache_with_failed_parsing(self):
+        """Test that failed parsing results are also cached."""
+        # Create a file that will cause parsing to fail
+        corrupted_content = """FORMAT 1
+completely invalid line that will cause parsing failure
+another invalid line
+"""
+        tim_file = self._create_test_tim_file("cache_fail_test.tim", corrupted_content)
+
+        # First call should fail and cache empty result
+        timespan1 = self.analyzer.calculate_timespan(tim_file)
+        assert timespan1 == 0.0
+
+        # Verify failed result is cached
+        assert tim_file in self.analyzer._file_cache
+        cached_timespan, cached_count = self.analyzer._file_cache[tim_file]
+        assert cached_timespan == 0.0
+        assert cached_count == 0
+
+        # Second call should use cached empty result
+        timespan2 = self.analyzer.calculate_timespan(tim_file)
+        assert timespan2 == 0.0
+        assert timespan1 == timespan2
+
+    def test_cache_with_empty_file(self):
+        """Test caching behavior with empty files."""
+        empty_file = self._create_test_tim_file("cache_empty_test.tim", "")
+
+        # Parse empty file
+        timespan = self.analyzer.calculate_timespan(empty_file)
+        assert timespan == 0.0
+
+        # Verify empty result is cached
+        assert empty_file in self.analyzer._file_cache
+        cached_timespan, cached_count = self.analyzer._file_cache[empty_file]
+        assert cached_timespan == 0.0
+        assert cached_count == 0
+
+        # Verify cache hit on subsequent calls
+        assert self.analyzer.calculate_timespan(empty_file) == 0.0
+
+    def test_cache_with_missing_file(self):
+        """Test caching behavior with missing files."""
+        missing_file = self.test_data_dir / "cache_missing_test.tim"
+
+        # Parse missing file
+        timespan = self.analyzer.calculate_timespan(missing_file)
+        assert timespan == 0.0
+
+        # Verify missing file result is cached
+        assert missing_file in self.analyzer._file_cache
+        cached_timespan, cached_count = self.analyzer._file_cache[missing_file]
+        assert cached_timespan == 0.0
+        assert cached_count == 0
+
+    def test_get_timespan_and_count_caching(self):
+        """Test that get_timespan_and_count uses the same cache as calculate_timespan."""
+        content = f"""FORMAT 1
+{self._create_tempo2_line(55087.1109722889085)}
+{self._create_tempo2_line(55090.1109722889085)}
+{self._create_tempo2_line(55093.1109722889085)}
+"""
+        tim_file = self._create_test_tim_file("cache_combined_test.tim", content)
+
+        # First call with calculate_timespan
+        timespan1 = self.analyzer.calculate_timespan(tim_file)
+        assert timespan1 == 6.0
+
+        # Verify file is cached
+        assert tim_file in self.analyzer._file_cache
+
+        # Call get_timespan_and_count - should use cache
+        timespan2, count = self.analyzer.get_timespan_and_count(tim_file)
+        assert timespan2 == 6.0
+        assert count == 3
+
+        # Verify cache still contains same data
+        cached_timespan, cached_count = self.analyzer._file_cache[tim_file]
+        assert cached_timespan == 6.0
+        assert cached_count == 3
+
+    def test_count_toas_caching(self):
+        """Test that count_toas uses the same cache as other methods."""
+        content = f"""FORMAT 1
+{self._create_tempo2_line(55087.1109722889085)}
+{self._create_tempo2_line(55090.1109722889085)}
+"""
+        tim_file = self._create_test_tim_file("cache_count_test.tim", content)
+
+        # First call with calculate_timespan
+        timespan = self.analyzer.calculate_timespan(tim_file)
+        assert timespan == 3.0
+
+        # Verify file is cached
+        assert tim_file in self.analyzer._file_cache
+
+        # Call count_toas - should use cache
+        count = self.analyzer.count_toas(tim_file)
+        assert count == 2
+
+        # Verify cache still contains same data
+        cached_timespan, cached_count = self.analyzer._file_cache[tim_file]
+        assert cached_timespan == 3.0
+        assert cached_count == 2
+
+    def test_cache_persistence_across_method_calls(self):
+        """Test that cache persists across different method calls on same file."""
+        content = f"""FORMAT 1
+{self._create_tempo2_line(55087.1109722889085)}
+{self._create_tempo2_line(55090.1109722889085)}
+{self._create_tempo2_line(55093.1109722889085)}
+"""
+        tim_file = self._create_test_tim_file("cache_persistence_test.tim", content)
+
+        # Call different methods in sequence
+        timespan1 = self.analyzer.calculate_timespan(tim_file)
+        count1 = self.analyzer.count_toas(tim_file)
+        timespan2, count2 = self.analyzer.get_timespan_and_count(tim_file)
+        timespan3 = self.analyzer.calculate_timespan(tim_file)
+
+        # All should return consistent results
+        assert timespan1 == 6.0
+        assert count1 == 3
+        assert timespan2 == 6.0
+        assert count2 == 3
+        assert timespan3 == 6.0
+
+        # Cache should contain the data
+        assert tim_file in self.analyzer._file_cache
+        cached_timespan, cached_count = self.analyzer._file_cache[tim_file]
+        assert cached_timespan == 6.0
+        assert cached_count == 3
+
     # Integration Tests
 
     def test_integration_with_file_discovery(self):
