@@ -10,6 +10,7 @@ Complete API documentation for the MetaPulsar package.
 - [Layout Discovery](#layout-discovery)
 - [Parameter Management](#parameter-management)
 - [Selection Utilities](#selection-utilities)
+- [Utilities](#utilities)
 - [Exceptions](#exceptions)
 
 ## Core Classes
@@ -176,6 +177,26 @@ def pta_summary(file_data: Dict[str, List[Dict[str, Any]]]) -> None:
     """
 ```
 
+### reorder_ptas_for_pulsar
+
+Reorder PTAs for a specific pulsar to put the reference PTA first.
+
+```python
+def reorder_ptas_for_pulsar(
+    pulsar_file_data: Dict[str, List[Dict[str, Any]]],
+    reference_pta: str,
+) -> Dict[str, List[Dict[str, Any]]]:
+    """Reorder PTAs for a specific pulsar to put specified PTA first as reference.
+    
+    Args:
+        pulsar_file_data: PTA data for a specific pulsar
+        reference_pta: PTA name to use as reference (will be first in dict)
+
+    Returns:
+        Reordered pulsar data with reference_pta first
+    """
+```
+
 ## File Discovery
 
 ### discover_files
@@ -216,7 +237,7 @@ def get_pulsar_names_from_file_data(
         file_data: File data from FileDiscoveryService
         
     Returns:
-        List of pulsar names (B-names preferred)
+        List of canonical J-names (e.g., 'J0613-0200')
     """
 ```
 
@@ -227,13 +248,13 @@ Filter file data to specific pulsars.
 ```python
 def filter_file_data_by_pulsars(
     file_data: Dict[str, List[Dict[str, Any]]],
-    pulsar_names: List[str]
+    pulsar_names: Union[str, List[str]]
 ) -> Dict[str, List[Dict[str, Any]]]:
     """Filter file data to specific pulsars.
     
     Args:
         file_data: File data from FileDiscoveryService
-        pulsar_names: List of pulsar names to include
+        pulsar_names: Single pulsar name or list of names (J or B formats accepted)
         
     Returns:
         Filtered file data containing only specified pulsars
@@ -302,12 +323,15 @@ Manages parameter consistency across PTAs.
 class ParameterManager:
     """Manages parameter consistency and mapping across PTAs."""
     
-    def __init__(self, combination_strategy: str = "consistent"):
-        """Initialize parameter manager.
-        
-        Args:
-            combination_strategy: Strategy for parameter combination
-        """
+    def __init__(
+        self,
+        file_data: Dict[str, Dict[str, Any]],
+        combine_components: List[str] = ["astrometry", "spindown", "binary", "dispersion"],
+        add_dm_derivatives: bool = True,
+        output_dir: Path = None,
+        pulsar_name: str = None,
+    ):
+        """Initialize parameter manager with file data and configuration."""
 ```
 
 ### ParameterMapping
@@ -327,15 +351,15 @@ Create Enterprise-compatible selection functions.
 
 ```python
 def create_staggered_selection(
-    parameter_name: str,
-    selection_criteria: Dict[Union[str, Tuple[str, ...]], Optional[str]],
+    name: str,
+    flag_criteria: Dict[Union[str, Tuple[str, ...]], Optional[str]] = None,
     freq_range: Optional[Tuple[float, float]] = None,
 ) -> Callable:
     """Create Enterprise-compatible selection function with hierarchical fallback.
 
     Args:
-        parameter_name: Name of the parameter to select (e.g., 'efac', 'ecorr')
-        selection_criteria: Dictionary mapping selection criteria to fallback values
+        name: Base name for the selection (e.g., 'efac', 'ecorr')
+        flag_criteria: Mapping from flag(s) to target value or None (for all values)
         freq_range: Optional frequency range tuple (low, high) in MHz
 
     Returns:
@@ -383,10 +407,14 @@ PTA_DATA_RELEASES: Dict[str, Dict[str, Any]]
 ```
 
 Contains regex patterns and directory structures for:
+- EPTA DR1 v2.2
 - EPTA DR2
-- PPTA DR2  
-- NANOGrav 15yr
+- InPTA DR1
 - MPTA DR1
+- NANOGrav 9-year
+- NANOGrav 12-year
+- NANOGrav 15-year
+- PPTA DR1+DR2
 
 ## Data Structures
 
@@ -421,6 +449,24 @@ layout = {
         # ... other discovery metadata
     }
 }
+```
+
+## Utilities
+
+### TimFileAnalyzer
+
+Fast analyzer for TIM files to compute timespan and TOA counts without constructing full TOA objects.
+
+```python
+class TimFileAnalyzer:
+    def calculate_timespan(self, tim_file_path: Path) -> float:
+        """Calculate timespan in days from a TIM file."""
+
+    def count_toas(self, tim_file_path: Path) -> int:
+        """Count number of TOAs in a TIM file."""
+
+    def get_timespan_and_count(self, tim_file_path: Path) -> Tuple[float, int]:
+        """Return (timespan_in_days, toa_count) efficiently."""
 ```
 
 ## Usage Examples
