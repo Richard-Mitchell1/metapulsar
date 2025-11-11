@@ -104,7 +104,7 @@ If you use this software in your research, please cite:
 ```bibtex
 @software{metapulsar,
   title={MetaPulsar},
-  author={van Haasteren, Rutger and Yu, Wang-Wei},
+  author={van Haasteren, Rutger and Yu, Wang-Wei and Wright, David},
   year={2025},
   url={https://github.com/vhaasteren/metapulsar},
   license={MIT}
@@ -115,6 +115,7 @@ If you use this software in your research, please cite:
 
 - **Rutger van Haasteren** - *Lead Developer* - [rutger@vhaasteren.com](mailto:rutger@vhaasteren.com)
 - **Wang-Wei Yu** - *Co-Developer* - [wangwei.yu@aei.mpg.de](mailto:wangwei.yu@aei.mpg.de)
+- **David Wright** - *Co-Developer* - [david.wright@nanograv.org](mailto:david.wright@nanograv.org)
 
 ## Support
 

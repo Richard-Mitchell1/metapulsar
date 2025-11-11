@@ -40,7 +40,7 @@ from .pint_helpers import PINTDiscoveryError
 
 
 __version__ = "0.1.0"
-__author__ = "Rutger van Haasteren, Wangwei Yu"
+__author__ = "Rutger van Haasteren, Wangwei Yu, David Wright"
 __email__ = "rutger@vhaasteren.com"
 
 __all__ = [
