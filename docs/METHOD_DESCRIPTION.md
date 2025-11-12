@@ -78,7 +78,7 @@ We now define the **meta‑parameters** that the combined design matrix will use
 * For any parameter that belongs to a consistent component and exists across PTAs, we expose **one merged meta‑parameter** (e.g., `RAJ`, `F0`, `PB`, `DM`), mapped to the corresponding parameter name in each PTA object.
 * All **detector‑specific** timing‑model parameters (e.g., `JUMP`, `FD*`, per‑backend offsets) are exposed as **PTA‑specific** meta‑parameters by suffixing with the PTA label (e.g., `JUMP_XXXX_epta`, `Offset_nanograv`).
 * If a per‑dataset **phase offset** is implicit in a given timing package, we explicitly include an **`Offset_<pta>`** meta‑parameter to reflect the standard constant phase term that is effectively fit in pulsar timing (this is not a noise parameter).
-* NOTE: The `Offset_XXXX` parameter is effectively just a `JUMP_XXXX` parameter for that specific PTA. But the name `Offset` make it clear it is _not_ an added parameter, but merely the mapped phase offset from a specific PTA.
+* NOTE: The `Offset_XXXX` parameter is effectively just a `JUMP_XXXX` parameter for that specific PTA. But the name `Offset` makes it clear it is _not_ an added parameter, but merely the mapped phase offset from a specific PTA.
 
 This mapping is produced by `ParameterManager.build_parameter_mappings()` and recorded as `fitparameters` (free) and `setparameters` (present) in the `MetaPulsar` object. It is **deterministic** given the input `.par` files and the selected consistent components.
 
