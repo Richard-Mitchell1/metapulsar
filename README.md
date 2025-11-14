@@ -116,7 +116,7 @@ If you use this software in your research, please cite:
 
 - **Rutger van Haasteren** - *Lead Developer* - [rutger@vhaasteren.com](mailto:rutger@vhaasteren.com)
 - **Wang-Wei Yu** - *Co-Developer* - [wangwei.yu@aei.mpg.de](mailto:wangwei.yu@aei.mpg.de)
-- **David Wright** - *Co-Developer* - [david.wright@nanograv.org](mailto:david.wright@nanograv.org)
+- **David Wright** - *Co-Developer* - [dcw3.dev@gmail.com](mailto:dcw3.dev@gmail.com)
 
 ## Support
 
