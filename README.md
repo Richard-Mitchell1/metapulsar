@@ -4,7 +4,7 @@
 
 # MetaPulsar
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![DOI](https://zenodo.org/badge/727659043.svg)](https://doi.org/10.5281/zenodo.17626664)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -83,7 +83,7 @@ loguru.logger.add(sys.stdout, level="DEBUG")
 
 ## Dependencies
 
-- **Python 3.8+**
+- **Python 3.9+**
 - **numpy** ≥ 1.20.0
 - **astropy** ≥ 5.0.0
 - **scipy** ≥ 1.7.0
