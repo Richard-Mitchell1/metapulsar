@@ -480,13 +480,15 @@ class TestPulsarHelperFunctions:
             ],
         }
 
-        with patch(
-            "metapulsar.metapulsar_factory.MetaPulsarFactory"
-        ) as mock_factory, patch(
-            "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
-        ) as mock_bj_name, patch(
-            "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
-        ) as mock_extract:
+        with (
+            patch("metapulsar.metapulsar_factory.MetaPulsarFactory") as mock_factory,
+            patch(
+                "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
+            ) as mock_bj_name,
+            patch(
+                "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
+            ) as mock_extract,
+        ):
 
             mock_instance = mock_factory.return_value
             mock_instance.group_files_by_pulsar.return_value = {
@@ -530,13 +532,15 @@ class TestPulsarHelperFunctions:
             ],
         }
 
-        with patch(
-            "metapulsar.metapulsar_factory.MetaPulsarFactory"
-        ) as mock_factory, patch(
-            "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
-        ) as mock_bj_name, patch(
-            "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
-        ) as mock_extract:
+        with (
+            patch("metapulsar.metapulsar_factory.MetaPulsarFactory") as mock_factory,
+            patch(
+                "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
+            ) as mock_bj_name,
+            patch(
+                "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
+            ) as mock_extract,
+        ):
 
             mock_instance = mock_factory.return_value
             mock_instance.group_files_by_pulsar.return_value = {
@@ -577,13 +581,15 @@ class TestPulsarHelperFunctions:
             ]
         }
 
-        with patch(
-            "metapulsar.metapulsar_factory.MetaPulsarFactory"
-        ) as mock_factory, patch(
-            "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
-        ) as mock_bj_name, patch(
-            "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
-        ) as mock_extract:
+        with (
+            patch("metapulsar.metapulsar_factory.MetaPulsarFactory") as mock_factory,
+            patch(
+                "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
+            ) as mock_bj_name,
+            patch(
+                "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
+            ) as mock_extract,
+        ):
 
             mock_instance = mock_factory.return_value
             mock_instance.group_files_by_pulsar.return_value = {
@@ -623,13 +629,15 @@ class TestPulsarHelperFunctions:
             ],
         }
 
-        with patch(
-            "metapulsar.metapulsar_factory.MetaPulsarFactory"
-        ) as mock_factory, patch(
-            "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
-        ) as mock_bj_name, patch(
-            "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
-        ) as mock_extract:
+        with (
+            patch("metapulsar.metapulsar_factory.MetaPulsarFactory") as mock_factory,
+            patch(
+                "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
+            ) as mock_bj_name,
+            patch(
+                "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
+            ) as mock_extract,
+        ):
 
             mock_instance = mock_factory.return_value
             mock_instance.group_files_by_pulsar.return_value = {
@@ -668,13 +676,15 @@ class TestPulsarHelperFunctions:
             ]
         }
 
-        with patch(
-            "metapulsar.metapulsar_factory.MetaPulsarFactory"
-        ) as mock_factory, patch(
-            "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
-        ) as mock_bj_name, patch(
-            "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
-        ) as mock_extract:
+        with (
+            patch("metapulsar.metapulsar_factory.MetaPulsarFactory") as mock_factory,
+            patch(
+                "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
+            ) as mock_bj_name,
+            patch(
+                "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
+            ) as mock_extract,
+        ):
 
             mock_instance = mock_factory.return_value
             mock_instance.group_files_by_pulsar.return_value = {
@@ -721,13 +731,15 @@ class TestPulsarHelperFunctions:
             ]
         }
 
-        with patch(
-            "metapulsar.metapulsar_factory.MetaPulsarFactory"
-        ) as mock_factory, patch(
-            "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
-        ) as mock_bj_name, patch(
-            "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
-        ) as mock_extract:
+        with (
+            patch("metapulsar.metapulsar_factory.MetaPulsarFactory") as mock_factory,
+            patch(
+                "metapulsar.position_helpers.bj_name_from_coordinates_optimized"
+            ) as mock_bj_name,
+            patch(
+                "metapulsar.position_helpers.extract_coordinates_from_parfile_optimized"
+            ) as mock_extract,
+        ):
 
             mock_instance = mock_factory.return_value
             mock_instance.group_files_by_pulsar.return_value = {
