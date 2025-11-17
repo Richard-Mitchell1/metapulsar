@@ -108,6 +108,7 @@ If you use this software in your research, please cite:
   title={MetaPulsar},
   author={van Haasteren, Rutger and Yu, Wang-Wei and Wright, David},
   year={2025},
+  doi={10.5281/zenodo.17626664},
   url={https://github.com/vhaasteren/metapulsar},
   license={MIT}
 }
