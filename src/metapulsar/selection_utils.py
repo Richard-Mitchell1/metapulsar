@@ -15,15 +15,15 @@ Key Features:
 Basic Usage:
     >>> from metapulsar.selection_utils import create_staggered_selection
     >>> from enterprise.signals.selections import Selection
-    >>> 
+    >>>
     >>> # Simple group-based selection
     >>> group_sel = create_staggered_selection("efac", {"group": None})
     >>> selection = Selection(group_sel)
-    >>> 
+    >>>
     >>> # Staggered selection with fallback
     >>> staggered_sel = create_staggered_selection("ecorr", {("group", "f"): None})
     >>> selection = Selection(staggered_sel)
-    >>> 
+    >>>
     >>> # Frequency band selection
     >>> band_sel = create_staggered_selection("band", {"group": None}, freq_range=(400, 1000))
     >>> selection = Selection(band_sel)
@@ -34,7 +34,7 @@ Advanced Usage:
     ...     "pta": "EPTA",  # PTA-specific
     ...     ("group", "f"): None  # All groups with fallback
     ... })
-    >>> 
+    >>>
     >>> # Complex staggered selection
     >>> complex_sel = create_staggered_selection("efac", {
     ...     ("group", "f", "B"): None,  # Triple fallback
@@ -43,11 +43,11 @@ Advanced Usage:
 
 Migration from Legacy:
     The new API is designed to be a drop-in replacement for the legacy function:
-    
+
     >>> # Legacy code
     >>> from legacy.metapulsar import create_selection_stag
     >>> legacy_sel = create_selection_stag("efac", {"group": None}, lowfreq=400, highfreq=1000)
-    >>> 
+    >>>
     >>>
     >>> from metapulsar.selection_utils import create_staggered_selection
     >>> new_sel = create_staggered_selection("efac", {"group": None}, freq_range=(400, 1000))

@@ -43,7 +43,7 @@ dependencies = [
 dev = [
     "pytest>=6.0",
     "pytest-cov>=2.0",
-    "black>=22.0",
+    "black==25.11.0",
     "mypy>=0.900",
     "flake8>=4.0",
 ]

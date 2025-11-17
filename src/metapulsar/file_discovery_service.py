@@ -453,7 +453,7 @@ def discover_files(
 
 
 def get_pulsar_names_from_file_data(
-    file_data: Dict[str, List[Dict[str, Any]]]
+    file_data: Dict[str, List[Dict[str, Any]]],
 ) -> List[str]:
     """
     Extract canonical pulsar names from file data using coordinate-based discovery.

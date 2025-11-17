@@ -320,7 +320,7 @@ def _parse_angle_string_optimized(angle_str: str) -> Optional[float]:
 
 
 def _extract_equatorial_coordinates_optimized(
-    parfile_dict: Dict[str, str]
+    parfile_dict: Dict[str, str],
 ) -> Tuple[Optional[float], Optional[float]]:
     """Extract RAJ/DECJ coordinates (optimized version)."""
     try:
@@ -348,7 +348,7 @@ def _extract_equatorial_coordinates_optimized(
 
 
 def _extract_ecliptic_coordinates_optimized(
-    parfile_dict: Dict[str, str]
+    parfile_dict: Dict[str, str],
 ) -> Tuple[Optional[float], Optional[float]]:
     """Extract ecliptic coordinates and convert to equatorial (optimized version)."""
     try:
@@ -382,7 +382,7 @@ def _extract_ecliptic_coordinates_optimized(
 
 
 def _extract_fk4_coordinates_optimized(
-    parfile_dict: Dict[str, str]
+    parfile_dict: Dict[str, str],
 ) -> Tuple[Optional[float], Optional[float]]:
     """Extract FK4/B1950 coordinates and convert to equatorial (optimized version)."""
     try:
@@ -511,7 +511,7 @@ def _format_b_name_from_coordinates_optimized(ra_hours: float, dec_deg: float) -
 
 
 def discover_pulsars_by_coordinates_optimized(
-    file_data: Dict[str, List[Dict[str, Any]]]
+    file_data: Dict[str, List[Dict[str, Any]]],
 ) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
     """
     Discover pulsars by extracting coordinates directly from parfiles (optimized version).
