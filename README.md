@@ -5,6 +5,7 @@
 # MetaPulsar
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![PyPI](https://img.shields.io/pypi/v/metapulsar.svg)](https://pypi.org/project/metapulsar/)
 [![DOI](https://zenodo.org/badge/727659043.svg)](https://doi.org/10.5281/zenodo.17626664)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
@@ -22,6 +23,17 @@ A framework for combining pulsar timing data from multiple PTA collaborations in
 ## Quick Start
 
 ### Installation
+
+Install the latest release from PyPI:
+
+```bash
+pip install metapulsar
+
+# With optional extras
+pip install "metapulsar[dev,libstempo]"
+```
+
+Or install from source for development:
 
 ```bash
 git clone https://github.com/vhaasteren/metapulsar.git
