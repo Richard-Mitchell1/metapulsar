@@ -131,6 +131,7 @@ C 12345.67890 0.0001
             ), f"Unexpected KeyError for invalid reference_pta: {e}"
 
     @pytest.mark.slow
+    @pytest.mark.requires_libstempo
     def test_empty_par_files(self, available_data_sets):
         """Test handling of empty par files."""
         if not available_data_sets:
@@ -179,6 +180,7 @@ PEPOCH 55000
                 MetaPulsarFactory().create_metapulsar(file_data)
 
     @pytest.mark.slow
+    @pytest.mark.requires_libstempo
     def test_corrupted_binary_files(self, available_data_sets):
         """Test handling of corrupted binary files."""
         if not available_data_sets:

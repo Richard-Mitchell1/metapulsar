@@ -14,6 +14,7 @@ class TestParfileContentValidation:
         """Set up test fixtures."""
         self.factory = MetaPulsarFactory()
 
+    @pytest.mark.requires_ipta_data
     def test_ensure_parfile_content_with_missing_content(self):
         """Test validation when par_content is missing."""
         # Create file data without par_content
