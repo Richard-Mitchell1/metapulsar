@@ -1,0 +1,17 @@
+include LICENSE
+include README.md
+include CHANGELOG.md
+include CITATION.cff
+include CONTRIBUTING.md
+include requirements.txt
+recursive-include docs *.md *.rst *.txt *.html *.css *.js *.png *.jpg *.svg
+recursive-include examples *.py *.ipynb *.md
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude *.so
+global-exclude .git*
+global-exclude .DS_Store
+global-exclude *.egg-info
+global-exclude build
+global-exclude dist
+

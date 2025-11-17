@@ -4,14 +4,15 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "metapulsar"
-version = "0.1.0"
+version = "0.9.1"
 description = "Multi-PTA pulsar timing data combination framework for gravitational wave detection"
-readme = "README.md"
+readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
     {name = "Rutger van Haasteren", email = "rutger@vhaasteren.com"},
     {name = "Wang-Wei Yu", email = "wangwei.yu@aei.mpg.de"},
+    {name = "David Wright", email = "dcw3.dev@gmail.com"},
 ]
 keywords = ["pulsar", "timing", "gravitational-waves", "pta", "astronomy"]
 classifiers = [
@@ -24,6 +25,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Astronomy",
     "Topic :: Scientific/Engineering :: Physics",
 ]
@@ -34,7 +36,7 @@ dependencies = [
     "scipy>=1.7.0",
     "pint-pulsar>=0.9.0",
     "enterprise-pulsar>=3.0.0",
-    "h5pulsar @ git+https://github.com/vhaasteren/h5pulsar@main",
+    "loguru>=0.7.3",
 ]
 
 [project.optional-dependencies]
