@@ -1,32 +1,37 @@
 {
   "name": "anpta dev",
-  "image": "vhaasteren/anpta:cpu-devcontainer",
-  "runArgs": [
-    "--user", "${localEnv:UID}:${localEnv:GID}"
-  ],
+  "image": "vhaasteren/anpta:cpu",
+  "overrideCommand": false,
+  "containerEnv": {
+    "HOST_UID": "${localEnv:UID}",
+    "HOST_GID": "${localEnv:GID}",
+    "HOME_OVERRIDE": "/workspaces/${localWorkspaceFolderBasename}/.home",
+    "PYTHONUSERBASE": "/workspaces/${localWorkspaceFolderBasename}/.home/.local",
+    "PYTHONPYCACHEPREFIX": "/workspaces/${localWorkspaceFolderBasename}/.home/.cache/pycache"
+  },
+  "remoteUser": "anpta",
+  "updateRemoteUserUID": false,
   "remoteEnv": {
-    "HOME": "/workspaces/${localWorkspaceFolderBasename}/.home"
+    "HOME": "${containerEnv:HOME_OVERRIDE}",
+    "SSH_AUTH_SOCK": "/ssh-agent",
+    "PYTHONPATH": "${containerEnv:HOME_OVERRIDE}/.local/lib/python3.12/site-packages:${containerEnv:HOME_OVERRIDE}/.local/lib/python3.11/site-packages:${containerEnv:HOME_OVERRIDE}/.local/lib/python3.10/site-packages"
   },
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "postCreateCommand": "mkdir -p \"/workspaces/${localWorkspaceFolderBasename}/.home\" && git config --global --add safe.directory \"/workspaces/${localWorkspaceFolderBasename}\" || true",
-  "postStartCommand": "bash -lc 'pre-commit install --hook-type pre-commit --hook-type pre-push --hook-type commit-msg'",
+  "onCreateCommand": "mkdir -p \"$HOME\" && git config --global --add safe.directory \"$PWD\" || true",
+  "mounts": [
+    "source=${env:SSH_AUTH_SOCK},target=/ssh-agent,type=bind"
+  ],
   "customizations": {
     "vscode": {
       "extensions": [
-        "ms-vscode.vscodevim",
         "ms-python.python",
-        "ms-vscode-remote.remote-containers",
         "ms-python.black-formatter",
         "charliermarsh.ruff",
         "ms-toolsai.jupyter",
         "ms-toolsai.jupyter-keymap",
         "ms-toolsai.jupyter-renderers",
-        "ms-python.pytest",
-        "ms-vscode.vscode-json",
         "ms-python.vscode-pylance",
         "redhat.vscode-yaml",
-        "ms-vscode.makefile-tools",
-        "github.vscode-pull-request-github",
         "eamodio.gitlens"
       ]
     }

@@ -276,6 +276,41 @@ class ParameterManager:
         except Exception as e:
             raise RuntimeError(f"PINT conversion failed: {e}") from e
 
+    def _align_parameter(self, parfile_dict, reference_dict, aliases):
+        alias_list = [aliases] if isinstance(aliases, str) else list(aliases)
+
+        # Grab the reference value from whichever alias the reference PTA used
+        ref_key = None
+        for alias in alias_list:
+            if alias in reference_dict:
+                ref_key = alias
+                break
+        if ref_key is None:
+            self.logger.error(
+                f"No alias from {alias_list} found in reference PTA {self.reference_pta}"
+            )
+            return
+        ref_value = reference_dict[ref_key]
+
+        # Keep only the first alias that already exists in this PTA; drop the rest
+        target_key = None
+        for alias in alias_list:
+            if alias in parfile_dict:
+                if target_key is None:
+                    target_key = alias
+                else:
+                    parfile_dict.pop(alias)
+                    self.logger.error(
+                        f"Dropping duplicate {alias} found in PTA (not {self.reference_pta})"
+                    )
+
+        if target_key is None:
+            # Inject the reference key/value if PTA lacked any alias
+            target_key = ref_key
+
+        # Update the value in-place using the existing key
+        parfile_dict[target_key] = ref_value
+
     def _make_parameters_consistent(
         self, parfile_data: Dict[str, str]
     ) -> Dict[str, str]:
@@ -363,15 +398,21 @@ class ParameterManager:
 
         # Always align CLOCK and EPHEM parameters
         for pta_name, parfile_dict in parfile_dicts.items():
-            parfile_dict["EPHEM"] = reference_dict["EPHEM"]
-            if "CLOCK" in reference_dict:
-                parfile_dict["CLOCK"] = reference_dict["CLOCK"]
-            elif "CLK" in reference_dict:
-                parfile_dict["CLK"] = reference_dict["CLK"]
-            else:
-                self.logger.error(
-                    f"No CLOCK or CLK parameter found in reference PTA {self.reference_pta}"
-                )
+            self._align_parameter(parfile_dict, reference_dict, "EPHEM")
+            self._align_parameter(parfile_dict, reference_dict, ["CLOCK", "CLK"])
+        #    parfile_dict["EPHEM"] = reference_dict["EPHEM"]
+        #    if "CLOCK" in reference_dict:
+        #        parfile_dict["CLOCK"] = reference_dict["CLOCK"]
+        #        if "CLK" in parfile_dict:
+        #            parfile_dict.pop("CLK")
+        #    elif "CLK" in reference_dict:
+        #        parfile_dict["CLK"] = reference_dict["CLK"]
+        #        if "CLOCK" in parfile_dict:
+        #            parfile_dict.pop("CLOCK")
+        #    else:
+        #        self.logger.error(
+        #            f"No CLOCK or CLK parameter found in reference PTA {self.reference_pta}"
+        #        )
 
         # Convert back to par file strings
         consistent_parfiles = {}
