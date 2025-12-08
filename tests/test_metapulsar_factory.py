@@ -404,7 +404,9 @@ class TestMetaPulsarFactory:
             mock_toas = Mock()
             mock_get_model.return_value = (mock_model, mock_toas)
 
-            result = self.factory._create_pulsar_objects(file_pairs, file_data)
+            result = self.factory._create_pulsar_objects(
+                file_pairs, file_data, use_pulse_numbers=False
+            )
 
             assert "epta_dr2" in result
             assert result["epta_dr2"] == (mock_model, mock_toas)
@@ -436,7 +438,9 @@ class TestMetaPulsarFactory:
             mock_psr = Mock()
             mock_tempopulsar.return_value = mock_psr
 
-            result = self.factory._create_pulsar_objects(file_pairs, file_data)
+            result = self.factory._create_pulsar_objects(
+                file_pairs, file_data, use_pulse_numbers=False
+            )
 
             assert "epta_dr2" in result
             assert result["epta_dr2"] == mock_psr
