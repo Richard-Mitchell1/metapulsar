@@ -555,7 +555,14 @@ def temporary_pn_tim_from_par_tim_tempo2(
     parfile_text: str, tim_path: Path
 ) -> Iterator[str]:
     """Yield a temporary pn-tagged .tim via tempo2 output plugin; deleted on exit."""
-    tim_path = Path(tim_path)
+    tim_path = Path(tim_path).resolve()
+
+    # Preflight: check file exists and is readable
+    if not tim_path.exists():
+        raise FileNotFoundError(f"Tim file not found: {tim_path}")
+    if not tim_path.is_file():
+        raise ValueError(f"Tim path is not a file: {tim_path}")
+
     with tempfile.TemporaryDirectory(prefix="withpn_t2_") as td:
         td_path = Path(td)
         par_tmp = td_path / "orig.par"
@@ -577,9 +584,56 @@ def temporary_pn_tim_from_par_tim_tempo2(
                 text=True,
             )
         except subprocess.CalledProcessError as e:
-            raise RuntimeError(
-                f"tempo2 add_pulseNumber failed: {e.stderr or e.stdout}"
-            ) from e
+            # Sanitize error: extract relevant error lines, skip warranty banner
+            # Combine stderr and stdout, prefer stderr for actual errors
+            combined_output = (e.stderr or "").strip()
+            if not combined_output or len(combined_output) < 20:
+                # If stderr is empty/short, check stdout
+                combined_output = (e.stdout or "").strip()
+
+            error_lines = []
+            warranty_keywords = [
+                "warranty",
+                "gpl",
+                "free software",
+                "absolutely no",
+                "redistribute",
+                "this program comes",
+                "welcome to redistribute",
+            ]
+
+            for line in combined_output.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                line_lower = line.lower()
+                # Skip warranty/license text more aggressively
+                if any(keyword in line_lower for keyword in warranty_keywords):
+                    continue
+                # Keep ERROR lines, "Unable to open", and assertion failures
+                if (
+                    line.startswith("ERROR")
+                    or "Unable to open" in line
+                    or "Assertion" in line
+                    or "failed" in line_lower
+                    or line.startswith("tempo2:")
+                ):
+                    error_lines.append(line)
+
+            # If still no errors found after filtering, try to find any non-warranty line
+            if not error_lines:
+                for line in combined_output.splitlines():
+                    line = line.strip()
+                    if line and not any(
+                        keyword in line.lower() for keyword in warranty_keywords
+                    ):
+                        error_lines.append(line)
+                        break
+
+            error_msg = (
+                "\n".join(error_lines) if error_lines else "tempo2 command failed"
+            )
+            raise RuntimeError(f"tempo2 add_pulseNumber failed: {error_msg}") from e
         src = td_path / "withpn.tim"
         if not src.exists():
             raise RuntimeError("tempo2 plugin did not produce withpn.tim")

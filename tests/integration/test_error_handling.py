@@ -59,7 +59,9 @@ DM 13.299 1 0.001
                             }
                         ]
                     }
-                    MetaPulsarFactory().create_metapulsar(file_data)
+                    MetaPulsarFactory().create_metapulsar(
+                        file_data, use_pulse_numbers=False
+                    )
 
     def test_malformed_tim_file(self, available_data_sets):
         """Test handling of malformed tim files."""
@@ -98,7 +100,9 @@ C 12345.67890 0.0001
                             }
                         ]
                     }
-                    MetaPulsarFactory().create_metapulsar(file_data)
+                    MetaPulsarFactory().create_metapulsar(
+                        file_data, use_pulse_numbers=False
+                    )
 
     def test_invalid_data_release_config(self):
         """Test handling of invalid data release configurations."""
@@ -177,7 +181,9 @@ PEPOCH 55000
                         }
                     ]
                 }
-                MetaPulsarFactory().create_metapulsar(file_data)
+                MetaPulsarFactory().create_metapulsar(
+                    file_data, use_pulse_numbers=False
+                )
 
     @pytest.mark.slow
     @pytest.mark.requires_libstempo
@@ -229,7 +235,9 @@ PEPOCH 55000
                         }
                     ]
                 }
-                MetaPulsarFactory().create_metapulsar(file_data)
+                MetaPulsarFactory().create_metapulsar(
+                    file_data, use_pulse_numbers=False
+                )
 
     def test_memory_limit_handling(self, available_data_sets):
         """Test handling of memory limits with large datasets."""
