@@ -67,6 +67,7 @@ print(f"PTA names: {list(metapulsar._pulsars.keys())}")
 - **[Interactive Tutorial](examples/notebooks/using_metapulsar.ipynb)** - Complete usage guide with examples
 - **[API Reference](docs/API_REFERENCE.md)** - Complete API documentation
 - **[Method Description](docs/METHOD_DESCRIPTION.md)** - Detailed description of the direct combination method
+- **[Poster](docs/poster/metapulsar-poster-2025.pdf)** - MetaPulsar poster (2025)
 
 ## Examples
 
