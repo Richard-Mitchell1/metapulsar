@@ -367,3 +367,100 @@ class TestEdgeCases:
 
 
 # === INTEGRATION TESTS ===
+
+
+def test_discover_pulsars_different_posepoch_match(load_parfile_text):
+    """Test that pulsars with correct positions at different POSEPOCH are matched correctly.
+
+    Uses generated parfiles with correct positions at each epoch (reflecting proper motion),
+    which should normalize to the same J2000 position and match.
+
+    Note: This is an integration test for the discovery system. The unit test for normalization
+    logic is in test_position_helpers.py::test_same_pulsar_different_posepoch_produces_same_j_name
+    """
+    # Use generated parfiles with correct positions at different epochs
+    # These have different positions at different POSEPOCH but same PM,
+    # so they normalize to the same J2000 position
+    parfile_epoch1 = load_parfile_text("test_same_pulsar_epoch1_54500.par")
+    parfile_epoch2 = load_parfile_text("test_same_pulsar_epoch2_56000.par")
+
+    file_data = {
+        "PTA1": [
+            {
+                "par": "test1.par",
+                "par_content": parfile_epoch1,
+                "tim": "test1.tim",
+            }
+        ],
+        "PTA2": [
+            {
+                "par": "test2.par",
+                "par_content": parfile_epoch2,
+                "tim": "test2.tim",
+            }
+        ],
+    }
+
+    coordinate_map = discover_pulsars_by_coordinates_optimized(file_data)
+
+    # Should match as same pulsar despite different POSEPOCH
+    # (because positions are correctly different at each epoch, normalizing to same J2000)
+    assert len(coordinate_map) == 1, "Should match as single pulsar"
+    assert "J1857+0943" in coordinate_map
+    pulsar_data = coordinate_map["J1857+0943"]
+    assert len(pulsar_data) == 2, "Both PTAs should be matched"
+    assert "PTA1" in pulsar_data, "PTA1 should be in matched pulsar data"
+    assert "PTA2" in pulsar_data, "PTA2 should be in matched pulsar data"
+
+
+def test_discover_pulsars_same_position_different_posepoch_should_not_match(
+    load_parfile_text,
+):
+    """Test that parfiles with identical positions but different POSEPOCH and PM should NOT match.
+
+    This tests the error case: if someone incorrectly provides the same position at different
+    epochs when proper motion exists, they normalize to different J2000 positions and should
+    be discovered as separate pulsars.
+
+    Uses very large PM values (15000 mas/yr) for testing to ensure coordinate difference > 1 arcmin,
+    which produces different J-names and allows the discovery system to correctly separate them.
+
+    The unit test for this normalization behavior is in
+    test_position_helpers.py::test_same_position_different_posepoch_with_pm_should_not_match
+    """
+    # Use generated parfiles with same position at different POSEPOCH
+    parfile_epoch1 = load_parfile_text("test_same_position_large_pm_epoch1_54500.par")
+    parfile_epoch2 = load_parfile_text("test_same_position_large_pm_epoch2_56000.par")
+
+    # Test discovery system behavior
+    file_data = {
+        "PTA1": [
+            {
+                "par": "test1.par",
+                "par_content": parfile_epoch1,
+                "tim": "test1.tim",
+            }
+        ],
+        "PTA2": [
+            {
+                "par": "test2.par",
+                "par_content": parfile_epoch2,
+                "tim": "test2.tim",
+            }
+        ],
+    }
+
+    coordinate_map = discover_pulsars_by_coordinates_optimized(file_data)
+
+    # With large PM (15000 mas/yr), coordinate difference is > 1 arcmin,
+    # so J-names should differ and they should be discovered as separate pulsars
+    assert (
+        len(coordinate_map) == 2
+    ), "Should discover as two separate pulsars when same position at different POSEPOCH with large PM"
+
+    # Verify they have different J-names
+    j_names = list(coordinate_map.keys())
+    assert len(j_names) == 2, f"Should have two different J-names, got: {j_names}"
+    assert (
+        j_names[0] != j_names[1]
+    ), f"J-names should differ: {j_names[0]} == {j_names[1]}"

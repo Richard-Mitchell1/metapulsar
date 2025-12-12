@@ -21,7 +21,6 @@ from astropy.coordinates import (
     ICRS,
     FK4,
     Angle,
-    GeocentricTrueEcliptic,
     BarycentricTrueEcliptic,
 )
 from astropy.time import Time
@@ -31,6 +30,13 @@ from io import StringIO
 
 # Import PINT utilities for robust parfile parsing
 from pint.models.model_builder import parse_parfile
+
+# Import alias resolution for parameter access
+from .pint_helpers import get_aliases_for_parameter
+
+# Constants for J2000 normalization
+J2000_TIME = Time("J2000")
+MAS_TO_DEG = 1.0 / 3.6e6  # 1 mas = 1/3.6e6 deg
 
 
 def _format_j_name_from_icrs(c: SkyCoord) -> str:
@@ -67,78 +73,65 @@ def _format_b_name_from_icrs(c: SkyCoord) -> str:
 
 
 def _skycoord_from_pint_model(model: Any) -> SkyCoord:
+    """Build a SkyCoord from a PINT TimingModel, normalized to J2000 when possible.
+
+    Preference order:
+    1. Equatorial (RAJ/DECJ) with PM + POSEPOCH propagation to J2000.
+    2. Ecliptic (prefer LAMBDA/BETA, else ELONG/ELAT) with PMELONG/PMELAT + POSEPOCH propagation, then to ICRS.
+    3. FK4 (RA/DEC B1950) as legacy fallback, then to ICRS.
     """
-    Build a SkyCoord from a PINT TimingModel.
+    posepoch_q = _get_model_quantity(model, "POSEPOCH")
+    posepoch_mjd = float(posepoch_q.value) if posepoch_q is not None else None
 
-    Tries multiple coordinate systems in order of preference:
-    1. Direct equatorial (RAJ/DECJ) - preferred
-    2. Ecliptic coordinates (LAMBDA/BETA or ELONG/ELAT)
-    3. FK4/B1950 coordinates (RA/DEC) - legacy fallback
+    # Equatorial path (canonical only; PINT maps aliases to canonical attributes)
+    ra_q = _get_model_quantity(model, "RAJ")
+    dec_q = _get_model_quantity(model, "DECJ")
+    if ra_q is not None and dec_q is not None:
+        ra_hours = Angle(ra_q).to(u.hourangle).value
+        dec_deg = Angle(dec_q).to(u.deg).value
 
-    Args:
-        model: PINT TimingModel object
+        pmra_q = _get_model_quantity(model, "PMRA")
+        pmdec_q = _get_model_quantity(model, "PMDEC")
+        pmra = pmra_q.to(u.mas / u.yr).value if pmra_q is not None else None
+        pmdec = pmdec_q.to(u.mas / u.yr).value if pmdec_q is not None else None
 
-    Returns:
-        SkyCoord object in ICRS frame
+        # Propagate to J2000 if possible
+        ra_hours_j2000, dec_deg_j2000 = _propagate_equatorial_to_j2000(
+            ra_hours, dec_deg, pmra, pmdec, posepoch_mjd
+        )
+        return SkyCoord(
+            ra=ra_hours_j2000 * u.hourangle, dec=dec_deg_j2000 * u.deg, frame=ICRS()
+        )
 
-    Raises:
-        ValueError: If no valid coordinates found
-    """
-    # Direct equatorial coordinates (preferred method)
-    if (
-        hasattr(model, "RAJ")
-        and hasattr(model, "DECJ")
-        and model.RAJ.value is not None
-        and model.DECJ.value is not None
-    ):
-        ra = Angle(model.RAJ.quantity).to(u.hourangle)
-        dec = Angle(model.DECJ.quantity).to(u.deg)
-        return SkyCoord(ra=ra, dec=dec, frame=ICRS())
+    # Ecliptic path (canonical; ELONG/ELAT exist regardless of LAMBDA/BETA usage)
+    lon_q = _get_model_quantity(model, "ELONG")
+    lat_q = _get_model_quantity(model, "ELAT")
+    if lon_q is not None and lat_q is not None:
+        lam_deg = Angle(lon_q).to(u.deg).value
+        bet_deg = Angle(lat_q).to(u.deg).value
 
-    # Ecliptic coordinates (LAMBDA/BETA or ELONG/ELAT)
-    # Try BarycentricTrueEcliptic first; fall back to GeocentricTrueEcliptic
-    for ecl_frame in (BarycentricTrueEcliptic, GeocentricTrueEcliptic):
-        if (
-            hasattr(model, "LAMBDA")
-            and hasattr(model, "BETA")
-            and model.LAMBDA.value is not None
-            and model.BETA.value is not None
-        ):
-            lam = Angle(model.LAMBDA.quantity).to(u.deg)
-            bet = Angle(model.BETA.quantity).to(u.deg)
-            c = SkyCoord(
-                lon=lam,
-                lat=bet,
-                distance=1 * u.pc,
-                frame=ecl_frame(equinox=Time("J2000")),
-            )
-            return c.transform_to(ICRS())
+        pmelong_q = _get_model_quantity(model, "PMELONG")
+        pmelat_q = _get_model_quantity(model, "PMELAT")
+        pmelong = pmelong_q.to(u.mas / u.yr).value if pmelong_q is not None else None
+        pmelat = pmelat_q.to(u.mas / u.yr).value if pmelat_q is not None else None
 
-        if (
-            hasattr(model, "ELONG")
-            and hasattr(model, "ELAT")
-            and model.ELONG.value is not None
-            and model.ELAT.value is not None
-        ):
-            lam = Angle(model.ELONG.quantity).to(u.deg)
-            bet = Angle(model.ELAT.quantity).to(u.deg)
-            c = SkyCoord(
-                lon=lam,
-                lat=bet,
-                distance=1 * u.pc,
-                frame=ecl_frame(equinox=Time("J2000")),
-            )
-            return c.transform_to(ICRS())
+        lam_deg_j2000, bet_deg_j2000 = _propagate_ecliptic_to_j2000(
+            lam_deg, bet_deg, pmelong, pmelat, posepoch_mjd
+        )
+        c_ecl = SkyCoord(
+            lon=lam_deg_j2000 * u.deg,
+            lat=bet_deg_j2000 * u.deg,
+            distance=1 * u.pc,
+            frame=BarycentricTrueEcliptic(equinox=J2000_TIME),
+        )
+        return c_ecl.transform_to(ICRS())
 
-    # Legacy FK4/B1950 coordinates (rare fallback)
-    if (
-        hasattr(model, "RA")
-        and hasattr(model, "DEC")
-        and model.RA.value is not None
-        and model.DEC.value is not None
-    ):
-        ra = Angle(model.RA.quantity).to(u.hourangle)
-        dec = Angle(model.DEC.quantity).to(u.deg)
+    # Legacy FK4/B1950 fallback
+    ra_q = _get_model_quantity(model, "RA")
+    dec_q = _get_model_quantity(model, "DEC")
+    if ra_q is not None and dec_q is not None:
+        ra = Angle(ra_q).to(u.hourangle)
+        dec = Angle(dec_q).to(u.deg)
         c_fk4 = SkyCoord(ra=ra, dec=dec, frame=FK4(equinox=Time("B1950")))
         return c_fk4.transform_to(ICRS())
 
@@ -146,52 +139,64 @@ def _skycoord_from_pint_model(model: Any) -> SkyCoord:
 
 
 def _skycoord_from_libstempo(psr: Any) -> SkyCoord:
-    """
-    Build a SkyCoord from a libstempo tempopulsar.
+    """Build a SkyCoord from a libstempo tempopulsar, normalized to J2000 when possible.
 
-    Tries multiple coordinate systems in order of preference:
-    1. Direct equatorial (RAJ/DECJ) - preferred
-    2. Ecliptic coordinates (LAMBDA/BETA or ELONG/ELAT)
-    3. FK4/B1950 coordinates (RA/DEC) - legacy fallback
-
-    Args:
-        psr: libstempo tempopulsar object with parameter access
-
-    Returns:
-        SkyCoord object in ICRS frame
-
-    Raises:
-        ValueError: If no valid coordinates found
+    Uses RAJ/DECJ (radians) with optional PMRA/PMDEC (mas/yr) and POSEPOCH (MJD).
+    Assumes PMELONG/PMELAT and PMRA/PMDEC are in mas/yr (tempo2/PINT conventions).
+    Falls back to ecliptic or FK4 as needed.
     """
 
-    # Helper to fetch parameter safely
-    def _val(name):
-        # libstempo exposes parameters via dict-like access; .val gives float
-        try:
-            return psr[name].val
-        except Exception:
-            return None
+    def _val_aliases(psr, canonical: str):
+        for key in get_aliases_for_parameter(canonical):
+            try:
+                return psr[key].val
+            except Exception:
+                pass
+        return None
 
-    raj = _val("RAJ")
-    decj = _val("DECJ")
+    raj = _val_aliases(psr, "RAJ")  # covers RA
+    decj = _val_aliases(psr, "DECJ")  # covers DEC
     if raj is not None and decj is not None:
-        return SkyCoord(ra=raj * u.rad, dec=decj * u.rad, frame=ICRS())
+        ra_hours = (raj * u.rad).to(u.hourangle).value
+        dec_deg = (decj * u.rad).to(u.deg).value
+
+        # Attempt PM propagation
+        pmra = _val_aliases(psr, "PMRA")  # mas/yr
+        pmdec = _val_aliases(psr, "PMDEC")  # mas/yr
+        posepoch_mjd = _val_aliases(psr, "POSEPOCH")  # MJD
+
+        ra_hours_j2000, dec_deg_j2000 = _propagate_equatorial_to_j2000(
+            ra_hours, dec_deg, pmra, pmdec, posepoch_mjd
+        )
+        return SkyCoord(
+            ra=ra_hours_j2000 * u.hourangle, dec=dec_deg_j2000 * u.deg, frame=ICRS()
+        )
 
     # Ecliptic variants (in radians)
-    lam = _val("LAMBDA") or _val("ELONG")
-    bet = _val("BETA") or _val("ELAT")
+    lam = _val_aliases(psr, "ELONG")  # covers LAMBDA
+    bet = _val_aliases(psr, "ELAT")  # covers BETA
     if lam is not None and bet is not None:
+        lam_deg = (lam * u.rad).to(u.deg).value
+        bet_deg = (bet * u.rad).to(u.deg).value
+
+        pmelong = _val_aliases(psr, "PMELONG")  # covers PMLAMBDA
+        pmelat = _val_aliases(psr, "PMELAT")  # covers PMBETA
+        posepoch_mjd = _val_aliases(psr, "POSEPOCH")
+
+        lam_deg_j2000, bet_deg_j2000 = _propagate_ecliptic_to_j2000(
+            lam_deg, bet_deg, pmelong, pmelat, posepoch_mjd
+        )
         c = SkyCoord(
-            lon=lam * u.rad,
-            lat=bet * u.rad,
+            lon=lam_deg_j2000 * u.deg,
+            lat=bet_deg_j2000 * u.deg,
             distance=1 * u.pc,
-            frame=BarycentricTrueEcliptic(equinox=Time("J2000")),
+            frame=BarycentricTrueEcliptic(equinox=J2000_TIME),
         )
         return c.transform_to(ICRS())
 
     # FK4 B1950 fallback (rare)
-    ra_b = _val("RA")
-    dec_b = _val("DEC")
+    ra_b = _val_aliases(psr, "RA")
+    dec_b = _val_aliases(psr, "DEC")
     if ra_b is not None and dec_b is not None:
         c_fk4 = SkyCoord(
             ra=ra_b * u.rad, dec=dec_b * u.rad, frame=FK4(equinox=Time("B1950"))
@@ -222,8 +227,10 @@ def _skycoord_from_enterprise(psr: Any) -> SkyCoord:
 
 
 def bj_name_from_pulsar(psr_obj: Any, name_type: str = "J") -> str:
-    """
-    Generate canonical B-name or J-name from pulsar object coordinates.
+    """Generate canonical B-name or J-name from pulsar object coordinates.
+
+    Coordinates are normalized to J2000 using POSEPOCH + proper motion when available
+    before formatting the name, ensuring epoch-stable canonical naming.
 
     Supports multiple pulsar object types:
     - PINT TimingModel
@@ -269,6 +276,36 @@ def bj_name_from_pulsar(psr_obj: Any, name_type: str = "J") -> str:
         return _format_b_name_from_icrs(c_fk4)
     else:
         return _format_j_name_from_icrs(c_icrs)
+
+
+# ============================================================================
+# ALIAS-DRIVEN PARAMETER ACCESS
+# ============================================================================
+
+
+def _get_first_par_value_by_aliases(
+    parfile_dict: Dict[str, str], canonical_param: str
+) -> Optional[str]:
+    """Return first non-empty value among all aliases for a canonical parameter.
+
+    This leverages PINT's alias map so that we accept ELONG/LAMBDA, ELAT/BETA,
+    PMELONG/PMLAMBDA, PMELAT/PMBETA, RAJ/RA, DECJ/DEC, etc., without hard-coding names.
+    """
+    for key in get_aliases_for_parameter(canonical_param):
+        val = parfile_dict.get(key)
+        if val:
+            return val
+    return None
+
+
+def _get_model_quantity(model, canonical_name: str):
+    """Get a model parameter's quantity by its canonical name; None if missing/empty."""
+    if (
+        hasattr(model, canonical_name)
+        and getattr(model, canonical_name).value is not None
+    ):
+        return getattr(model, canonical_name).quantity
+    return None
 
 
 # ============================================================================
@@ -319,29 +356,157 @@ def _parse_angle_string_optimized(angle_str: str) -> Optional[float]:
         return None
 
 
+def _parse_float_optimized(value: Optional[str]) -> Optional[float]:
+    """Parse a float from a simple string; return None on failure.
+
+    The optimized parfile parser already strips uncertainty/fit columns,
+    so we can safely attempt a plain float conversion.
+    """
+    try:
+        if value is None or value == "":
+            return None
+        return float(value)
+    except Exception:
+        return None
+
+
+def _get_pm_equatorial_masyr_optimized(
+    parfile_dict: Dict[str, str],
+) -> Tuple[Optional[float], Optional[float]]:
+    """Return (PMRA, PMDEC) in mas/yr if available via aliases; otherwise (None, None).
+
+    Conventions: PMRA is μ_α cosδ (mas/yr), PMDEC is μ_δ (mas/yr).
+    """
+    pmra_val = _get_first_par_value_by_aliases(parfile_dict, "PMRA")
+    pmdec_val = _get_first_par_value_by_aliases(parfile_dict, "PMDEC")
+    return _parse_float_optimized(pmra_val), _parse_float_optimized(pmdec_val)
+
+
+def _get_pm_ecliptic_masyr_optimized(
+    parfile_dict: Dict[str, str],
+) -> Tuple[Optional[float], Optional[float]]:
+    """Return (PMELONG, PMELAT) in mas/yr if available via aliases; otherwise (None, None).
+
+    Conventions: PMELONG is μ_λ cosβ (mas/yr), PMELAT is μ_β (mas/yr).
+    """
+    pm_lon_val = _get_first_par_value_by_aliases(
+        parfile_dict, "PMELONG"
+    )  # covers PMLAMBDA
+    pm_lat_val = _get_first_par_value_by_aliases(
+        parfile_dict, "PMELAT"
+    )  # covers PMBETA
+    return _parse_float_optimized(pm_lon_val), _parse_float_optimized(pm_lat_val)
+
+
+def _propagate_equatorial_to_j2000(
+    ra_hours: float,
+    dec_deg: float,
+    pm_ra_cosdec_masyr: Optional[float],
+    pm_dec_masyr: Optional[float],
+    posepoch_mjd: Optional[float],
+) -> Tuple[float, float]:
+    """Propagate an equatorial position from POSEPOCH to J2000 using small-angle spherical propagation.
+
+    Args:
+        ra_hours: Right ascension in hours at POSEPOCH.
+        dec_deg: Declination in degrees at POSEPOCH.
+        pm_ra_cosdec_masyr: μ_α cosδ in mas/yr (None to skip).
+        pm_dec_masyr: μ_δ in mas/yr (None to skip).
+        posepoch_mjd: POSEPOCH in MJD (None to skip).
+
+    Returns:
+        (ra_hours_at_J2000, dec_deg_at_J2000)
+    """
+    if pm_ra_cosdec_masyr is None or pm_dec_masyr is None or posepoch_mjd is None:
+        return ra_hours, dec_deg
+
+    dt_yr = (J2000_TIME - Time(posepoch_mjd, format="mjd")).to_value("yr")
+    if dt_yr == 0:
+        return ra_hours, dec_deg
+
+    dec_rad = np.deg2rad(dec_deg)
+    dra_deg = (pm_ra_cosdec_masyr / np.cos(dec_rad)) * dt_yr * MAS_TO_DEG
+    ddec_deg = pm_dec_masyr * dt_yr * MAS_TO_DEG
+
+    ra_deg_new = (ra_hours * 15.0 + dra_deg) % 360.0
+    dec_deg_new = dec_deg + ddec_deg
+    return ra_deg_new / 15.0, dec_deg_new
+
+
+def _propagate_ecliptic_to_j2000(
+    lon_deg: float,
+    lat_deg: float,
+    pm_lon_coslat_masyr: Optional[float],
+    pm_lat_masyr: Optional[float],
+    posepoch_mjd: Optional[float],
+) -> Tuple[float, float]:
+    """Propagate an ecliptic position from POSEPOCH to J2000 using small-angle spherical propagation.
+
+    Args:
+        lon_deg: Ecliptic longitude (deg) at POSEPOCH.
+        lat_deg: Ecliptic latitude (deg) at POSEPOCH.
+        pm_lon_coslat_masyr: μ_λ cosβ in mas/yr (None to skip).
+        pm_lat_masyr: μ_β in mas/yr (None to skip).
+        posepoch_mjd: POSEPOCH in MJD (None to skip).
+
+    Returns:
+        (lon_deg_at_J2000, lat_deg_at_J2000)
+    """
+    if pm_lon_coslat_masyr is None or pm_lat_masyr is None or posepoch_mjd is None:
+        return lon_deg, lat_deg
+
+    dt_yr = (J2000_TIME - Time(posepoch_mjd, format="mjd")).to_value("yr")
+    if dt_yr == 0:
+        return lon_deg, lat_deg
+
+    lat_rad = np.deg2rad(lat_deg)
+    dlon_deg = (pm_lon_coslat_masyr / np.cos(lat_rad)) * dt_yr * MAS_TO_DEG
+    dlat_deg = pm_lat_masyr * dt_yr * MAS_TO_DEG
+
+    lon_deg_new = (lon_deg + dlon_deg) % 360.0
+    lat_deg_new = lat_deg + dlat_deg
+    return lon_deg_new, lat_deg_new
+
+
 def _extract_equatorial_coordinates_optimized(
     parfile_dict: Dict[str, str],
 ) -> Tuple[Optional[float], Optional[float]]:
-    """Extract RAJ/DECJ coordinates (optimized version)."""
+    """Extract RAJ/DECJ (via aliases) and propagate from POSEPOCH to J2000 if PM/POSEPOCH exist.
+
+    Returns RA (hours) and DEC (degrees) at J2000 when propagation is possible,
+    otherwise returns the catalogued values. Output coordinates are suitable for
+    canonical naming and cross-PTA matching.
+    """
     try:
-        # Try RAJ/DECJ first, then RA/DEC aliases
-        raj = parfile_dict.get("RAJ") or parfile_dict.get("RA")
-        decj = parfile_dict.get("DECJ") or parfile_dict.get("DEC")
+        # Use alias map to accept RAJ/RA and DECJ/DEC
+        raj = _get_first_par_value_by_aliases(parfile_dict, "RAJ")
+        decj = _get_first_par_value_by_aliases(parfile_dict, "DECJ")
 
         if not raj or not decj:
             return None, None
 
-        # Parse RA (format: HH:MM:SS.SSSS or HH:MM:SS)
         ra_hours = _parse_ra_string_optimized(raj)
-        if ra_hours is None:
-            return None, None
-
-        # Parse DEC (format: ±DD:MM:SS.SSSS or ±DD:MM:SS)
         dec_deg = _parse_dec_string_optimized(decj)
-        if dec_deg is None:
+        if ra_hours is None or dec_deg is None:
             return None, None
 
-        return ra_hours, dec_deg
+        # Equatorial PM + POSEPOCH extraction
+        pmra, pmdec = _get_pm_equatorial_masyr_optimized(parfile_dict)
+        posepoch_mjd = _parse_float_optimized(parfile_dict.get("POSEPOCH"))
+
+        # Issue warning if PM/POSEPOCH missing (epoch-stable naming requires them)
+        if pmra is None or pmdec is None or posepoch_mjd is None:
+            logger.warning(
+                "Missing PMRA/PMDEC or POSEPOCH in parfile. "
+                "Using catalogued position without proper motion propagation. "
+                "Canonical naming may be unstable across epochs."
+            )
+
+        # Propagate to J2000 if possible
+        ra_hours_j2000, dec_deg_j2000 = _propagate_equatorial_to_j2000(
+            ra_hours, dec_deg, pmra, pmdec, posepoch_mjd
+        )
+        return ra_hours_j2000, dec_deg_j2000
 
     except Exception:
         return None, None
@@ -350,30 +515,47 @@ def _extract_equatorial_coordinates_optimized(
 def _extract_ecliptic_coordinates_optimized(
     parfile_dict: Dict[str, str],
 ) -> Tuple[Optional[float], Optional[float]]:
-    """Extract ecliptic coordinates and convert to equatorial (optimized version)."""
-    try:
-        # Try LAMBDA/BETA first, then ELONG/ELAT aliases
-        lam = parfile_dict.get("LAMBDA") or parfile_dict.get("ELONG")
-        bet = parfile_dict.get("BETA") or parfile_dict.get("ELAT")
+    """Extract ecliptic coords (via aliases), propagate to J2000 using PM if available, then convert to ICRS.
 
+    Returns RA (hours) and DEC (degrees) at J2000 when possible, otherwise None.
+    """
+    try:
+        # Use alias map to accept ELONG/LAMBDA and ELAT/BETA
+        lam = _get_first_par_value_by_aliases(parfile_dict, "ELONG")
+        bet = _get_first_par_value_by_aliases(parfile_dict, "ELAT")
         if not lam or not bet:
             return None, None
 
-        # Parse ecliptic coordinates
         lam_deg = _parse_angle_string_optimized(lam)
         bet_deg = _parse_angle_string_optimized(bet)
-
         if lam_deg is None or bet_deg is None:
             return None, None
 
-        # Convert ecliptic to equatorial
-        c_ecl = SkyCoord(
-            lon=lam_deg * u.deg,
-            lat=bet_deg * u.deg,
-            distance=1 * u.pc,
-            frame=BarycentricTrueEcliptic(equinox=Time("J2000")),
+        # Ecliptic PM + POSEPOCH extraction
+        pmelong, pmelat = _get_pm_ecliptic_masyr_optimized(parfile_dict)
+        posepoch_mjd = _parse_float_optimized(parfile_dict.get("POSEPOCH"))
+
+        # Issue warning if PM/POSEPOCH missing (epoch-stable naming requires them)
+        if pmelong is None or pmelat is None or posepoch_mjd is None:
+            logger.warning(
+                "Missing PMELONG/PMELAT or POSEPOCH in parfile. "
+                "Using catalogued position without proper motion propagation. "
+                "Canonical naming may be unstable across epochs."
+            )
+
+        # Propagate ecliptic coords to J2000 if possible
+        lam_deg_j2000, bet_deg_j2000 = _propagate_ecliptic_to_j2000(
+            lam_deg, bet_deg, pmelong, pmelat, posepoch_mjd
         )
-        c_icrs = c_ecl.transform_to(ICRS())
+
+        # Convert ecliptic (J2000) -> ICRS (J2000)
+        c_ecl_j2000 = SkyCoord(
+            lon=lam_deg_j2000 * u.deg,
+            lat=bet_deg_j2000 * u.deg,
+            distance=1 * u.pc,
+            frame=BarycentricTrueEcliptic(equinox=J2000_TIME),
+        )
+        c_icrs = c_ecl_j2000.transform_to(ICRS())
 
         return c_icrs.ra.to(u.hourangle).value, c_icrs.dec.to(u.deg).value
 
