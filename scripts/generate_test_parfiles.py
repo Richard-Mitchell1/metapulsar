@@ -391,71 +391,57 @@ def generate_same_position_large_pm_different_posepoch():
     at different epochs when proper motion exists. After normalization to J2000,
     these should produce different coordinates (and different J-names with large PM).
 
-    Changes POSEPOCH incrementally with refits, but keeps position fixed to simulate
-    the error where position wasn't updated for the new epoch.
+    Loads the same pulsar twice, changes ONLY POSEPOCH in the second one (no refitting).
     """
     print(
         "Generating test_same_position_large_pm_epoch1_54500.par and test_same_position_large_pm_epoch2_56000.par..."
     )
 
-    # Load and prepare
-    psr = T.tempopulsar(str(BASE_PAR), str(BASE_TIM))
-    LT.make_ideal(psr)
-    LT.add_efac(psr, efac=1.0, seed=1243)
+    # Load and prepare psr_a (epoch 1)
+    psr_a = T.tempopulsar(str(BASE_PAR), str(BASE_TIM))
+    LT.make_ideal(psr_a)
+    LT.add_efac(psr_a, efac=1.0, seed=1243)
 
     # Set large PM values for testing
     pmra_val = -2.7
     pmdec_val = (
         15000.0  # Large PM for testing - ensures coordinate difference > 1 arcmin
     )
-    psr["PMRA"].val = pmra_val
-    psr["PMDEC"].val = pmdec_val
+    psr_a["PMRA"].val = pmra_val
+    psr_a["PMDEC"].val = pmdec_val
 
     # Set epoch 1
-    psr["POSEPOCH"].val = 54500.0
-    psr["PEPOCH"].val = 54500.0
-    psr.fit()
-
-    # Store position at epoch 1 (this will be kept fixed for epoch 2 - simulating the error)
-    ra1_rad = psr["RAJ"].val
-    dec1_rad = psr["DECJ"].val
+    psr_a["POSEPOCH"].val = 54500.0
+    psr_a["PEPOCH"].val = 54500.0
+    psr_a.fit()
 
     # Save epoch 1 parfile
-    psr.savepar(str(OUTPUT_DIR / "test_same_position_large_pm_epoch1_54500.par"))
+    psr_a.savepar(str(OUTPUT_DIR / "test_same_position_large_pm_epoch1_54500.par"))
 
-    # For epoch 2, fix the position (simulating error where position wasn't updated)
-    # but incrementally change POSEPOCH with refits to maintain timing solution coherence
-    psr["RAJ"].fit = False  # Fix position to simulate error
-    psr["DECJ"].fit = False
-    psr["PMRA"].fit = False  # Also fix PM
-    psr["PMDEC"].fit = False
+    # Load the same pulsar again as psr_b
+    psr_b = T.tempopulsar(str(BASE_PAR), str(BASE_TIM))
+    LT.make_ideal(psr_b)
+    LT.add_efac(psr_b, efac=1.0, seed=1243)  # Same seed for consistency
 
-    # Step size: 100 days (small enough to maintain coherence)
-    step_size_days = 100.0
-    start_epoch = 54500.0
-    end_epoch = 56000.0
-    current_epoch = start_epoch
+    # Set the same PM values
+    psr_b["PMRA"].val = pmra_val
+    psr_b["PMDEC"].val = pmdec_val
 
-    # Incrementally change POSEPOCH and refit (position stays fixed)
-    while current_epoch < end_epoch:
-        next_epoch = min(current_epoch + step_size_days, end_epoch)
-        psr["POSEPOCH"].val = next_epoch
-        psr["PEPOCH"].val = next_epoch
-        psr.fit()  # Refit at each step to maintain coherence (position stays fixed)
-        current_epoch = next_epoch
+    # Set epoch 1 and fit to get the same position as psr_a
+    psr_b["POSEPOCH"].val = 54500.0
+    psr_b["PEPOCH"].val = 54500.0
+    psr_b.fit()
 
-    # Verify position stayed the same (error case)
-    assert (
-        abs(psr["RAJ"].val - ra1_rad) < 1e-6
-    ), "Position should stay fixed (error case)"
-    assert (
-        abs(psr["DECJ"].val - dec1_rad) < 1e-6
-    ), "Position should stay fixed (error case)"
-    assert (
-        abs(psr["POSEPOCH"].val - 56000.0) < 0.1
-    ), f"Final POSEPOCH should be 56000.0, got {psr['POSEPOCH'].val}"
+    # Verify positions match
+    assert abs(psr_b["RAJ"].val - psr_a["RAJ"].val) < 1e-8, "Positions should match"
+    assert abs(psr_b["DECJ"].val - psr_a["DECJ"].val) < 1e-8, "Positions should match"
 
-    psr.savepar(str(OUTPUT_DIR / "test_same_position_large_pm_epoch2_56000.par"))
+    # Change ONLY POSEPOCH (no refitting, nothing else)
+    psr_b["POSEPOCH"].val = 56000.0
+    psr_b["PEPOCH"].val = 56000.0
+
+    # Save epoch 2 parfile (same position, different POSEPOCH - error case)
+    psr_b.savepar(str(OUTPUT_DIR / "test_same_position_large_pm_epoch2_56000.par"))
 
     print("  ✓ Generated")
 
