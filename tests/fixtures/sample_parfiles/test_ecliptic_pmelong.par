@@ -1,0 +1,29 @@
+PSRJ           J1857+0943
+ELONG 286.8597    1
+ELAT 32.3214    1
+F0             186.49408099999959632     1  2.5521569653526659975e-13
+F1             -1.2300002631974114366e-15 1  2.1060608891091004135e-21
+PEPOCH         54500                       
+POSEPOCH       54500                       
+DMEPOCH        54500                       
+DM             13.3                        
+PMELONG -2.7            1
+PMELAT -5.5            1
+TZRMJD         50000.000000004944287       
+TZRFRQ         1400                     
+TZRSITE        gbt   
+TRES           91.695       
+EPHVER         5                           
+CLK            TT(TAI)
+UNITS          TCB
+TIMEEPH        IF99
+DILATEFREQ     Y
+PLANET_SHAPIRO Y
+T2CMETHOD      IAU2000B
+NE_SW          4.000
+CORRECT_TROPOSPHERE  Y
+EPHEM          DE405
+NITS           1
+NTOA           0
+CHI2R          nan 0
+TNsubtractPoly 1
