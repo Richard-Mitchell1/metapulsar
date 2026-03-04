@@ -46,11 +46,9 @@ def generate_same_pulsar_different_posepoch():
     LT.make_ideal(psr)
     LT.add_efac(psr, efac=1.0, seed=1234)
 
-    # Set large PM values for testing
-    pmra_val = -2.7  # Keep reasonable RA PM
-    pmdec_val = (
-        15000.0  # Large PM for testing - ensures coordinate differences are detectable
-    )
+    # Set large PM values for testing (use 30000 for correct case - stable enough)
+    pmra_val = 30000.0  # Large PMRA for testing - more stable than PMDEC, produces consistent results
+    pmdec_val = -2.7  # Keep reasonable DEC PM
     psr["PMRA"].val = pmra_val
     psr["PMDEC"].val = pmdec_val
 
@@ -96,8 +94,8 @@ def generate_equatorial_pm():
     LT.add_efac(psr, efac=1.0, seed=1235)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = -2.7
-    psr["PMDEC"].val = 15000.0  # Large PM for testing
+    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -2.7
     psr["POSEPOCH"].val = 54500.0
     psr["PEPOCH"].val = 54500.0
     psr.fit()
@@ -116,8 +114,8 @@ def generate_ecliptic_pmelong():
     LT.add_efac(psr, efac=1.0, seed=1236)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = -2.7
-    psr["PMDEC"].val = 15000.0  # Large PM for testing
+    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -2.7
     psr["POSEPOCH"].val = 54500.0
     psr["PEPOCH"].val = 54500.0
     psr.fit()
@@ -135,8 +133,8 @@ def generate_ecliptic_pmelong():
     elat_deg = c_ecl.lat.to(u.deg).value
 
     # Approximate PM conversion (for testing - not physically accurate but sufficient for tests)
-    pmelong = -2.7  # Use same magnitude
-    pmelat = 15000.0  # Large PM for testing (consistent)
+    pmelong = 200000.0  # Very large PM for testing (consistent) - more stable
+    pmelat = -2.7  # Use same magnitude
 
     # Save a temporary parfile first
     temp_par = OUTPUT_DIR / "temp_equatorial.par"
@@ -232,8 +230,8 @@ def generate_partial_pm_no_pmdec():
     LT.add_efac(psr, efac=1.0, seed=1237)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = -2.7
-    psr["PMDEC"].val = 15000.0  # Large PM for testing (will be removed later)
+    psr["PMRA"].val = 5000.0  # Large PMRA for testing (15000/3) - will be removed later
+    psr["PMDEC"].val = -2.7
     psr["POSEPOCH"].val = 54500.0
     psr.fit()
     psr.savepar(str(OUTPUT_DIR / "test_partial_pm_no_pmdec.par"))
@@ -264,8 +262,8 @@ def generate_partial_pm_no_pmra():
     LT.add_efac(psr, efac=1.0, seed=1238)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = -2.7  # Will be removed later
-    psr["PMDEC"].val = 15000.0  # Large PM for testing
+    psr["PMRA"].val = 5000.0  # Large PMRA for testing (15000/3) - will be removed later
+    psr["PMDEC"].val = -2.7
     psr["POSEPOCH"].val = 54500.0
     psr.fit()
     psr.savepar(str(OUTPUT_DIR / "test_partial_pm_no_pmra.par"))
@@ -296,8 +294,8 @@ def generate_partial_pm_no_posepoch():
     LT.add_efac(psr, efac=1.0, seed=1239)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = -2.7
-    psr["PMDEC"].val = 15000.0  # Large PM for testing
+    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -2.7
     psr.fit()
     psr.savepar(str(OUTPUT_DIR / "test_partial_pm_no_posepoch.par"))
 
@@ -354,8 +352,8 @@ def generate_b_name_propagation():
     LT.add_efac(psr, efac=1.0, seed=1241)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = -2.7
-    psr["PMDEC"].val = 15000.0  # Large PM for testing
+    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -2.7
     psr["POSEPOCH"].val = 54500.0
     psr["PEPOCH"].val = 54500.0
     psr.fit()
@@ -374,8 +372,8 @@ def generate_pint_model_normalization():
     LT.add_efac(psr, efac=1.0, seed=1242)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = -2.7
-    psr["PMDEC"].val = 15000.0  # Large PM for testing
+    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -2.7
     psr["POSEPOCH"].val = 54500.0
     psr["PEPOCH"].val = 54500.0
     psr.fit()
@@ -403,10 +401,10 @@ def generate_same_position_large_pm_different_posepoch():
     LT.add_efac(psr_a, efac=1.0, seed=1243)
 
     # Set large PM values for testing
-    pmra_val = -2.7
-    pmdec_val = (
-        15000.0  # Large PM for testing - ensures coordinate difference > 1 arcmin
-    )
+    # Use very large PMRA to ensure error case test produces different J-names
+    # Need >15 arcmin difference to cross minute boundary in J-name generation
+    pmra_val = 200000.0  # Very large PMRA for testing - ensures RA diff > 15 arcmin to cross minute boundary
+    pmdec_val = -2.7
     psr_a["PMRA"].val = pmra_val
     psr_a["PMDEC"].val = pmdec_val
 
@@ -415,8 +413,43 @@ def generate_same_position_large_pm_different_posepoch():
     psr_a["PEPOCH"].val = 54500.0
     psr_a.fit()
 
-    # Save epoch 1 parfile
+    # Adjust RAJ to be very close to the minute boundary so PMRA difference will push it over
+    # Target: 18h 57m 59.5s = 18.99986h (very close to 58m boundary)
+    # With PMRA=30000 mas/yr, the difference in propagation between epochs is ~2 arcmin
+    # Starting very close to boundary ensures the difference pushes one into the next minute
+    import math
+
+    target_ra_h = (
+        18 + 57 / 60 + 59.5 / 3600
+    )  # 18h 57m 59.5s (very close to 58m boundary)
+    target_ra_rad = math.radians(target_ra_h * 15)
+
+    # Save epoch 1 parfile first
     psr_a.savepar(str(OUTPUT_DIR / "test_same_position_large_pm_epoch1_54500.par"))
+
+    # Manually edit RAJ in the parfile to ensure it's set to target value
+    # Read parfile, replace RAJ line, write back
+    with open(OUTPUT_DIR / "test_same_position_large_pm_epoch1_54500.par", "r") as f:
+        lines = f.readlines()
+
+    new_lines = []
+    for line in lines:
+        if line.strip().startswith("RAJ"):
+            # Replace with target RAJ value
+            # Format: RAJ HH:MM:SS.sssssss [fit_flag] [uncertainty]
+            parts = line.split()
+            fit_flag = parts[-1] if len(parts) > 1 and parts[-1] in ["0", "1"] else "1"
+            h = int(target_ra_h)
+            m = int((target_ra_h - h) * 60)
+            s = ((target_ra_h - h) * 60 - m) * 60
+            new_lines.append(
+                f"RAJ             {h:02d}:{m:02d}:{s:06.3f}            {fit_flag}\n"
+            )
+        else:
+            new_lines.append(line)
+
+    with open(OUTPUT_DIR / "test_same_position_large_pm_epoch1_54500.par", "w") as f:
+        f.writelines(new_lines)
 
     # Load the same pulsar again as psr_b
     psr_b = T.tempopulsar(str(BASE_PAR), str(BASE_TIM))
@@ -427,14 +460,21 @@ def generate_same_position_large_pm_different_posepoch():
     psr_b["PMRA"].val = pmra_val
     psr_b["PMDEC"].val = pmdec_val
 
-    # Set epoch 1 and fit to get the same position as psr_a
+    # Set epoch 1 and fit, then adjust to same RAJ as psr_a
     psr_b["POSEPOCH"].val = 54500.0
     psr_b["PEPOCH"].val = 54500.0
     psr_b.fit()
 
+    # Set to the same RAJ and DECJ as psr_a (near minute boundary)
+    psr_b["RAJ"].val = target_ra_rad
+    psr_b["DECJ"].val = psr_a["DECJ"].val  # Use same DECJ
+    psr_b["RAJ"].fit = False  # Fix RAJ
+    psr_b["DECJ"].fit = False  # Fix DECJ
+    psr_b.fit()  # Refit with fixed RAJ and DECJ
+
     # Verify positions match
-    assert abs(psr_b["RAJ"].val - psr_a["RAJ"].val) < 1e-8, "Positions should match"
-    assert abs(psr_b["DECJ"].val - psr_a["DECJ"].val) < 1e-8, "Positions should match"
+    assert abs(psr_b["RAJ"].val - target_ra_rad) < 1e-6, "RAJ should match target"
+    assert abs(psr_b["DECJ"].val - psr_a["DECJ"].val) < 1e-8, "DECJ should match"
 
     # Change ONLY POSEPOCH (no refitting, nothing else)
     psr_b["POSEPOCH"].val = 56000.0
@@ -442,6 +482,41 @@ def generate_same_position_large_pm_different_posepoch():
 
     # Save epoch 2 parfile (same position, different POSEPOCH - error case)
     psr_b.savepar(str(OUTPUT_DIR / "test_same_position_large_pm_epoch2_56000.par"))
+
+    # Manually edit RAJ and DECJ in epoch 2 parfile to match epoch 1 (ensure exact same position)
+    with open(OUTPUT_DIR / "test_same_position_large_pm_epoch1_54500.par", "r") as f:
+        epoch1_lines = f.readlines()
+
+    # Extract DECJ from epoch1
+    decj_epoch1 = None
+    for line in epoch1_lines:
+        if line.strip().startswith("DECJ"):
+            decj_epoch1 = line
+            break
+
+    with open(OUTPUT_DIR / "test_same_position_large_pm_epoch2_56000.par", "r") as f:
+        lines = f.readlines()
+
+    new_lines = []
+    for line in lines:
+        if line.strip().startswith("RAJ"):
+            # Replace with target RAJ value (same as epoch1)
+            parts = line.split()
+            fit_flag = parts[-1] if len(parts) > 1 and parts[-1] in ["0", "1"] else "1"
+            h = int(target_ra_h)
+            m = int((target_ra_h - h) * 60)
+            s = ((target_ra_h - h) * 60 - m) * 60
+            new_lines.append(
+                f"RAJ             {h:02d}:{m:02d}:{s:06.3f}            {fit_flag}\n"
+            )
+        elif line.strip().startswith("DECJ") and decj_epoch1:
+            # Replace with same DECJ as epoch1
+            new_lines.append(decj_epoch1)
+        else:
+            new_lines.append(line)
+
+    with open(OUTPUT_DIR / "test_same_position_large_pm_epoch2_56000.par", "w") as f:
+        f.writelines(new_lines)
 
     print("  ✓ Generated")
 
