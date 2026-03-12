@@ -47,10 +47,13 @@ def generate_same_pulsar_different_posepoch():
     LT.add_efac(psr, efac=1.0, seed=1234)
 
     # Set large PM values for testing (use 30000 for correct case - stable enough)
-    pmra_val = 30000.0  # Large PMRA for testing - more stable than PMDEC, produces consistent results
-    pmdec_val = -2.7  # Keep reasonable DEC PM
+    pmra_val = 100000.0  # Large PMRA for testing - more stable than PMDEC, produces consistent results
+    pmdec_val = -100.0  # Keep reasonable DEC PM
     psr["PMRA"].val = pmra_val
     psr["PMDEC"].val = pmdec_val
+    psr["PMRA"].fit = False
+    psr["PMDEC"].fit = False
+    # FAILED tests/test_position_helpers.py::TestProperMotionJ2000Normalization::test_same_pulsar_different_posepoch_produces_same_j_name - AssertionError: DEC should match after normalization (within second-order tolerance): 9.766314576711078 != 9.78916849029951, diff=0.0228539136deg
 
     # Save epoch 1 (54500)
     psr["POSEPOCH"].val = 54500.0
@@ -94,8 +97,8 @@ def generate_equatorial_pm():
     LT.add_efac(psr, efac=1.0, seed=1235)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
-    psr["PMDEC"].val = -2.7
+    psr["PMRA"].val = 100000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -100.0
     psr["POSEPOCH"].val = 54500.0
     psr["PEPOCH"].val = 54500.0
     psr.fit()
@@ -114,8 +117,8 @@ def generate_ecliptic_pmelong():
     LT.add_efac(psr, efac=1.0, seed=1236)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
-    psr["PMDEC"].val = -2.7
+    psr["PMRA"].val = 100000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -100.0
     psr["POSEPOCH"].val = 54500.0
     psr["PEPOCH"].val = 54500.0
     psr.fit()
@@ -133,8 +136,8 @@ def generate_ecliptic_pmelong():
     elat_deg = c_ecl.lat.to(u.deg).value
 
     # Approximate PM conversion (for testing - not physically accurate but sufficient for tests)
-    pmelong = 200000.0  # Very large PM for testing (consistent) - more stable
-    pmelat = -2.7  # Use same magnitude
+    pmelong = 100000.0  # Very large PM for testing (consistent) - more stable
+    pmelat = -100.0  # Use same magnitude
 
     # Save a temporary parfile first
     temp_par = OUTPUT_DIR / "temp_equatorial.par"
@@ -231,7 +234,7 @@ def generate_partial_pm_no_pmdec():
 
     # Set large PM values for testing (consistent across all parfiles)
     psr["PMRA"].val = 5000.0  # Large PMRA for testing (15000/3) - will be removed later
-    psr["PMDEC"].val = -2.7
+    psr["PMDEC"].val = -100.0
     psr["POSEPOCH"].val = 54500.0
     psr.fit()
     psr.savepar(str(OUTPUT_DIR / "test_partial_pm_no_pmdec.par"))
@@ -263,7 +266,7 @@ def generate_partial_pm_no_pmra():
 
     # Set large PM values for testing (consistent across all parfiles)
     psr["PMRA"].val = 5000.0  # Large PMRA for testing (15000/3) - will be removed later
-    psr["PMDEC"].val = -2.7
+    psr["PMDEC"].val = -100.0
     psr["POSEPOCH"].val = 54500.0
     psr.fit()
     psr.savepar(str(OUTPUT_DIR / "test_partial_pm_no_pmra.par"))
@@ -294,8 +297,8 @@ def generate_partial_pm_no_posepoch():
     LT.add_efac(psr, efac=1.0, seed=1239)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
-    psr["PMDEC"].val = -2.7
+    psr["PMRA"].val = 100000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -100.0
     psr.fit()
     psr.savepar(str(OUTPUT_DIR / "test_partial_pm_no_posepoch.par"))
 
@@ -352,8 +355,8 @@ def generate_b_name_propagation():
     LT.add_efac(psr, efac=1.0, seed=1241)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
-    psr["PMDEC"].val = -2.7
+    psr["PMRA"].val = 100000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -100.0
     psr["POSEPOCH"].val = 54500.0
     psr["PEPOCH"].val = 54500.0
     psr.fit()
@@ -372,8 +375,8 @@ def generate_pint_model_normalization():
     LT.add_efac(psr, efac=1.0, seed=1242)
 
     # Set large PM values for testing (consistent across all parfiles)
-    psr["PMRA"].val = 200000.0  # Very large PMRA for testing - more stable than PMDEC
-    psr["PMDEC"].val = -2.7
+    psr["PMRA"].val = 100000.0  # Very large PMRA for testing - more stable than PMDEC
+    psr["PMDEC"].val = -100.0
     psr["POSEPOCH"].val = 54500.0
     psr["PEPOCH"].val = 54500.0
     psr.fit()
@@ -403,8 +406,8 @@ def generate_same_position_large_pm_different_posepoch():
     # Set large PM values for testing
     # Use very large PMRA to ensure error case test produces different J-names
     # Need >15 arcmin difference to cross minute boundary in J-name generation
-    pmra_val = 200000.0  # Very large PMRA for testing - ensures RA diff > 15 arcmin to cross minute boundary
-    pmdec_val = -2.7
+    pmra_val = 100000.0  # Very large PMRA for testing - ensures RA diff > 15 arcmin to cross minute boundary
+    pmdec_val = -100.0
     psr_a["PMRA"].val = pmra_val
     psr_a["PMDEC"].val = pmdec_val
 

@@ -557,9 +557,7 @@ class TestProperMotionJ2000Normalization:
         # Allow for second-order effects: with large PMRA, relative error ~0.1%
         # The propagated position difference has second-order errors proportional to PMRA
         # Set tolerance to account for these effects (scales with PMRA value used)
-        tolerance_hours = (
-            0.02  # ~1080 arcsec, accounts for second-order effects with large PMRA
-        )
+        tolerance_hours = 0.02  # 0.02 arcmin accounts for second-order effects with large PMRA and PMDEC
         assert (
             abs(ra1 - ra2) < tolerance_hours
         ), f"RA should match after normalization (within second-order tolerance): {ra1} != {ra2}, diff={abs(ra1-ra2):.10f}h"
