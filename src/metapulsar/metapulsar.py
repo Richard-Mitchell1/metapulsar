@@ -490,6 +490,7 @@ class MetaPulsar(ep.BasePulsar):
         import astropy.units as u
 
         # Complete units correction matching legacy system
+        # TODO: move this to pint_helpers.py or another suitable location -- RvH
         units_correction = {
             ("elong", "tempo2"): (1.0 * u.second / u.radian).to(u.second / u.deg).value,
             ("elong", "pint"): 1.0,
