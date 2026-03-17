@@ -21,7 +21,7 @@ from astropy.coordinates import (
     ICRS,
     FK4,
     Angle,
-    BarycentricTrueEcliptic,
+    BarycentricMeanEcliptic,
 )
 from astropy.time import Time
 import astropy.units as u
@@ -122,7 +122,7 @@ def _skycoord_from_pint_model(model: Any) -> SkyCoord:
             lon=lam_deg_j2000 * u.deg,
             lat=bet_deg_j2000 * u.deg,
             distance=1 * u.pc,
-            frame=BarycentricTrueEcliptic(equinox=J2000_TIME),
+            frame=BarycentricMeanEcliptic(equinox=J2000_TIME),
         )
         return c_ecl.transform_to(ICRS())
 
@@ -190,7 +190,7 @@ def _skycoord_from_libstempo(psr: Any) -> SkyCoord:
             lon=lam_deg_j2000 * u.deg,
             lat=bet_deg_j2000 * u.deg,
             distance=1 * u.pc,
-            frame=BarycentricTrueEcliptic(equinox=J2000_TIME),
+            frame=BarycentricMeanEcliptic(equinox=J2000_TIME),
         )
         return c.transform_to(ICRS())
 
@@ -553,7 +553,7 @@ def _extract_ecliptic_coordinates_optimized(
             lon=lam_deg_j2000 * u.deg,
             lat=bet_deg_j2000 * u.deg,
             distance=1 * u.pc,
-            frame=BarycentricTrueEcliptic(equinox=J2000_TIME),
+            frame=BarycentricMeanEcliptic(equinox=J2000_TIME),
         )
         c_icrs = c_ecl_j2000.transform_to(ICRS())
 

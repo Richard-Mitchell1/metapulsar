@@ -10,7 +10,7 @@ from io import StringIO
 from dataclasses import dataclass
 
 import astropy.units as u
-from astropy.coordinates import SkyCoord, ICRS, BarycentricTrueEcliptic
+from astropy.coordinates import SkyCoord, ICRS, BarycentricMeanEcliptic
 from astropy.time import Time
 from pint.models.model_builder import ModelBuilder
 
@@ -114,7 +114,7 @@ def libstempo_from_model_equatorial(model) -> LibstempoMock:
 
 def libstempo_from_model_ecliptic(model) -> LibstempoMock:
     """Mock with ELONG/ELAT only (in radians) to hit the ecliptic branch."""
-    c = _icrs_from_model(model).transform_to(BarycentricTrueEcliptic(equinox="J2000"))
+    c = _icrs_from_model(model).transform_to(BarycentricMeanEcliptic(equinox="J2000"))
     mapping = {
         "ELONG": LibstempoParam(c.lon.to(u.rad).value),
         "ELAT": LibstempoParam(c.lat.to(u.rad).value),
