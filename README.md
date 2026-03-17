@@ -67,6 +67,7 @@ print(f"PTA names: {list(metapulsar._pulsars.keys())}")
 - **[Interactive Tutorial](examples/notebooks/using_metapulsar.ipynb)** - Complete usage guide with examples
 - **[API Reference](docs/API_REFERENCE.md)** - Complete API documentation
 - **[Method Description](docs/METHOD_DESCRIPTION.md)** - Detailed description of the direct combination method
+- **[Poster](docs/poster/metapulsar-poster-2025.pdf)** - MetaPulsar poster (2025)
 
 ## Examples
 
@@ -92,6 +93,21 @@ import sys
 loguru.logger.remove()
 loguru.logger.add(sys.stdout, level="DEBUG")
 ```
+
+### CI import error with `pkg_resources`
+
+If CI fails during test collection with an error like
+`ImportError: cannot import name 'Requirement' from 'pkg_resources'`, this
+usually comes from `enterprise-pulsar` importing the legacy `pkg_resources`
+API via setuptools.
+
+Current workaround in this repository:
+- CI installs `setuptools<81` to preserve compatibility with current
+  `enterprise-pulsar` releases.
+
+Long-term plan:
+- Upgrade to a future `enterprise-pulsar` release that removes the
+  `pkg_resources` dependency, then remove the setuptools pin.
 
 ## Dependencies
 

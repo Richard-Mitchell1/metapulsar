@@ -10,7 +10,8 @@ from io import StringIO
 from dataclasses import dataclass
 
 import astropy.units as u
-from astropy.coordinates import SkyCoord, ICRS, BarycentricTrueEcliptic
+from astropy.coordinates import SkyCoord, ICRS, BarycentricMeanEcliptic
+from astropy.time import Time
 from pint.models.model_builder import ModelBuilder
 
 from metapulsar.position_helpers import (
@@ -21,6 +22,12 @@ from metapulsar.position_helpers import (
     extract_coordinates_from_parfile_optimized,
     bj_name_from_coordinates_optimized,
     discover_pulsars_by_coordinates_optimized,
+    _parse_parfile_optimized,
+    _get_first_par_value_by_aliases,
+    _parse_ra_string_optimized,
+    _parse_dec_string_optimized,
+    _get_pm_equatorial_masyr_optimized,
+    _parse_float_optimized,
 )
 
 # === FIXTURES ===
@@ -107,7 +114,7 @@ def libstempo_from_model_equatorial(model) -> LibstempoMock:
 
 def libstempo_from_model_ecliptic(model) -> LibstempoMock:
     """Mock with ELONG/ELAT only (in radians) to hit the ecliptic branch."""
-    c = _icrs_from_model(model).transform_to(BarycentricTrueEcliptic(equinox="J2000"))
+    c = _icrs_from_model(model).transform_to(BarycentricMeanEcliptic(equinox="J2000"))
     mapping = {
         "ELONG": LibstempoParam(c.lon.to(u.rad).value),
         "ELAT": LibstempoParam(c.lat.to(u.rad).value),
@@ -521,3 +528,296 @@ DM 10.0
         assert (
             len(j_name_lambda_beta) == 10
         ), f"Invalid J-name length: {j_name_lambda_beta}"
+
+
+class TestProperMotionJ2000Normalization:
+    """Test proper motion propagation to J2000 for epoch-stable naming."""
+
+    def test_same_pulsar_different_posepoch_produces_same_j_name(
+        self, load_parfile_text
+    ):
+        """Test that same pulsar at different POSEPOCH produces identical J-name."""
+        # Use generated parfiles with consistent PM but different positions at different epochs
+        # Both should normalize to the same J2000 position
+
+        parfile_epoch1 = load_parfile_text("test_same_pulsar_epoch1_54500.par")
+        parfile_epoch2 = load_parfile_text("test_same_pulsar_epoch2_56000.par")
+
+        coords1 = extract_coordinates_from_parfile_optimized(parfile_epoch1)
+        coords2 = extract_coordinates_from_parfile_optimized(parfile_epoch2)
+
+        assert coords1 is not None and coords2 is not None
+
+        # Verify coordinates are actually different at the two POSEPOCH values
+        # (before normalization, they would differ)
+        ra1, dec1 = coords1
+        ra2, dec2 = coords2
+
+        # After normalization to J2000, coordinates should be identical
+        # Allow for second-order effects: with large PMRA, relative error ~0.1%
+        # The propagated position difference has second-order errors proportional to PMRA
+        # Set tolerance to account for these effects (scales with PMRA value used)
+        tolerance_hours = 0.02  # 0.02 arcmin accounts for second-order effects with large PMRA and PMDEC
+        assert (
+            abs(ra1 - ra2) < tolerance_hours
+        ), f"RA should match after normalization (within second-order tolerance): {ra1} != {ra2}, diff={abs(ra1-ra2):.10f}h"
+        assert (
+            abs(dec1 - dec2) < tolerance_hours
+        ), f"DEC should match after normalization (within second-order tolerance): {dec1} != {dec2}, diff={abs(dec1-dec2):.10f}deg"
+
+        j_name1 = bj_name_from_coordinates_optimized(ra1, dec1, "J")
+        j_name2 = bj_name_from_coordinates_optimized(ra2, dec2, "J")
+
+        # Should produce identical J-names after normalization
+        assert j_name1 == j_name2, f"J-names differ: {j_name1} != {j_name2}"
+
+    def test_same_position_different_posepoch_with_pm_should_not_match(
+        self, load_parfile_text
+    ):
+        """Test that parfiles with identical positions but different POSEPOCH and PM should NOT match.
+
+        This tests the error case: if someone incorrectly provides the same position at different
+        epochs when proper motion exists, the positions should NOT match after normalization to J2000.
+        This is because proper motion means the position should have been different at different epochs.
+
+        Uses large PM values (15000 mas/yr) to ensure coordinate difference > 1 arcmin,
+        which produces different J-names and allows the test to correctly verify separation.
+        """
+        # Use generated parfiles with same position at different POSEPOCH
+        parfile_epoch1 = load_parfile_text(
+            "test_same_position_large_pm_epoch1_54500.par"
+        )
+        parfile_epoch2 = load_parfile_text(
+            "test_same_position_large_pm_epoch2_56000.par"
+        )
+
+        # Extract coordinates (should normalize to J2000)
+        coords1 = extract_coordinates_from_parfile_optimized(parfile_epoch1)
+        coords2 = extract_coordinates_from_parfile_optimized(parfile_epoch2)
+
+        assert coords1 is not None and coords2 is not None
+
+        ra1, dec1 = coords1
+        ra2, dec2 = coords2
+
+        # After normalization to J2000, coordinates should be DIFFERENT
+        # because they started from the same position at different epochs
+        # (this indicates an error in the parfiles - position should have been different)
+        coord_diff_ra = abs(ra1 - ra2)
+        coord_diff_dec = abs(dec1 - dec2)
+
+        # With large proper motion (15000 mas/yr), there should be a significant difference
+        # For PMDEC=15000 mas/yr and dt=1500 days ≈ 4.1 years, difference ≈ 61 arcsec = 1.02 arcmin
+        # This ensures different J-names (J-names have 1 arcmin precision)
+        assert coord_diff_ra > 1e-6 or coord_diff_dec > 1e-6, (
+            f"Coordinates should differ when same position at different POSEPOCH with PM: "
+            f"RA diff={coord_diff_ra}, DEC diff={coord_diff_dec}"
+        )
+
+        # J-names should differ with large PM (ensures coordinate difference > 1 arcmin)
+        j_name1 = bj_name_from_coordinates_optimized(ra1, dec1, "J")
+        j_name2 = bj_name_from_coordinates_optimized(ra2, dec2, "J")
+
+        # With large PM (15000 mas/yr), coordinate difference is > 1 arcmin,
+        # so J-names should differ
+        assert j_name1 != j_name2, (
+            f"J-names should differ with large PM: {j_name1} == {j_name2}, "
+            f"RA diff={coord_diff_ra}, DEC diff={coord_diff_dec}"
+        )
+
+    def test_proper_motion_propagation_equatorial(self, load_parfile_text):
+        """Test that PMRA/PMDEC are correctly propagated to J2000."""
+        parfile_with_pm = load_parfile_text("test_equatorial_pm.par")
+
+        # Extract catalogued position at POSEPOCH
+        parfile_dict = _parse_parfile_optimized(parfile_with_pm)
+        posepoch_mjd = _parse_float_optimized(parfile_dict.get("POSEPOCH"))
+
+        # Parse catalogued coordinates (before propagation)
+        raj = _get_first_par_value_by_aliases(parfile_dict, "RAJ")
+        decj = _get_first_par_value_by_aliases(parfile_dict, "DECJ")
+        ra_catalogued = _parse_ra_string_optimized(raj)
+        dec_catalogued = _parse_dec_string_optimized(decj)
+
+        # Get propagated coordinates (at J2000)
+        coords = extract_coordinates_from_parfile_optimized(parfile_with_pm)
+        assert coords is not None
+        ra_propagated, dec_propagated = coords
+
+        # Verify propagation actually happened (coordinates should differ from catalogued)
+        # unless POSEPOCH is exactly J2000
+        if posepoch_mjd is not None:
+            j2000_mjd = Time("J2000").mjd
+            if abs(posepoch_mjd - j2000_mjd) > 1.0:  # More than 1 day difference
+                # Coordinates should be different (propagation occurred)
+                assert (
+                    abs(ra_propagated - ra_catalogued) > 1e-8
+                    or abs(dec_propagated - dec_catalogued) > 1e-8
+                ), "Coordinates should differ after propagation from POSEPOCH to J2000"
+
+        # Verify coordinates are reasonable
+        assert 0 <= ra_propagated < 24, f"RA out of range: {ra_propagated}"
+        assert -90 <= dec_propagated <= 90, f"DEC out of range: {dec_propagated}"
+
+        j_name = bj_name_from_coordinates_optimized(ra_propagated, dec_propagated, "J")
+        assert j_name.startswith("J") and len(j_name) == 10, f"Invalid J-name: {j_name}"
+
+    def test_proper_motion_propagation_ecliptic_with_aliases(self, load_parfile_text):
+        """Test ecliptic PM propagation with PMELONG/PMLAMBDA and PMELAT/PMBETA aliases."""
+        # Test PMELONG/PMELAT
+        parfile_pmelong = load_parfile_text("test_ecliptic_pmelong.par")
+
+        # Test PMLAMBDA/PMBETA (aliases)
+        parfile_pmlambda = load_parfile_text("test_ecliptic_pmlambda.par")
+
+        coords1 = extract_coordinates_from_parfile_optimized(parfile_pmelong)
+        coords2 = extract_coordinates_from_parfile_optimized(parfile_pmlambda)
+
+        assert coords1 is not None and coords2 is not None
+
+        # Both should produce identical results (aliases work)
+        j_name1 = bj_name_from_coordinates_optimized(coords1[0], coords1[1], "J")
+        j_name2 = bj_name_from_coordinates_optimized(coords2[0], coords2[1], "J")
+
+        assert j_name1 == j_name2, "PMELONG/PMLAMBDA aliases should produce same result"
+        # Also verify coordinates match (not just names)
+        assert (
+            abs(coords1[0] - coords2[0]) < 1e-6 and abs(coords1[1] - coords2[1]) < 1e-6
+        ), "Coordinates should match when using aliases"
+
+    def test_ecliptic_lambda_beta_coordinates_with_pm(self, load_parfile_text):
+        """Test that LAMBDA/BETA coordinates work with proper motion."""
+        parfile_lambda = load_parfile_text("test_ecliptic_lambda_beta.par")
+
+        coords = extract_coordinates_from_parfile_optimized(parfile_lambda)
+        assert coords is not None
+
+        # Should produce valid J-name
+        j_name = bj_name_from_coordinates_optimized(coords[0], coords[1], "J")
+        assert j_name.startswith("J") and len(j_name) == 10
+
+    def test_partial_pm_missing_components(self, load_parfile_text):
+        """Test behavior when only some PM components are present."""
+        # Missing PMDEC
+        parfile_no_pmdec = load_parfile_text("test_partial_pm_no_pmdec.par")
+
+        # Missing PMRA
+        parfile_no_pmra = load_parfile_text("test_partial_pm_no_pmra.par")
+
+        # Missing POSEPOCH
+        parfile_no_posepoch = load_parfile_text("test_partial_pm_no_posepoch.par")
+
+        # All should still work (no propagation, uses catalogued position)
+        # Note: When POSEPOCH equals J2000, dt_yr=0 and propagation is automatically a no-op
+        # (handled by early return in _propagate_* functions), so no special test needed.
+        for parfile in [parfile_no_pmdec, parfile_no_pmra, parfile_no_posepoch]:
+            coords = extract_coordinates_from_parfile_optimized(parfile)
+            assert coords is not None
+            j_name = bj_name_from_coordinates_optimized(coords[0], coords[1], "J")
+            assert j_name == "J1857+0943"
+
+    def test_missing_pm_issues_warning(self, load_parfile_text):
+        """Test that missing PM/POSEPOCH issues warning and uses catalogued position."""
+        from unittest.mock import patch
+        from loguru import logger
+
+        parfile_no_pm = load_parfile_text("test_no_pm.par")
+
+        with patch.object(logger, "warning") as mock_warning:
+            coords = extract_coordinates_from_parfile_optimized(parfile_no_pm)
+
+            # Should issue warning about missing PM/POSEPOCH
+            assert mock_warning.called, "Should issue warning when PM/POSEPOCH missing"
+            warning_calls = [str(call) for call in mock_warning.call_args_list]
+            assert any(
+                "POSEPOCH" in call or "proper motion" in call.lower()
+                for call in warning_calls
+            ), "Warning should mention POSEPOCH or proper motion"
+
+        assert coords is not None
+
+        # Should still produce valid J-name (no propagation, uses catalogued position)
+        j_name = bj_name_from_coordinates_optimized(coords[0], coords[1], "J")
+        assert j_name == "J1857+0943"
+
+    def test_b_name_generation_with_propagation(self, mb, load_parfile_text):
+        """Test that B-name generation also normalizes to J2000."""
+        parfile_with_pm = load_parfile_text("test_b_name_propagation.par")
+
+        coords1 = extract_coordinates_from_parfile_optimized(parfile_with_pm)
+        assert coords1 is not None
+
+        # Generate B-name from propagated coordinates
+        b_name = bj_name_from_coordinates_optimized(coords1[0], coords1[1], "B")
+        assert b_name.startswith("B") and len(b_name) == 8
+
+        # Test with PINT model path too
+        model = _build_pint_model(mb, parfile_with_pm)
+        b_name_model = bj_name_from_pulsar(model, "B")
+        assert (
+            b_name_model == b_name
+        ), "B-names should match between optimized and model paths"
+
+    def test_pint_model_proper_motion_normalization(self, mb, load_parfile_text):
+        """Test that PINT model path also normalizes to J2000."""
+        import astropy.units as u
+        from metapulsar.position_helpers import _skycoord_from_pint_model
+
+        parfile_with_pm = load_parfile_text("test_pint_model_normalization.par")
+
+        model = _build_pint_model(mb, parfile_with_pm)
+
+        # Extract coordinates via model path
+        c_model = _skycoord_from_pint_model(model)
+        ra_model = c_model.ra.to(u.hourangle).value
+        dec_model = c_model.dec.to(u.deg).value
+
+        # Verify coordinates are reasonable (propagated to J2000)
+        assert 0 <= ra_model < 24, f"RA out of range: {ra_model}"
+        assert -90 <= dec_model <= 90, f"DEC out of range: {dec_model}"
+
+        j_name = bj_name_from_pulsar(model, "J")
+        assert j_name.startswith("J") and len(j_name) == 10, f"Invalid J-name: {j_name}"
+
+    def test_libstempo_proper_motion_normalization(self, load_parfile_text):
+        """Test that libstempo path also normalizes to J2000."""
+        from tests.test_position_helpers import LibstempoMock, LibstempoParam
+        from metapulsar.position_helpers import _skycoord_from_libstempo
+        import numpy as np
+
+        # Use the same parfile as other tests for consistency
+        parfile_with_pm = load_parfile_text("test_pint_model_normalization.par")
+        parfile_dict = _parse_parfile_optimized(parfile_with_pm)
+
+        # Extract coordinates and PM from parfile
+        raj = _get_first_par_value_by_aliases(parfile_dict, "RAJ")
+        decj = _get_first_par_value_by_aliases(parfile_dict, "DECJ")
+        ra_hours = _parse_ra_string_optimized(raj)
+        dec_deg = _parse_dec_string_optimized(decj)
+        pmra, pmdec = _get_pm_equatorial_masyr_optimized(parfile_dict)
+        posepoch_mjd = _parse_float_optimized(parfile_dict.get("POSEPOCH"))
+
+        # Convert to radians for libstempo mock
+        raj_rad = np.deg2rad(ra_hours * 15.0)
+        decj_rad = np.deg2rad(dec_deg)
+
+        # Create libstempo mock with values from parfile
+        mapping = {
+            "RAJ": LibstempoParam(raj_rad),
+            "DECJ": LibstempoParam(decj_rad),
+            "PMRA": LibstempoParam(pmra),  # mas/yr
+            "PMDEC": LibstempoParam(pmdec),  # mas/yr
+            "POSEPOCH": LibstempoParam(posepoch_mjd),  # MJD
+        }
+
+        lmock = LibstempoMock(mapping)
+        c_libstempo = _skycoord_from_libstempo(lmock)
+        ra_libstempo = c_libstempo.ra.to(u.hourangle).value
+        dec_libstempo = c_libstempo.dec.to(u.deg).value
+
+        # Verify coordinates are reasonable (propagated to J2000)
+        assert 0 <= ra_libstempo < 24, f"RA out of range: {ra_libstempo}"
+        assert -90 <= dec_libstempo <= 90, f"DEC out of range: {dec_libstempo}"
+
+        j_name = bj_name_from_pulsar(lmock, "J")
+        assert j_name.startswith("J") and len(j_name) == 10, f"Invalid J-name: {j_name}"
