@@ -94,6 +94,21 @@ loguru.logger.remove()
 loguru.logger.add(sys.stdout, level="DEBUG")
 ```
 
+### CI import error with `pkg_resources`
+
+If CI fails during test collection with an error like
+`ImportError: cannot import name 'Requirement' from 'pkg_resources'`, this
+usually comes from `enterprise-pulsar` importing the legacy `pkg_resources`
+API via setuptools.
+
+Current workaround in this repository:
+- CI installs `setuptools<81` to preserve compatibility with current
+  `enterprise-pulsar` releases.
+
+Long-term plan:
+- Upgrade to a future `enterprise-pulsar` release that removes the
+  `pkg_resources` dependency, then remove the setuptools pin.
+
 ## Dependencies
 
 - **Python 3.9+**
