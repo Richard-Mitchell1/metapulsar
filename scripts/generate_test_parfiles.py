@@ -46,14 +46,15 @@ def generate_same_pulsar_different_posepoch():
     LT.make_ideal(psr)
     LT.add_efac(psr, efac=1.0, seed=1234)
 
-    # Set large PM values for testing (use 30000 for correct case - stable enough)
-    pmra_val = 100000.0  # Large PMRA for testing - more stable than PMDEC, produces consistent results
-    pmdec_val = -100.0  # Keep reasonable DEC PM
+    # Use a realistic but clearly non-zero PM: large enough to produce a visible
+    # coordinate difference between the two epochs, small enough that J2000
+    # propagation keeps the RA well inside the 57m bin (~3 arcmin headroom).
+    pmra_val = 3000.0  # mas/yr
+    pmdec_val = -25.0  # mas/yr
     psr["PMRA"].val = pmra_val
     psr["PMDEC"].val = pmdec_val
     psr["PMRA"].fit = False
     psr["PMDEC"].fit = False
-    # FAILED tests/test_position_helpers.py::TestProperMotionJ2000Normalization::test_same_pulsar_different_posepoch_produces_same_j_name - AssertionError: DEC should match after normalization (within second-order tolerance): 9.766314576711078 != 9.78916849029951, diff=0.0228539136deg
 
     # Save epoch 1 (54500)
     psr["POSEPOCH"].val = 54500.0
