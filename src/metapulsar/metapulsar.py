@@ -545,15 +545,18 @@ class MetaPulsar(ep.BasePulsar):
 
         # Set position vector and time array
         pta_slice = self._get_pta_slices()
-        self._pos = np.zeros((len(self._toas), 3))
         self._pos_t = np.zeros((len(self._toas), 3))
+        self._planetssb = np.zeros((len(self._toas), 9, 6))
+        self._sunssb = np.zeros((len(self._toas), 6))
         for pta, psr in self._epulsars.items():
-            self._pos[pta_slice[pta], :] = psr._pos
             self._pos_t[pta_slice[pta], :] = psr._pos_t
+            self._planetssb[pta_slice[pta],:,:] = psr._planetssb
+            self._sunssb[pta_slice[pta],:] = psr._sunssb
+
+        # Set pulsar sky position
+        self._pos = ref_psr._pos
 
         # Set planetary data
-        self._planetssb = ref_psr._planetssb
-        self._sunssb = ref_psr._sunssb
         self._pdist = ref_psr._pdist
 
     def _get_parfile_data(self, pulsars):
