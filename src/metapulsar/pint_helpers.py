@@ -641,6 +641,76 @@ def temporary_pn_tim_from_par_tim_tempo2(
     # temp dir auto-removed
 
 
+def _write_pn_tim_libstempo(psr, out_path: Path) -> None:
+    """Write a Tempo2-format .tim with -pn flags from a libstempo tempopulsar.
+
+    Writes FORMAT 1, MODE 1, then one line per observation with name, freq, MJD,
+    error, type 'g', all flags, and -pn <pulse_number>. Pulse numbers must already
+    be filled (e.g. by calling psr.pulsenumbers()).
+    """
+    out_path = Path(out_path)
+    # Compute pulse numbers (fills obsn[].pulseN and returns array)
+    pn = psr.pulsenumbers(updatebats=True, formresiduals=True, removemean=True)
+    names = psr.filename()
+    freqs = psr.freqs
+    stoas = psr.stoas
+    errs = psr.toaerrs
+    flag_names = psr.flags()
+    lines = ["FORMAT 1\n", "MODE 1\n"]
+    for i in range(psr.nobs):
+        # name freq mjd error type
+        mjd = float(stoas[i])
+        flag_parts = []
+        for f in flag_names:
+            val = psr.flagvals(f)[i]
+            if val:
+                flag_parts.append(f" -{f} {val}")
+        flag_parts.append(f" -pn {int(pn[i])}")
+        flag_str = "".join(flag_parts)
+        name = str(names[i]).strip()
+        freq = float(freqs[i])
+        err = float(errs[i])
+        line = f" {name} {freq:.5f} {mjd:.17f} {err:.5f} g{flag_str}\n"
+        lines.append(line)
+    out_path.write_text("".join(lines), encoding="utf-8")
+
+
+@contextmanager
+def temporary_pn_tim_from_par_tim_libstempo(
+    parfile_text: str, tim_path: Path
+) -> Iterator[str]:
+    """Yield a temporary pn-tagged .tim via libstempo; deleted on exit.
+
+    Uses libstempo to load par + tim, compute pulse numbers (same as tempo2),
+    and write a .tim file with -pn flags. Equivalent in outcome to
+    temporary_pn_tim_from_par_tim_tempo2 but without calling the tempo2 binary.
+
+    Requires libstempo (and a tempo2 runtime) to be installed.
+    """
+    try:
+        import libstempo as t2
+    except ImportError as e:
+        raise ImportError(
+            "temporary_pn_tim_from_par_tim_libstempo requires libstempo. "
+            "Install with: conda install -c conda-forge libstempo"
+        ) from e
+
+    tim_path = Path(tim_path).resolve()
+    if not tim_path.exists():
+        raise FileNotFoundError(f"Tim file not found: {tim_path}")
+    if not tim_path.is_file():
+        raise ValueError(f"Tim path is not a file: {tim_path}")
+
+    with tempfile.TemporaryDirectory(prefix="withpn_libstempo_") as td:
+        td_path = Path(td)
+        par_tmp = td_path / "orig.par"
+        par_tmp.write_text(parfile_text, encoding="utf-8")
+        out_tim = td_path / "withpn.tim"
+        psr = t2.tempopulsar(parfile=str(par_tmp), timfile=str(tim_path), dofit=False)
+        _write_pn_tim_libstempo(psr, out_tim)
+        yield str(out_tim)
+
+
 @contextmanager
 def temporary_par_with_track_minus_2(par_text: str) -> Iterator[str]:
     """Yield a temporary tempo2-formatted par file with TRACK -2; deleted on exit."""

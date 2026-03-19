@@ -1,6 +1,6 @@
 {
   "name": "anpta dev",
-  "image": "anpta:addsat",
+  "image": "anpta:cpu",
   "overrideCommand": false,
   "containerEnv": {
     "HOST_UID": "${localEnv:UID}",
