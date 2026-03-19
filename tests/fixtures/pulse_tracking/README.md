@@ -38,11 +38,12 @@ numbers are preserved from the original coherent solutions:
 The regression test uses absolute post-fit RMS thresholds rather than
 fixture-dependent ratios:
 
-- coherent solution: `< 1e-8 s`
+- coherent solution: `< 1e-6 s`
 - incoherent solution: `> 1e-5 s`
 
 These values are intentionally tied to physically meaningful scales:
-`1e-8 s` is comfortably above timing-package numerical precision, while
+`1e-6 s` is still far below any phase-wrap-scale failure while allowing for
+environment-dependent effects such as clock-correction differences, and
 `1e-5 s` is still well below the pulse period for this synthetic pulsar but
 firmly in the phase-wrap regime the test is designed to expose.
 
