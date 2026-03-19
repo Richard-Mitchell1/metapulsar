@@ -1,0 +1,35 @@
+# Created: 2026-03-19T15:08:21.584190
+# PINT_version: 1.1.4
+# User: Rutger van Haasteren (anpta)
+# Host: 7510a1ed9943
+# OS: Linux-5.15.49-linuxkit-pr-aarch64-with-glibc2.39
+# Python: 3.12.3 (main, Jan  8 2026, 11:30:50) [GCC 13.3.0]
+# Format: pint
+# read_time: 2026-03-19T15:08:18.826121
+# allow_tcb: False
+# convert_tcb: False
+# allow_T2: True
+PSR                            J2222+2222
+EPHEM                               DE440
+CLOCK                        TT(BIPM2021)
+UNITS                                 TDB
+DILATEFREQ                              N
+DMDATA                                  N
+NTOA                                    0
+ELONG                  45.000000000000000
+ELAT                   20.000000000000000
+PMELONG                               0.0
+PMELAT                                0.0
+PX                                    0.0
+ECL                              IERS2010
+F0                                  300.0
+F1                                 -1e-15
+PEPOCH             58000.0000000000000000
+TZRMJD             58029.1666666669843866
+TZRSITE                               ssb
+TZRFRQ                                inf
+PLANET_SHAPIRO                          N
+DM                                  120.0
+DM1                                   0.1
+DM2                                  0.05
+DMEPOCH            58000.0000000000000000
