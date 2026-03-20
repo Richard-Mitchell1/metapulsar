@@ -43,7 +43,7 @@ We welcome contributions to MetaPulsar! This document provides guidelines for co
 - **Test Categories**: Use appropriate pytest markers
   - `@pytest.mark.slow` for slow tests
   - `@pytest.mark.integration` for integration tests
-- **MockPulsar**: Use MockPulsar for unit tests when possible
+- **Mock Timing Objects**: Use `create_mock_libstempo` / `MockLibstempo` for timing-mock based tests
 
 ### Documentation
 
@@ -126,21 +126,19 @@ class TestFeatureName:
         pass
 ```
 
-### MockPulsar Usage
+### MockLibstempo Usage
 
-Use MockPulsar for testing when possible:
+Use `MockLibstempo` for testing timing-object integration:
 
 ```python
-from metapulsar.mockpulsar import MockPulsar
-from metapulsar.mockpulsar import create_mock_timing_data, create_mock_flags
+from metapulsar.mockpulsar import create_mock_libstempo
 
 def test_metapulsar_creation():
-    """Test MetaPulsar creation with MockPulsar."""
-    toas, residuals, errors, freqs = create_mock_timing_data(100)
-    flags = create_mock_flags(100, telescope='test')
-    mock_psr = MockPulsar(toas, residuals, errors, freqs, flags, 'test', 'J1857+0943')
-    
-    metapulsar = MetaPulsar({'test': mock_psr})
+    """Test MetaPulsar creation with MockLibstempo."""
+    mock_lt = create_mock_libstempo(
+        n_toas=100, name="J1857+0943", telescope="test", seed=42
+    )
+    metapulsar = MetaPulsar({"test": mock_lt})
     assert len(metapulsar._toas) == 100
 ```
 
