@@ -28,6 +28,11 @@ except ImportError:
 
 # Import sandbox for robust libstempo usage
 from .sandbox_tempo2 import tempopulsar
+from .pint_helpers import (
+    temporary_pn_tim_from_par_tim_pint,
+    temporary_pn_tim_from_par_tim_tempo2,
+    temporary_par_with_track_minus_2,
+)
 
 # Default components for consistent combination strategy
 DEFAULT_COMBINE_COMPONENTS: List[str] = [
@@ -114,6 +119,7 @@ class MetaPulsarFactory:
         combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
         add_dm_derivatives: bool = True,
         parfile_output_dir: Path = None,
+        use_pulse_numbers: bool = True,
     ) -> MetaPulsar:
         """Create MetaPulsar using specified combination strategy.
 
@@ -203,7 +209,11 @@ class MetaPulsarFactory:
             )
 
         # Create PINT/Tempo2 objects from file pairs using file data
-        pulsars = self._create_pulsar_objects(file_pairs, single_file_data)
+        pulsars = self._create_pulsar_objects(
+            file_pairs=file_pairs,
+            file_data=single_file_data,
+            use_pulse_numbers=use_pulse_numbers,
+        )
 
         return MetaPulsar(
             pulsars=pulsars,
@@ -359,6 +369,7 @@ class MetaPulsarFactory:
         combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
         add_dm_derivatives: bool = True,
         parfile_output_dir: Path = None,
+        use_pulse_numbers: bool = True,
     ) -> Dict[str, MetaPulsar]:
         """Create MetaPulsars for all available pulsars using file data.
 
@@ -402,6 +413,7 @@ class MetaPulsarFactory:
                     combine_components=combine_components,
                     add_dm_derivatives=add_dm_derivatives,
                     parfile_output_dir=parfile_output_dir,
+                    use_pulse_numbers=use_pulse_numbers,
                 )
 
                 # Canonical name is automatically calculated from pulsar data
@@ -564,6 +576,7 @@ class MetaPulsarFactory:
         self,
         file_pairs: Dict[str, Tuple[Path, Path]],
         file_data: Dict[str, Dict[str, Any]],
+        use_pulse_numbers: bool = True,
     ) -> Dict[str, Any]:
         """Create PINT/Tempo2 objects from file pairs using file data.
 
@@ -571,6 +584,7 @@ class MetaPulsarFactory:
             file_pairs: Dictionary mapping PTA names to (parfile, timfile) tuples
             file_data: Dictionary mapping PTA names to file dictionaries
                       Contains timing_package info from FileDiscoveryService
+            use_pulse_numbers: Whether to derive and use pulse numbers from original par+tim
 
         Returns:
             Dictionary mapping PTA names to PINT/Tempo2 objects
@@ -587,16 +601,44 @@ class MetaPulsarFactory:
                     if get_model_and_toas is None:
                         raise RuntimeError("PINT not available for PINT creation")
 
-                    model, toas = get_model_and_toas(
-                        str(parfile), str(timfile), planets=True, allow_T2=True
-                    )
+                    if use_pulse_numbers:
+                        original_par_text = file_data[pta_name]["par_content"]
+                        with temporary_pn_tim_from_par_tim_pint(
+                            original_par_text, timfile
+                        ) as pn_tim_path:
+                            model, toas = get_model_and_toas(
+                                str(parfile),
+                                str(pn_tim_path),
+                                planets=True,
+                                allow_T2=True,
+                            )
+                    else:
+                        model, toas = get_model_and_toas(
+                            str(parfile), str(timfile), planets=True, allow_T2=True
+                        )
                     pulsar_objects[pta_name] = (model, toas)
 
                 else:  # tempo2
                     # Create Tempo2 object using sandbox
-                    t2_psr = tempopulsar(
-                        parfile=str(parfile), timfile=str(timfile), dofit=False
-                    )
+                    if use_pulse_numbers:
+                        original_par_text = file_data[pta_name]["par_content"]
+                        with (
+                            temporary_pn_tim_from_par_tim_tempo2(
+                                original_par_text, timfile
+                            ) as pn_tim_path,
+                            temporary_par_with_track_minus_2(
+                                Path(parfile).read_text(encoding="utf-8")
+                            ) as par_for_tempo2,
+                        ):
+                            t2_psr = tempopulsar(
+                                parfile=str(par_for_tempo2),
+                                timfile=str(pn_tim_path),
+                                dofit=False,
+                            )
+                    else:
+                        t2_psr = tempopulsar(
+                            parfile=str(parfile), timfile=str(timfile), dofit=False
+                        )
                     pulsar_objects[pta_name] = t2_psr
 
                 self.logger.debug(f"Created {timing_package} object for {pta_name}")
@@ -728,6 +770,7 @@ def create_metapulsar(
     combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
     add_dm_derivatives: bool = True,
     parfile_output_dir: Path = None,
+    use_pulse_numbers: bool = True,
 ) -> MetaPulsar:
     """Create MetaPulsar using specified combination strategy.
 
@@ -758,6 +801,7 @@ def create_metapulsar(
         combine_components=combine_components,
         add_dm_derivatives=add_dm_derivatives,
         parfile_output_dir=parfile_output_dir,
+        use_pulse_numbers=use_pulse_numbers,
     )
 
 
@@ -768,6 +812,7 @@ def create_all_metapulsars(
     combine_components: List[str] = DEFAULT_COMBINE_COMPONENTS,
     add_dm_derivatives: bool = True,
     parfile_output_dir: Path = None,
+    use_pulse_numbers: bool = True,
 ) -> Dict[str, MetaPulsar]:
     """Create MetaPulsars for all available pulsars using file data.
 
@@ -791,6 +836,7 @@ def create_all_metapulsars(
         combine_components=combine_components,
         add_dm_derivatives=add_dm_derivatives,
         parfile_output_dir=parfile_output_dir,
+        use_pulse_numbers=use_pulse_numbers,
     )
 
 
