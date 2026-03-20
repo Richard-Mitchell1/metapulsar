@@ -14,6 +14,7 @@ from pathlib import Path
 import tempfile
 import subprocess
 from io import StringIO
+import numpy as np
 from pint.models.model_builder import parse_parfile
 
 
@@ -659,7 +660,14 @@ def _write_pn_tim_libstempo(psr, out_path: Path) -> None:
     lines = ["FORMAT 1\n", "MODE 1\n"]
     for i in range(psr.nobs):
         # name freq mjd error type
-        mjd = float(stoas[i])
+        # Keep TOA MJD in longdouble precision; do not downcast to float64.
+        mjd = np.longdouble(stoas[i])
+        mjd_str = np.format_float_positional(
+            mjd,
+            precision=30,
+            unique=False,
+            trim="k",
+        )
         flag_parts = []
         for f in flag_names:
             val = psr.flagvals(f)[i]
@@ -670,7 +678,7 @@ def _write_pn_tim_libstempo(psr, out_path: Path) -> None:
         name = str(names[i]).strip()
         freq = float(freqs[i])
         err = float(errs[i])
-        line = f" {name} {freq:.5f} {mjd:.17f} {err:.5f} g{flag_str}\n"
+        line = f" {name} {freq:.5f} {mjd_str} {err:.5f} g{flag_str}\n"
         lines.append(line)
     out_path.write_text("".join(lines), encoding="utf-8")
 

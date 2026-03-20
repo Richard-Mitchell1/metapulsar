@@ -239,62 +239,30 @@ class TestCoordinateBasedDiscovery:
         self, mock_file_discovery_service, mock_file_system
     ):
         """Test MetaPulsar creation includes canonical name."""
-        from metapulsar.mockpulsar import MockPulsar
-        from metapulsar.mockpulsar import (
-            create_mock_timing_data,
-            create_mock_flags,
-        )
-
-        # Create mock timing data for two PTAs
-        toas1, residuals1, errors1, freqs1 = create_mock_timing_data(50)
-        flags1 = create_mock_flags(50, telescope="test_data_release1")
-        mock_psr1 = MockPulsar(
-            toas1,
-            residuals1,
-            errors1,
-            freqs1,
-            flags1,
-            "test_data_release1",
-            "J1857+0943",
-            astrometry=True,
-        )
-
-        toas2, residuals2, errors2, freqs2 = create_mock_timing_data(50)
-        flags2 = create_mock_flags(50, telescope="test_data_release2")
-        mock_psr2 = MockPulsar(
-            toas2,
-            residuals2,
-            errors2,
-            freqs2,
-            flags2,
-            "test_data_release2",
-            "J1857+0943",
-            astrometry=True,
-        )
-
-        # Create MetaPulsar with adapted MockPulsar objects
-        from metapulsar.mockpulsar import create_libstempo_adapter
+        from metapulsar.mockpulsar import create_mock_libstempo
 
         adapted_pulsars = {
-            "test_data_release1": create_libstempo_adapter(mock_psr1),
-            "test_data_release2": create_libstempo_adapter(mock_psr2),
+            "test_data_release1": create_mock_libstempo(
+                n_toas=50,
+                name="J1857+0943",
+                telescope="test_data_release1",
+                include_astrometry=True,
+                include_spin=True,
+                seed=10,
+            ),
+            "test_data_release2": create_mock_libstempo(
+                n_toas=50,
+                name="J1857+0943",
+                telescope="test_data_release2",
+                include_astrometry=True,
+                include_spin=True,
+                seed=20,
+            ),
         }
         metapulsar = MetaPulsar(
             pulsars=adapted_pulsars,
             combination_strategy="composite",
         )
-
-        # Fix Offset parameter mapping (PINT doesn't recognize OFFSET, so it's not included)
-        # Offset is always fitted but not in libstempo .pars(), so we need to add it manually
-        if "Offset" not in metapulsar._fitparameters:
-            metapulsar._fitparameters["Offset"] = {
-                "test_data_release1": "Offset",
-                "test_data_release2": "Offset",
-            }
-            if "Offset" not in metapulsar.fitpars:
-                metapulsar.fitpars.insert(0, "Offset")
-            # Rebuild design matrix to include the new Offset parameter
-            metapulsar._build_design_matrix()
 
         assert isinstance(metapulsar, MetaPulsar)
         assert hasattr(metapulsar, "name")
