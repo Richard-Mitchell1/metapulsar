@@ -113,36 +113,24 @@ class TestMetaPulsarFactory:
 
     @patch("metapulsar.position_helpers.bj_name_from_pulsar")
     def test_create_metapulsar_success(self, mock_bj_name):
-        """Test successful MetaPulsar creation using MockPulsar directly."""
+        """Test successful MetaPulsar creation using MockLibstempo directly."""
         # Mock position helper
         mock_bj_name.return_value = "J1857+0943"
-        from metapulsar.mockpulsar import MockPulsar
-        from metapulsar.mockpulsar import (
-            create_mock_timing_data,
-            create_mock_flags,
+        from metapulsar.mockpulsar import create_mock_libstempo
+
+        mock_psr = create_mock_libstempo(
+            n_toas=50,
+            name="J1857+0943",
+            telescope="test_pta",
+            include_astrometry=True,
+            include_spin=True,
+            seed=42,
         )
 
-        # Create mock timing data
-        toas, residuals, errors, freqs = create_mock_timing_data(50)
-        flags = create_mock_flags(50, telescope="test_pta")
-        mock_psr = MockPulsar(
-            toas,
-            residuals,
-            errors,
-            freqs,
-            flags,
-            "test_pta",
-            "J1857+0943",
-            astrometry=True,
-            spin=True,
-        )
-
-        # Create MetaPulsar with adapted MockPulsar
+        # Create MetaPulsar with raw MockLibstempo
         from metapulsar.metapulsar import MetaPulsar
-        from metapulsar.mockpulsar import create_libstempo_adapter
 
-        adapted_pulsar = create_libstempo_adapter(mock_psr)
-        pulsars = {"test_pta": adapted_pulsar}
+        pulsars = {"test_pta": mock_psr}
         metapulsar = MetaPulsar(pulsars=pulsars, combination_strategy="composite")
 
         assert metapulsar is not None
