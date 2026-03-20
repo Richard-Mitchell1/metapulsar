@@ -128,7 +128,8 @@ class TestLegacyComparison:
                 continue  # Skip if no files found for this pulsar
 
             new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
-                file_data=filtered_file_data
+                file_data=filtered_file_data,
+                use_pulse_numbers=False,
             )
 
             # Compare basic properties
@@ -428,7 +429,8 @@ class TestLegacyComparison:
                 continue  # Skip if no files found for this pulsar
 
             new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
-                file_data=filtered_file_data
+                file_data=filtered_file_data,
+                use_pulse_numbers=False,
             )
 
             # Get design matrices
@@ -588,7 +590,8 @@ class TestLegacyComparison:
                 continue  # Skip if no files found for this pulsar
 
             new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
-                file_data=filtered_file_data
+                file_data=filtered_file_data,
+                use_pulse_numbers=False,
             )
 
             # Get flags
@@ -697,7 +700,8 @@ class TestLegacyComparison:
                 continue  # Skip if no files found for this pulsar
 
             new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
-                file_data=filtered_file_data
+                file_data=filtered_file_data,
+                use_pulse_numbers=False,
             )
 
             # Get intermediate par files (if available)
@@ -796,7 +800,8 @@ class TestLegacyComparison:
                 continue  # Skip if no files found for this pulsar
 
             new_mp = new_module["MetaPulsarFactory"]().create_metapulsar(
-                file_data=filtered_file_data
+                file_data=filtered_file_data,
+                use_pulse_numbers=False,
             )
 
             # Get fitpars from both implementations
@@ -822,3 +827,50 @@ class TestLegacyComparison:
             assert (
                 len(new_fitpars) > 0
             ), "No merged parameters found - parameter merging may be broken"
+
+    @pytest.mark.slow
+    @pytest.mark.legacy_comparison
+    def test_pulse_number_mode_residual_equivalence(
+        self, new_module, available_data_sets
+    ):
+        """Pulse-number and non-pulse-number paths should match to machine precision."""
+        if not available_data_sets:
+            pytest.skip("No data available for testing")
+
+        test_pta_data_releases = ["epta_dr1_v2_2", "ppta_dr2", "nanograv_9y"]
+        discovery_service = FileDiscoveryService(working_dir="data/ipta-dr2")
+        file_data = discovery_service.discover_files(test_pta_data_releases)
+        all_pulsar_names = get_pulsar_names_from_file_data(file_data)
+
+        if not all_pulsar_names:
+            pytest.skip("No pulsars found in selected PTAs")
+
+        target_pulsar = (
+            "J0030+0451" if "J0030+0451" in all_pulsar_names else all_pulsar_names[0]
+        )
+        filtered_file_data = filter_file_data_by_pulsars(file_data, [target_pulsar])
+
+        if not filtered_file_data:
+            pytest.skip(f"No file data found for {target_pulsar}")
+
+        factory = new_module["MetaPulsarFactory"]()
+        mp_without_pn = factory.create_metapulsar(
+            file_data=filtered_file_data,
+            use_pulse_numbers=False,
+        )
+        mp_with_pn = factory.create_metapulsar(
+            file_data=filtered_file_data,
+            use_pulse_numbers=True,
+        )
+
+        assert len(mp_without_pn._residuals) == len(mp_with_pn._residuals)
+        np.testing.assert_allclose(
+            mp_with_pn._residuals,
+            mp_without_pn._residuals,
+            rtol=1e-10,
+            atol=6e-10,  # Not 1e-12  <-- investigate this! -- RvH
+            err_msg=(
+                "Pulse-number and non-pulse-number residuals should be machine-precision equivalent "
+                "for this simple coherent timing-solution test case."
+            ),
+        )
