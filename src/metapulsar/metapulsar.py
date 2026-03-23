@@ -517,29 +517,6 @@ class MetaPulsar(ep.BasePulsar):
 
         return column
 
-    def _match_precision_helper(self, array):
-        '''Helper function to find the precision at which an array of floating point values are no longer the same. 
-        Used to truncate the sky position of the pulsar in the _setup_position_and_planets function.
-        '''
-        match_condition = True
-        # strips off the decimal value of all the floats by converting them to strings and partitioning based off the decimal
-        decimal_vals = [str(value).partition('.')[2] for value in array]
-
-        precision = 0
-        # While loop does the check of precision between all the numbers 
-        # Keeps incrementing the precision variable until either the end of the shortest decimal value is reached or two decimal values no longer match
-        while match_condition:
-            for decimal1, decimal2 in zip(decimal_vals[:-1], decimal_vals[1:]):
-                if precision >= len(decimal1) or precision >= len(decimal2):
-                    match_condition = False
-                    break
-                if decimal1[precision] != decimal2[precision]:
-                    match_condition = False
-                    break
-            precision = precision + 1
-
-        return (precision-1)
-
     def _setup_position_and_planets(self):
         """Setup position and planetary data using PositionHelpers."""
         # Check if we have any pulsars
@@ -568,10 +545,12 @@ class MetaPulsar(ep.BasePulsar):
 
         # Set position vector and time array
         pta_slice = self._get_pta_slices()
+        self._pos = np.zeros((len(self._toas), 3))
         self._pos_t = np.zeros((len(self._toas), 3))
         self._planetssb = np.zeros((len(self._toas), 9, 6))
         self._sunssb = np.zeros((len(self._toas), 6))
         for pta, psr in self._epulsars.items():
+            self._pos[pta_slice[pta], :] = psr._pos
             self._pos_t[pta_slice[pta], :] = psr._pos_t
             self._planetssb[pta_slice[pta],:,:] = psr._planetssb
             self._sunssb[pta_slice[pta],:] = psr._sunssb
@@ -580,20 +559,7 @@ class MetaPulsar(ep.BasePulsar):
         self._pdist = ref_psr._pdist
 
         # Set pulsar sky position
-        if len(self._epulsars) == 1:
-            self._pos = ref_psr._pos
-        else:
-            # Obtains sky positions for all the pulsar objects
-            psr_sky_positions = [psr._pos for psr in self._epulsars.values()]
-            ref_psr_sky_pos = ref_psr._pos
-            psr_sky_positions = np.array(psr_sky_positions).T
-
-            # Find up to what decimal place each of the different coordinates of the sky location match
-            precision_list = [self._match_precision_helper(sky_pos_coords) for sky_pos_coords in psr_sky_positions]
-
-            # Truncate the pulsar sky location
-            # Had to make my own algorithm to truncate because there was no clean function in python to do it
-            self._pos = np.array([int(sky_coord*10**precision)/10**precision for sky_coord, precision in zip(ref_psr_sky_pos,precision_list)])
+        self._pos = ref_psr._pos
 
     def _get_parfile_data(self, pulsars):
         """Extract parfile data from pulsar objects."""
