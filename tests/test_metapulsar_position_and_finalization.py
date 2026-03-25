@@ -74,8 +74,9 @@ class TestMetaPulsarPositionAndFinalization:
         """Test that position arrays have correct shapes."""
         n_toas = len(self.metapulsar._toas)
 
-        # Position arrays should have shape (n_toas, 3)
-        assert self.metapulsar._pos.shape == (n_toas, 3)
+        # _pos is the sky unit vector from the reference pulsar: shape (3,)
+        assert self.metapulsar._pos.shape == (3,)
+        # _pos_t is the per-TOA position array: shape (n_toas, 3)
         assert self.metapulsar._pos_t.shape == (n_toas, 3)
 
     def test_setup_position_and_planets_empty_pulsars(self):
@@ -148,42 +149,35 @@ class TestMetaPulsarPositionAndFinalization:
             mp.validate_consistency()
 
     def test_position_attributes_consistency(self):
-        """Test that position attributes are consistent across PTAs."""
-        # Get position data from individual PTAs
-        pta1_pos = self.mock_psr1._pos
-        pta2_pos = self.mock_psr2._pos
-
-        # Get combined position data
-        pta_slices = self.metapulsar._get_pta_slices()
-        combined_pta1_pos = self.metapulsar._pos[pta_slices["test_pta1"], :]
-        combined_pta2_pos = self.metapulsar._pos[pta_slices["test_pta2"], :]
-
-        # MockPulsar has single position vector, MetaPulsar tiles it across all TOAs
-        expected_pta1_pos = np.tile(
-            pta1_pos, (len(pta1_pos) if pta1_pos.ndim > 1 else 1, 1)
-        )
-        expected_pta2_pos = np.tile(
-            pta2_pos, (len(pta2_pos) if pta2_pos.ndim > 1 else 1, 1)
-        )
-
-        # If MockPulsar has single position vector, tile it to match expected shape
-        if pta1_pos.ndim == 1:
-            expected_pta1_pos = np.tile(pta1_pos, (len(self.mock_psr1._toas), 1))
-        if pta2_pos.ndim == 1:
-            expected_pta2_pos = np.tile(pta2_pos, (len(self.mock_psr2._toas), 1))
-
-        # Should match (within floating point precision)
-        np.testing.assert_array_almost_equal(combined_pta1_pos, expected_pta1_pos)
-        np.testing.assert_array_almost_equal(combined_pta2_pos, expected_pta2_pos)
-
-    def test_planetary_data_setup(self):
-        """Test that planetary data is properly set up."""
-        # Planetary data should be copied from reference pulsar
+        """Test that _pos is the reference pulsar's sky unit vector and _pos_t is per-PTA."""
         ref_psr = next(iter(self.metapulsar._epulsars.values()))
 
-        assert self.metapulsar._planetssb is ref_psr._planetssb
-        assert self.metapulsar._sunssb is ref_psr._sunssb
+        # _pos should be the reference pulsar's sky unit vector
+        np.testing.assert_array_equal(self.metapulsar._pos, ref_psr._pos)
+
+        # _pos_t should be filled per-PTA from each pulsar's _pos_t
+        pta_slices = self.metapulsar._get_pta_slices()
+        for pta, psr in self.metapulsar._epulsars.items():
+            np.testing.assert_array_almost_equal(
+                self.metapulsar._pos_t[pta_slices[pta], :], psr._pos_t
+            )
+
+    def test_planetary_data_setup(self):
+        """Test that planetary data is properly set up per-PTA."""
+        ref_psr = next(iter(self.metapulsar._epulsars.values()))
+
+        # _pdist is still taken directly from the reference pulsar
         assert self.metapulsar._pdist is ref_psr._pdist
+
+        # _planetssb and _sunssb are now per-PTA sliced arrays
+        pta_slices = self.metapulsar._get_pta_slices()
+        for pta, psr in self.metapulsar._epulsars.items():
+            np.testing.assert_array_equal(
+                self.metapulsar._planetssb[pta_slices[pta], :, :], psr._planetssb
+            )
+            np.testing.assert_array_equal(
+                self.metapulsar._sunssb[pta_slices[pta], :], psr._sunssb
+            )
 
     def test_position_coordinates(self):
         """Test that position coordinates are properly set."""
