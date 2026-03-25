@@ -552,8 +552,8 @@ class MetaPulsar(ep.BasePulsar):
         for pta, psr in self._epulsars.items():
             self._pos[pta_slice[pta], :] = psr._pos
             self._pos_t[pta_slice[pta], :] = psr._pos_t
-            self._planetssb[pta_slice[pta],:,:] = psr._planetssb
-            self._sunssb[pta_slice[pta],:] = psr._sunssb
+            self._planetssb[pta_slice[pta], :, :] = psr._planetssb
+            self._sunssb[pta_slice[pta], :] = psr._sunssb
 
         # Set planetary data
         self._pdist = ref_psr._pdist
