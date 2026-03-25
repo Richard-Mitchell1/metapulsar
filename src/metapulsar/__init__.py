@@ -31,7 +31,14 @@ from .parameter_manager import (
     ParameterMapping,
     ParameterInconsistencyError,
 )
-from .mockpulsar import MockPulsar
+from .mockpulsar import (
+    MockLibstempo,
+    MockParameter,
+    create_mock_libstempo,
+    create_mock_timing_data,
+    create_mock_flags,
+    validate_mock_data,
+)
 from .tim_file_analyzer import TimFileAnalyzer
 from .selection_utils import create_staggered_selection
 
@@ -53,7 +60,12 @@ __all__ = [
     "ParameterManager",
     "ParameterMapping",
     "ParameterInconsistencyError",
-    "MockPulsar",
+    "MockLibstempo",
+    "MockParameter",
+    "create_mock_libstempo",
+    "create_mock_timing_data",
+    "create_mock_flags",
+    "validate_mock_data",
     "TimFileAnalyzer",
     "create_staggered_selection",
     "PINTDiscoveryError",

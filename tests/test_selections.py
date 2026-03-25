@@ -6,26 +6,30 @@ filtering, and Enterprise compatibility.
 """
 
 import numpy as np
+from enterprise.pulsar import Tempo2Pulsar
 from enterprise.signals.selections import Selection
 
+from metapulsar.mockpulsar import MockLibstempo
 from metapulsar.selection_utils import create_staggered_selection
 
 
-class MockPulsar:
-    """Simple mock pulsar class for testing Enterprise selections."""
-
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-        self.name = "test_pulsar"
-        # Enterprise expects 'flags' and 'freqs' attributes
-        self.flags = {
-            "group": kwargs.get("group", np.array([])),
-            "f": kwargs.get("f", np.array([])),
-            "B": kwargs.get("B", np.array([])),
-            "empty_flag": kwargs.get("empty_flag", np.array([])),
-        }
-        self.freqs = kwargs.get("freqs", np.array([]))
+def _make_enterprise_pulsar(flags_dict, freqs_mhz):
+    """Create a real Enterprise Pulsar from mock libstempo data."""
+    n_toas = len(freqs_mhz)
+    toas_mjd = np.linspace(50000.0, 60000.0, n_toas)
+    residuals_s = np.zeros(n_toas)
+    toaerrs_us = np.ones(n_toas) * 0.1
+    freqs_hz = np.asarray(freqs_mhz) * 1e6
+    mock_lt = MockLibstempo(
+        toas_mjd,
+        residuals_s,
+        toaerrs_us,
+        freqs_hz,
+        flags_dict,
+        "mock",
+        "test_pulsar",
+    )
+    return Tempo2Pulsar(mock_lt, planets=False)
 
 
 # Mock flags data (realistic values)
@@ -266,10 +270,9 @@ class TestEnterpriseIntegration:
         sel_func = create_staggered_selection("test", {"group": None})
         selection = Selection(sel_func)
 
-        # Create mock pulsar with required attributes
-        mock_psr = MockPulsar(
-            group=np.array(["ASP_430", "ASP_800", "ASP_430"]),
-            freqs=np.array([100.0, 200.0, 300.0]),
+        mock_psr = _make_enterprise_pulsar(
+            {"group": np.array(["ASP_430", "ASP_800", "ASP_430"])},
+            np.array([100.0, 200.0, 300.0]),
         )
 
         # Test selection instance creation
@@ -293,9 +296,9 @@ class TestEnterpriseIntegration:
         sel_func = create_staggered_selection("test", {"group": None})
         selection = Selection(sel_func)
 
-        mock_psr = MockPulsar(
-            group=np.array(["ASP_430", "ASP_800", "ASP_430"]),
-            freqs=np.array([100.0, 200.0, 300.0]),
+        mock_psr = _make_enterprise_pulsar(
+            {"group": np.array(["ASP_430", "ASP_800", "ASP_430"])},
+            np.array([100.0, 200.0, 300.0]),
         )
 
         selection_instance = selection(mock_psr)

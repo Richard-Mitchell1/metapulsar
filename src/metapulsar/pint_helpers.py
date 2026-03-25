@@ -4,11 +4,18 @@ This module provides pure functions that encapsulate PINT-specific logic
 for parameter discovery, alias resolution, and model validation.
 """
 
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Iterator
 from functools import lru_cache
 from pint.models import TimingModel
 from pint.models.timing_model import AllComponents
 from pint.models.parameter import Parameter
+from contextlib import contextmanager
+from pathlib import Path
+import tempfile
+import subprocess
+from io import StringIO
+import numpy as np
+from pint.models.model_builder import parse_parfile
 
 
 class PINTDiscoveryError(Exception):
@@ -496,3 +503,236 @@ def parse_parameter_using_pint(param_name: str, param_value) -> Tuple[Any, bool]
             pass
 
     return value, is_frozen
+
+
+# ----------------------- Pulse-number helper utilities ----------------------- #
+
+from pint.toa import get_TOAs, TOAs  # noqa: E402 (import after top-level defs)
+
+
+def ensure_pulse_numbers(toas: TOAs, model: TimingModel) -> TOAs:
+    """Ensure TOAs has a complete pulse_number column.
+
+    If a -pn flag was present in the .tim, PINT already parsed it into
+    toas.table['pulse_number'] via phase_columns_from_flags(). If missing,
+    compute from the model.
+    """
+    import numpy as np
+
+    if "delta_pulse_number" not in toas.table.colnames:
+        toas.table["delta_pulse_number"] = np.zeros(len(toas))
+    if ("pulse_number" not in toas.table.colnames) or (
+        toas.table["pulse_number"] != toas.table["pulse_number"]
+    ).any():  # NaN check
+        toas.compute_pulse_numbers(model)
+    return toas
+
+
+def write_pn_tim(toas: TOAs, out_path: Path) -> Path:
+    """Write a Tempo2-format .tim with -pn flags from a TOAs table."""
+    out_path = Path(out_path)
+    toas.write_TOA_file(str(out_path), format="Tempo2", include_pn=True)
+    return out_path
+
+
+@contextmanager
+def temporary_pn_tim_from_par_tim_pint(
+    parfile_text: str, tim_path: Path
+) -> Iterator[str]:
+    """Yield a temporary pn-tagged .tim derived via PINT; file is deleted on exit."""
+    tim_path = Path(tim_path)
+    model = create_pint_model(parfile_text)
+    toas = get_TOAs(str(tim_path), model=model, include_pn=True)
+    ensure_pulse_numbers(toas, model)
+    with tempfile.TemporaryDirectory(prefix="withpn_pint_") as td:
+        out_path = Path(td) / "withpn.tim"
+        write_pn_tim(toas, out_path)
+        yield str(out_path)
+    # temp dir auto-removed
+
+
+@contextmanager
+def temporary_pn_tim_from_par_tim_tempo2(
+    parfile_text: str, tim_path: Path
+) -> Iterator[str]:
+    """Yield a temporary pn-tagged .tim via tempo2 output plugin; deleted on exit."""
+    tim_path = Path(tim_path).resolve()
+
+    # Preflight: check file exists and is readable
+    if not tim_path.exists():
+        raise FileNotFoundError(f"Tim file not found: {tim_path}")
+    if not tim_path.is_file():
+        raise ValueError(f"Tim path is not a file: {tim_path}")
+
+    with tempfile.TemporaryDirectory(prefix="withpn_t2_") as td:
+        td_path = Path(td)
+        par_tmp = td_path / "orig.par"
+        par_tmp.write_text(parfile_text, encoding="utf-8")
+        cmd = [
+            "tempo2",
+            "-f",
+            str(par_tmp),
+            str(tim_path),
+            "-output",
+            "add_pulseNumber",
+        ]
+        try:
+            subprocess.run(
+                cmd,
+                cwd=str(td_path),
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            # Sanitize error: extract relevant error lines, skip warranty banner
+            # Combine stderr and stdout, prefer stderr for actual errors
+            combined_output = (e.stderr or "").strip()
+            if not combined_output or len(combined_output) < 20:
+                # If stderr is empty/short, check stdout
+                combined_output = (e.stdout or "").strip()
+
+            error_lines = []
+            warranty_keywords = [
+                "warranty",
+                "gpl",
+                "free software",
+                "absolutely no",
+                "redistribute",
+                "this program comes",
+                "welcome to redistribute",
+            ]
+
+            for line in combined_output.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                line_lower = line.lower()
+                # Skip warranty/license text more aggressively
+                if any(keyword in line_lower for keyword in warranty_keywords):
+                    continue
+                # Keep ERROR lines, "Unable to open", and assertion failures
+                if (
+                    line.startswith("ERROR")
+                    or "Unable to open" in line
+                    or "Assertion" in line
+                    or "failed" in line_lower
+                    or line.startswith("tempo2:")
+                ):
+                    error_lines.append(line)
+
+            # If still no errors found after filtering, try to find any non-warranty line
+            if not error_lines:
+                for line in combined_output.splitlines():
+                    line = line.strip()
+                    if line and not any(
+                        keyword in line.lower() for keyword in warranty_keywords
+                    ):
+                        error_lines.append(line)
+                        break
+
+            error_msg = (
+                "\n".join(error_lines) if error_lines else "tempo2 command failed"
+            )
+            raise RuntimeError(f"tempo2 add_pulseNumber failed: {error_msg}") from e
+        src = td_path / "withpn.tim"
+        if not src.exists():
+            raise RuntimeError("tempo2 plugin did not produce withpn.tim")
+        yield str(src)
+    # temp dir auto-removed
+
+
+def _write_pn_tim_libstempo(psr, out_path: Path) -> None:
+    """Write a Tempo2-format .tim with -pn flags from a libstempo tempopulsar.
+
+    Writes FORMAT 1, MODE 1, then one line per observation with name, freq, MJD,
+    error, type 'g', all flags, and -pn <pulse_number>. Pulse numbers must already
+    be filled (e.g. by calling psr.pulsenumbers()).
+    """
+    out_path = Path(out_path)
+    # Compute pulse numbers (fills obsn[].pulseN and returns array)
+    pn = psr.pulsenumbers(updatebats=True, formresiduals=True, removemean=True)
+    names = psr.filename()
+    freqs = psr.freqs
+    stoas = psr.stoas
+    errs = psr.toaerrs
+    flag_names = psr.flags()
+    lines = ["FORMAT 1\n", "MODE 1\n"]
+    for i in range(psr.nobs):
+        # name freq mjd error type
+        # Keep TOA MJD in longdouble precision; do not downcast to float64.
+        mjd = np.longdouble(stoas[i])
+        mjd_str = np.format_float_positional(
+            mjd,
+            precision=30,
+            unique=False,
+            trim="k",
+        )
+        flag_parts = []
+        for f in flag_names:
+            val = psr.flagvals(f)[i]
+            if val:
+                flag_parts.append(f" -{f} {val}")
+        flag_parts.append(f" -pn {int(pn[i])}")
+        flag_str = "".join(flag_parts)
+        name = str(names[i]).strip()
+        freq = float(freqs[i])
+        err = float(errs[i])
+        line = f" {name} {freq:.5f} {mjd_str} {err:.5f} g{flag_str}\n"
+        lines.append(line)
+    out_path.write_text("".join(lines), encoding="utf-8")
+
+
+@contextmanager
+def temporary_pn_tim_from_par_tim_libstempo(
+    parfile_text: str, tim_path: Path
+) -> Iterator[str]:
+    """Yield a temporary pn-tagged .tim via libstempo; deleted on exit.
+
+    Uses libstempo to load par + tim, compute pulse numbers (same as tempo2),
+    and write a .tim file with -pn flags. Equivalent in outcome to
+    temporary_pn_tim_from_par_tim_tempo2 but without calling the tempo2 binary.
+
+    Requires libstempo (and a tempo2 runtime) to be installed.
+    """
+    try:
+        import libstempo as t2
+    except ImportError as e:
+        raise ImportError(
+            "temporary_pn_tim_from_par_tim_libstempo requires libstempo. "
+            "Install with: conda install -c conda-forge libstempo"
+        ) from e
+
+    tim_path = Path(tim_path).resolve()
+    if not tim_path.exists():
+        raise FileNotFoundError(f"Tim file not found: {tim_path}")
+    if not tim_path.is_file():
+        raise ValueError(f"Tim path is not a file: {tim_path}")
+
+    with tempfile.TemporaryDirectory(prefix="withpn_libstempo_") as td:
+        td_path = Path(td)
+        par_tmp = td_path / "orig.par"
+        par_tmp.write_text(parfile_text, encoding="utf-8")
+        out_tim = td_path / "withpn.tim"
+        psr = t2.tempopulsar(parfile=str(par_tmp), timfile=str(tim_path), dofit=False)
+        _write_pn_tim_libstempo(psr, out_tim)
+        yield str(out_tim)
+
+
+@contextmanager
+def temporary_par_with_track_minus_2(par_text: str) -> Iterator[str]:
+    """Yield a temporary tempo2-formatted par file with TRACK -2; deleted on exit."""
+    par_dict = parse_parfile(StringIO(par_text))
+    par_dict["TRACK"] = ["-2"]
+    par_out = dict_to_parfile_string(par_dict, format="tempo2")
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".par", delete=False) as tf:
+        tf.write(par_out)
+        tf.flush()
+        path = tf.name
+    try:
+        yield path
+    finally:
+        try:
+            Path(path).unlink(missing_ok=True)
+        except Exception:
+            pass
